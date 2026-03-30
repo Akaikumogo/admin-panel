@@ -28,12 +28,12 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
       >
         <div className="flex items-center justify-center">
           <motion.h1
-            className="text-3xl md:text-5xl font-semibold text-[#3d57c4]"
+            className="text-3xl md:text-5xl font-semibold text-[#2563eb]"
             initial={{ y: 10 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {t({ en: 'CRM ', uz: 'CRM ', ru: 'CRM ' })}
+            {t({ en: 'Elektro', uz: 'Elektro', ru: 'Elektro' })}
           </motion.h1>{' '}
           <motion.h1
             className="text-3xl md:text-5xl font-semibold"
@@ -41,7 +41,7 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
             animate={{ y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {t({ en: ' Pro', uz: ' Pro', ru: ' Pro' })}
+            {t({ en: 'Learn', uz: 'Learn', ru: 'Learn' })}
           </motion.h1>
         </div>
         <motion.div className="mt-6">
@@ -55,9 +55,9 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
           transition={{ delay: 0.3, duration: 0.5 }}
         >
           {t({
-            uz: "Biznesingizni boshqarishning eng oson yo'li.",
-            ru: 'Самый простой способ управлять вашим бизнесом.',
-            en: 'The easiest way to manage your business.'
+            uz: "Elektr xavfsizligini o'rganish uchun qulay platforma.",
+            ru: 'Удобная платформа для изучения электробезопасности.',
+            en: 'A convenient platform to learn electrical safety.'
           })}
         </motion.p>
         <motion.h3
@@ -67,9 +67,9 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
           transition={{ delay: 0.7, duration: 0.5 }}
         >
           {t({
-            uz: 'Roboservice jamoasi tomonidan ishlab chiqilgan',
-            ru: 'Робосервис создан командой Roboservice',
-            en: 'Roboservice team'
+            uz: 'ElektroLearn jamoasi',
+            ru: 'Команда ElektroLearn',
+            en: 'ElektroLearn team'
           })}
         </motion.h3>
       </motion.div>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="ElektroLearn">
+  <defs>
+    <linearGradient id="elg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="52" height="52" rx="14" fill="#0b1220"/>
+  <path d="M23 43V22h9.4c6 0 9.6 3 9.6 7.9c0 5-3.6 8.1-9.6 8.1H27.6V43H23zm4.6-8.6h4.3c3.5 0 5.3-1.5 5.3-4.6c0-3-1.8-4.4-5.3-4.4h-4.3v9z" fill="#e5e7eb"/>
+  <path d="M40.5 14.5l-9.2 15.1h6.1l-4.2 19.9l12.1-19.1h-6.3l4.2-15.9z" fill="url(#elg)"/>
+</svg>
