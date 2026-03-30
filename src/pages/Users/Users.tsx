@@ -6,7 +6,7 @@ import { useQueryParams } from '@/hooks/useQueryParams';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
-import apiService from '@/services/api';
+import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { UserProfile } from '@/services/api';
 
 const T = {
@@ -64,7 +64,7 @@ const Users = () => {
             size={36}
             src={
               record.avatarUrl
-                ? `http://localhost:3000${record.avatarUrl}`
+                ? `${BACKEND_ORIGIN}${record.avatarUrl}`
                 : undefined
             }
             className="bg-gradient-to-br from-blue-500 to-blue-700 flex-shrink-0"

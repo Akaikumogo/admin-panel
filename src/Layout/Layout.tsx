@@ -20,7 +20,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { latinTextToCyrillic } from '@/utils/latinToCyrillic';
 import { Select, Spin } from 'antd';
 import { Sidebar } from './SideBar';
-import apiService, { type UserProfile } from '@/services/api';
+import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 
 const navItems = [
   {
@@ -365,7 +365,7 @@ const Layout = () => {
                     <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
                       {me?.avatarUrl ? (
                         <img
-                          src={`http://localhost:3000${me.avatarUrl}`}
+                          src={`${BACKEND_ORIGIN}${me.avatarUrl}`}
                           alt="avatar"
                           className="w-full h-full object-cover"
                         />

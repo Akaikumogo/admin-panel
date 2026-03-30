@@ -11,13 +11,12 @@ import {
   UserCircle,
   X
 } from 'lucide-react';
-import apiService, { type UserProfile } from '@/services/api';
+import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // ─── Module-level constants (zero per-render allocation) ──────
 
-const BACKEND_BASE =
-  import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+const BACKEND_BASE = BACKEND_ORIGIN;
 
 const ROLE_COLOR_MAP: Record<string, string> = {
   SUPERADMIN: 'red',

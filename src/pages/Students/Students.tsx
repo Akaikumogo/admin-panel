@@ -7,7 +7,7 @@ import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
-import apiService from '@/services/api';
+import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
 
 const T = {
@@ -77,7 +77,7 @@ const Students = () => {
         <div className="flex items-center gap-3">
           <Avatar
             size={36}
-            src={record.avatarUrl ? `http://localhost:3000${record.avatarUrl}` : undefined}
+            src={record.avatarUrl ? `${BACKEND_ORIGIN}${record.avatarUrl}` : undefined}
             className="bg-gradient-to-br from-blue-500 to-blue-700 flex-shrink-0"
           >
             {(record.firstName?.[0] || '') + (record.lastName?.[0] || '')}

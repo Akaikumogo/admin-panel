@@ -4,7 +4,7 @@ import { ArrowLeft, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import NoData from '@/components/NoData';
-import apiService from '@/services/api';
+import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentDetail as StudentDetailType, LostQuestion, ActivityDay } from '@/services/api';
 
 const T = {
@@ -123,7 +123,7 @@ const StudentDetailPage = () => {
         <div className="flex items-start gap-5">
           <Avatar
             size={72}
-            src={student.avatarUrl ? `http://localhost:3000${student.avatarUrl}` : undefined}
+            src={student.avatarUrl ? `${BACKEND_ORIGIN}${student.avatarUrl}` : undefined}
             className="bg-gradient-to-br from-blue-500 to-blue-700 flex-shrink-0 text-2xl"
           >
             {(student.firstName?.[0] || '') + (student.lastName?.[0] || '')}

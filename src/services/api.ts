@@ -2,7 +2,9 @@ import axios from 'axios';
 import { notification } from 'antd';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  import.meta.env.VITE_API_URL || 'https://energolearnapi.akaikumogo.uz/api';
+
+export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const ERROR_TITLES: Record<number, string> = {
   400: 'Xato so`rov',
