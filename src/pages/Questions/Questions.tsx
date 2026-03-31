@@ -75,6 +75,15 @@ const Questions = () => {
     () => qp.levelId ? apiService.getTheoriesByLevel(qp.levelId) : Promise.resolve([]),
     [] as Theory[],
   );
+
+  const [form] = Form.useForm();
+  const formLevelId = Form.useWatch('levelId', form);
+  const { data: modalTheories, loading: loadingModalTheories } = useFetch(
+    ['theories-by-level', 'modal', formLevelId],
+    () => formLevelId ? apiService.getTheoriesByLevel(formLevelId) : Promise.resolve([]),
+    [] as Theory[],
+  );
+  
   const {
     data: questions, total, loading, initialLoading, loadingMore, hasMore, loadMore, refetch,
   } = useInfiniteList(
@@ -87,7 +96,6 @@ const Questions = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
-  const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [selectedType, setSelectedType] = useState<QuestionType>('SINGLE_CHOICE');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -205,8 +213,6 @@ const Questions = () => {
     message.success('Savol o`chirildi');
     refetch();
   };
-
-  const selectedLevel = form.getFieldValue('levelId');
 
   const renderOptionTag = (q: Question) => {
     if (q.type === 'MATCHING') {
@@ -344,8 +350,9 @@ const Questions = () => {
               <Form.Item name="theoryId" label={t(T.theory)} rules={[{ required: true }]}>
                 <Select
                   placeholder={t(T.theory)}
-                  disabled={!selectedLevel}
-                  options={theories.map(th => ({ value: th.id, label: th.title }))}
+                  disabled={!formLevelId}
+                  loading={!!formLevelId && loadingModalTheories}
+                  options={modalTheories.map(th => ({ value: th.id, label: th.title }))}
                 />
               </Form.Item>
             </>
