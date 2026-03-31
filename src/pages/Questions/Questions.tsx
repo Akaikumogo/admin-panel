@@ -14,6 +14,7 @@ import {
 } from 'antd';
 import { Plus, Pencil, Trash2, Filter, ArrowLeftRight, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch } from '@/hooks/useFetch';
@@ -67,6 +68,7 @@ const QP_DEFAULTS = { search: undefined, levelId: undefined, theoryId: undefined
 
 const Questions = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
 
   const { data: levels } = useFetch(['levels'], () => apiService.getLevels(), [] as Level[]);
@@ -285,9 +287,13 @@ const Questions = () => {
                 <Card className="!border-slate-200 dark:!border-slate-700/60" bodyStyle={{ padding: '16px 20px' }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="font-medium text-slate-900 dark:text-white text-base">
+                      <button
+                        type="button"
+                        className="font-medium text-slate-900 dark:text-white text-base hover:underline text-left"
+                        onClick={() => navigate(`/dashboard/questions/${q.id}`)}
+                      >
                         {idx + 1}. <HighlightText text={q.prompt} highlight={qp.search} />
-                      </p>
+                      </button>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <Tag>{q.level?.title || t(T.level)}</Tag>
                         <Tag>{q.theory?.title || t(T.theory)}</Tag>

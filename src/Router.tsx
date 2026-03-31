@@ -1,4 +1,4 @@
-import { lazy, type JSX } from 'react';
+import { lazy } from 'react';
 import { type RouteObject } from 'react-router-dom';
 import Navigator from './Providers/Navigator';
 import NotFoundPage from './pages/NotFounds/NotFoundPage';
@@ -14,6 +14,9 @@ const ProfilePage = lazy(() => import('./pages/Profile/Profile'));
 const LevelsPage = lazy(() => import('./pages/Levels/Levels'));
 const TheoriesPage = lazy(() => import('./pages/Theories/Theories'));
 const QuestionsPage = lazy(() => import('./pages/Questions/Questions'));
+const LevelDetailPage = lazy(() => import('./pages/Levels/LevelDetail'));
+const TheoryDetailPage = lazy(() => import('./pages/Theories/TheoryDetail'));
+const QuestionDetailPage = lazy(() => import('./pages/Questions/QuestionDetail'));
 const ModeratorsPage = lazy(() => import('./pages/Moderators/Moderators'));
 const OrganizationsPage = lazy(
   () => import('./pages/Organizations/Organizations')
@@ -23,7 +26,7 @@ const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
 
 const withSuspense = (
-  Component: React.LazyExoticComponent<() => JSX.Element | null>
+  Component: React.LazyExoticComponent<React.ComponentType>
 ) => {
   return (
     <AnimateWrapper>
@@ -53,12 +56,24 @@ export const routes: RouteObject[] = [
             element: withSuspense(LevelsPage)
           },
           {
+            path: 'levels/:id',
+            element: withSuspense(LevelDetailPage)
+          },
+          {
             path: 'theories',
             element: withSuspense(TheoriesPage)
           },
           {
+            path: 'theories/:id',
+            element: withSuspense(TheoryDetailPage)
+          },
+          {
             path: 'questions',
             element: withSuspense(QuestionsPage)
+          },
+          {
+            path: 'questions/:id',
+            element: withSuspense(QuestionDetailPage)
           },
           {
             path: 'organizations',

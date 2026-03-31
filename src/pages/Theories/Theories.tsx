@@ -13,6 +13,7 @@ import {
 } from 'antd';
 import { Plus, Pencil, Trash2, Filter, Search, BookOpen } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch } from '@/hooks/useFetch';
@@ -57,6 +58,7 @@ const QP_DEFAULTS = { search: undefined, levelId: undefined } as const;
 
 const Theories = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const {
     params: qp,
     setParam,
@@ -252,13 +254,17 @@ const Theories = () => {
                           size={16}
                           className="text-blue-500 flex-shrink-0"
                         />
-                        <p className="font-medium text-slate-900 dark:text-white text-base truncate">
+                        <button
+                          type="button"
+                          className="font-medium text-slate-900 dark:text-white text-base truncate hover:underline text-left"
+                          onClick={() => navigate(`/dashboard/theories/${th.id}`)}
+                        >
                           {idx + 1}.{' '}
                           <HighlightText
                             text={th.title}
                             highlight={qp.search}
                           />
-                        </p>
+                        </button>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
                         {th.level && <Tag color="blue">{th.level.title}</Tag>}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -112,6 +113,7 @@ const QP_DEFAULTS = { search: undefined, status: undefined } as const;
 const Levels = () => {
   const { t } = useTranslation();
   const { params: qp, setParam } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
+  const navigate = useNavigate();
 
   const {
     data: levels, loading, initialLoading, refetch: refetchLevels,
@@ -394,13 +396,20 @@ const Levels = () => {
                           size={16}
                           className={`text-slate-400 transition-transform ${expandedLevel === level.id ? 'rotate-90' : ''}`}
                         />
-                        <span className="font-semibold text-slate-900 dark:text-white">
+                        <button
+                          type="button"
+                          className="font-semibold text-slate-900 dark:text-white hover:underline text-left"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/dashboard/levels/${level.id}`);
+                          }}
+                        >
                           #{level.orderIndex + 1} —{' '}
                           <HighlightText
                             text={level.title}
                             highlight={qp.search}
                           />
-                        </span>
+                        </button>
                         <Tag color={level.isActive ? 'green' : 'default'}>
                           {level.isActive ? t(T.active) : 'Inactive'}
                         </Tag>
@@ -464,13 +473,20 @@ const Levels = () => {
                               key: theory.id,
                               label: (
                                 <div className="flex items-center justify-between w-full">
-                                  <span className="font-medium">
+                                  <button
+                                    type="button"
+                                    className="font-medium hover:underline text-left"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/dashboard/theories/${theory.id}`);
+                                    }}
+                                  >
                                     #{theory.orderIndex + 1} —{' '}
                                     <HighlightText
                                       text={theory.title}
                                       highlight={qp.search}
                                     />
-                                  </span>
+                                  </button>
                                   <div
                                     className="flex items-center gap-2"
                                     onClick={(e) => e.stopPropagation()}
@@ -500,9 +516,8 @@ const Levels = () => {
                               children: (
                                 <div className="space-y-3">
                                   {theory.content && (
-                                    <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-black/20 p-3 rounded-lg max-h-32 overflow-auto whitespace-pre-wrap">
-                                      {theory.content.slice(0, 300)}
-                                      {theory.content.length > 300 ? '...' : ''}
+                                    <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-black/20 p-3 rounded-lg max-h-[min(70vh,720px)] overflow-y-auto whitespace-pre-wrap">
+                                      {theory.content}
                                     </div>
                                   )}
                                   <div className="flex items-center justify-between">
@@ -535,13 +550,17 @@ const Levels = () => {
                                         >
                                           <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                              <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                              <button
+                                                type="button"
+                                                className="text-sm font-medium text-slate-900 dark:text-white hover:underline text-left"
+                                                onClick={() => navigate(`/dashboard/questions/${q.id}`)}
+                                              >
                                                 {idx + 1}.{' '}
                                                 <HighlightText
                                                   text={q.prompt}
                                                   highlight={qp.search}
                                                 />
-                                              </p>
+                                              </button>
                                               <div className="mt-2 flex flex-wrap gap-1">
                                                 {q.options.map((opt) => (
                                                   <Tag
