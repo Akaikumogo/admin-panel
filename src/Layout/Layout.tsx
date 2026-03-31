@@ -13,12 +13,14 @@ import {
   Building2,
   Users,
   GraduationCap,
-  Languages
+  Languages,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
 import { latinTextToCyrillic } from '@/utils/latinToCyrillic';
-import { Select, Spin } from 'antd';
+import { Button, Select, Spin } from 'antd';
 import { Sidebar } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 
@@ -72,6 +74,9 @@ const navItems = [
 
 const Layout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => typeof document !== 'undefined' && !!document.fullscreenElement,
+  );
   const { t, lang, setLang } = useTranslation();
   const colorFrom = '#3B82F6';
   const colorTo = '#0a36ad';
@@ -81,6 +86,18 @@ const Layout = () => {
   const [meLoading, setMeLoading] = useState(true);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      /* brauzer rad etishi mumkin */
+    }
+  };
 
   const getCurrentPageTitle = () => {
     const currentItem = navItems.find(
@@ -144,6 +161,12 @@ const Layout = () => {
     }
     return `${weekday}, ${day} ${month}, ${year}`;
   };
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   useEffect(() => {
     // Header profile info
@@ -335,6 +358,28 @@ const Layout = () => {
 
                 {/* Right Section */}
                 <div className="flex items-center gap-3 flex-shrink-0">
+                  <Button
+                    type="default"
+                    size="large"
+                    onClick={toggleFullscreen}
+                    title={t({
+                      uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                      en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
+                      ru: isFullscreen ? 'Выйти из полноэкранного режима' : 'Полный экран',
+                    })}
+                    aria-label={t({
+                      uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                      en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
+                      ru: isFullscreen ? 'Выйти из полноэкранного режима' : 'Полный экран',
+                    })}
+                    icon={
+                      isFullscreen ? (
+                        <Minimize2 size={16} strokeWidth={2} />
+                      ) : (
+                        <Maximize2 size={16} strokeWidth={2} />
+                      )
+                    }
+                  />
                   <ThemeToggle />
                   <Select
                     value={lang}
