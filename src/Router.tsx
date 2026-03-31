@@ -2,10 +2,11 @@ import { lazy, type JSX } from 'react';
 import { type RouteObject } from 'react-router-dom';
 import Navigator from './Providers/Navigator';
 import NotFoundPage from './pages/NotFounds/NotFoundPage';
-import ModuleNotFound from './pages/NotFounds/NotFoundModule';
+
 import DashboardLayout from './Layout/Layout';
 
 import AnimateWrapper from './components/AnimateWrapper';
+import ElektroLearn from './components/qwerttyu';
 
 const LoginPage = lazy(() => import('./pages/Login/Login'));
 const HomePage = lazy(() => import('./pages/Home'));
@@ -14,7 +15,9 @@ const LevelsPage = lazy(() => import('./pages/Levels/Levels'));
 const TheoriesPage = lazy(() => import('./pages/Theories/Theories'));
 const QuestionsPage = lazy(() => import('./pages/Questions/Questions'));
 const ModeratorsPage = lazy(() => import('./pages/Moderators/Moderators'));
-const OrganizationsPage = lazy(() => import('./pages/Organizations/Organizations'));
+const OrganizationsPage = lazy(
+  () => import('./pages/Organizations/Organizations')
+);
 const UsersPage = lazy(() => import('./pages/Users/Users'));
 const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
@@ -76,10 +79,6 @@ export const routes: RouteObject[] = [
           {
             path: 'profile',
             element: withSuspense(ProfilePage)
-          },
-          {
-            path: '*',
-            element: <ModuleNotFound />
           }
         ]
       }
@@ -89,6 +88,8 @@ export const routes: RouteObject[] = [
     path: 'login',
     element: withSuspense(LoginPage)
   },
+  { path: 'qwerttyu', element: <ElektroLearn /> },
+
   {
     path: '*',
     element: <NotFoundPage />
