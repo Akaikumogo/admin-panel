@@ -48,7 +48,7 @@ function showErrorNotification(error: unknown) {
   });
 }
 
-type Role = 'SUPERADMIN' | 'MODERATOR' | 'USER';
+export type Role = 'SUPERADMIN' | 'MODERATOR' | 'USER';
 
 export type UserProfile = {
   id: string;
@@ -226,6 +226,73 @@ export type ActivityDay = {
   count: number;
 };
 
+export type CrudPermissions = {
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+};
+
+export type ModeratorPermissions = {
+  contentLevels: CrudPermissions;
+  contentTheories: CrudPermissions;
+  contentQuestions: CrudPermissions;
+  organizations: CrudPermissions;
+  students: CrudPermissions;
+  users: CrudPermissions;
+  moderators: CrudPermissions;
+  profile: CrudPermissions;
+};
+
+export type ModeratorPermissionRecord = {
+  id: string;
+  moderatorUserId: string;
+  permissions: ModeratorPermissions;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ModeratorViolationRow = {
+  id: string;
+  moderatorUserId: string;
+  moderator: { id: string; firstName: string; lastName: string; email: string } | null;
+  organizationId: string | null;
+  actionKey: string;
+  method: string;
+  path: string;
+  ip: string | null;
+  userAgent: string | null;
+  requestBodyPreview: string | null;
+  createdAt: string;
+};
+
+export type ModeratorViolationsResponse = {
+  data: ModeratorViolationRow[];
+  total: number;
+  page: number;
+  limit: number;
+  from: string;
+  to: string;
+};
+
+export type HeartsLostAnalyticsResponse = {
+  orgId: string;
+  range: { from: string; to: string };
+  byUser: Array<{
+    userId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    lostHearts: number;
+  }>;
+  byQuestion: Array<{
+    questionId: string;
+    prompt: string;
+    levelTitle: string;
+    theoryTitle: string;
+    lostHearts: number;
+  }>;
+};
+
 class ApiService {
   private api: ReturnType<typeof axios.create>;
   private isRefreshing = false;
@@ -368,6 +435,55 @@ class ApiService {
 
   async getQuestionErrors(orgId: string): Promise<QuestionError[]> {
     const response = await this.api.get<QuestionError[]>('/admin/analytics/questions', { params: { orgId } });
+    return response.data;
+  }
+
+  async getHeartsLostAnalytics(params: {
+    range: 'today' | 'month' | 'year';
+    orgId?: string;
+  }): Promise<HeartsLostAnalyticsResponse> {
+    const response = await this.api.get<HeartsLostAnalyticsResponse>(
+      '/admin/analytics/hearts-lost',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getMyModeratorPermissions(): Promise<{ permissions: ModeratorPermissions | null }> {
+    const response = await this.api.get<{ permissions: ModeratorPermissions | null }>(
+      '/admin/my-permissions',
+    );
+    return response.data;
+  }
+
+  async getModeratorPermissions(moderatorId: string): Promise<ModeratorPermissionRecord> {
+    const response = await this.api.get<ModeratorPermissionRecord>(
+      `/admin/moderator-permissions/${moderatorId}`,
+    );
+    return response.data;
+  }
+
+  async updateModeratorPermissions(
+    moderatorId: string,
+    permissions: ModeratorPermissions,
+  ): Promise<ModeratorPermissionRecord> {
+    const response = await this.api.put<ModeratorPermissionRecord>(
+      `/admin/moderator-permissions/${moderatorId}`,
+      { permissions },
+    );
+    return response.data;
+  }
+
+  async getModeratorViolations(params: {
+    range: 'today' | 'month' | 'year';
+    moderatorId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ModeratorViolationsResponse> {
+    const response = await this.api.get<ModeratorViolationsResponse>(
+      '/admin/moderator-violations',
+      { params },
+    );
     return response.data;
   }
 

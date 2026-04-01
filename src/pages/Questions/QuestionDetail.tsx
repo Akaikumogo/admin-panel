@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { Question, QuestionType } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Savol', en: 'Question', ru: 'Вопрос' },
@@ -103,6 +104,7 @@ export default function QuestionDetail() {
 
   const handleSave = async () => {
     if (!questionId) return;
+    if (!can('contentQuestions', 'update')) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -169,7 +171,13 @@ export default function QuestionDetail() {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button type="primary" icon={<Save size={16} />} loading={saving} onClick={handleSave}>
+          <Button
+            type="primary"
+            icon={<Save size={16} />}
+            loading={saving}
+            onClick={handleSave}
+            disabled={!can('contentQuestions', 'update')}
+          >
             {t(T.save)}
           </Button>
         </div>

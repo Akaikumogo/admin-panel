@@ -15,7 +15,8 @@ import {
   GraduationCap,
   Languages,
   Maximize2,
-  Minimize2
+  Minimize2,
+  HeartPulse
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -23,6 +24,7 @@ import { latinTextToCyrillic } from '@/utils/latinToCyrillic';
 import { Button, Select, Spin } from 'antd';
 import { Sidebar } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
+import { cacheModeratorPermissions } from '@/utils/permissions';
 
 const navItems = [
   {
@@ -69,6 +71,16 @@ const navItems = [
     path: '/dashboard/profile',
     label: { uz: 'Profil', en: 'Profile', ru: 'Профиль' },
     icon: User
+  },
+  {
+    path: '/dashboard/hearts-analytics',
+    label: { uz: 'Yurak yo‘qotish', en: 'Hearts lost', ru: 'Потеря сердец' },
+    icon: HeartPulse,
+  },
+  {
+    path: '/dashboard/violations',
+    label: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
+    icon: Shield
   }
 ];
 
@@ -178,6 +190,18 @@ const Layout = () => {
   }, []);
 
   useEffect(() => {
+    if (!me) return;
+    if (me.role !== 'MODERATOR') {
+      cacheModeratorPermissions(null);
+      return;
+    }
+    apiService
+      .getMyModeratorPermissions()
+      .then((res) => cacheModeratorPermissions(res.permissions))
+      .catch(() => cacheModeratorPermissions(null));
+  }, [me]);
+
+  useEffect(() => {
     if (meLoading || !me) return;
 
     // Role USER (student) admin panelga kirmaydi.
@@ -197,7 +221,8 @@ const Layout = () => {
       return navItems.filter(
         (item) =>
           item.path !== '/dashboard/moderators' &&
-          item.path !== '/dashboard/users',
+          item.path !== '/dashboard/users' &&
+          item.path !== '/dashboard/violations',
       );
     }
     return [];

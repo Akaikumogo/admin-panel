@@ -22,6 +22,7 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Level, Theory } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Nazariyalar', en: 'Theories', ru: 'Теории' },
@@ -120,6 +121,8 @@ const Theories = () => {
   }, [handleScroll]);
 
   const openModal = (theory?: Theory) => {
+    if (theory && !can('contentTheories', 'update')) return;
+    if (!theory && !can('contentTheories', 'create')) return;
     setEditing(theory ?? null);
     setModalOpen(true);
     if (theory) {
@@ -137,6 +140,8 @@ const Theories = () => {
   };
 
   const handleSave = async () => {
+    if (editing && !can('contentTheories', 'update')) return;
+    if (!editing && !can('contentTheories', 'create')) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -177,6 +182,7 @@ const Theories = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!can('contentTheories', 'delete')) return;
     await apiService.deleteTheory(id);
     message.success(
       t({
@@ -217,6 +223,7 @@ const Theories = () => {
             type="primary"
             icon={<Plus size={16} />}
             onClick={() => openModal()}
+            disabled={!can('contentTheories', 'create')}
           >
             {t(T.addTheory)}
           </Button>
@@ -288,15 +295,18 @@ const Theories = () => {
                         size="small"
                         icon={<Pencil size={14} />}
                         onClick={() => openModal(th)}
+                        disabled={!can('contentTheories', 'update')}
                       />
                       <Popconfirm
                         title={t(T.deleteConfirm)}
                         onConfirm={() => handleDelete(th.id)}
+                        disabled={!can('contentTheories', 'delete')}
                       >
                         <Button
                           size="small"
                           danger
                           icon={<Trash2 size={14} />}
+                          disabled={!can('contentTheories', 'delete')}
                         />
                       </Popconfirm>
                     </div>
@@ -330,6 +340,11 @@ const Theories = () => {
         okText={t(T.save)}
         cancelText={t(T.cancel)}
         width={640}
+        okButtonProps={{
+          disabled: editing
+            ? !can('contentTheories', 'update')
+            : !can('contentTheories', 'create'),
+        }}
       >
         <Form form={form} layout="vertical">
           {!editing && (

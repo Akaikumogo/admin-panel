@@ -10,9 +10,11 @@ import {
   Tag,
   Popconfirm,
   message,
-  Avatar
+  Avatar,
+  Divider,
+  Switch
 } from 'antd';
-import { Plus, Trash2, Mail, Shield, Filter, Search } from 'lucide-react';
+import { Plus, Trash2, Mail, Shield, Filter, Search, Settings } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -20,7 +22,7 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
-import type { Organization } from '@/services/api';
+import type { ModeratorPermissions, Organization } from '@/services/api';
 
 const T = {
   title: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
@@ -77,6 +79,55 @@ const Moderators = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+
+  const [permOpen, setPermOpen] = useState(false);
+  const [permLoading, setPermLoading] = useState(false);
+  const [permSaving, setPermSaving] = useState(false);
+  const [permUserId, setPermUserId] = useState<string | null>(null);
+  const [permUserName, setPermUserName] = useState<string>('');
+  const [permissions, setPermissions] = useState<ModeratorPermissions | null>(null);
+
+  const setCrud = (
+    moduleKey: keyof ModeratorPermissions,
+    field: keyof ModeratorPermissions[keyof ModeratorPermissions],
+    value: boolean,
+  ) => {
+    setPermissions((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [moduleKey]: {
+          ...prev[moduleKey],
+          [field]: value,
+        },
+      };
+    });
+  };
+
+  const openPermissions = async (userId: string, userName: string) => {
+    setPermUserId(userId);
+    setPermUserName(userName);
+    setPermOpen(true);
+    setPermLoading(true);
+    try {
+      const rec = await apiService.getModeratorPermissions(userId);
+      setPermissions(rec.permissions);
+    } finally {
+      setPermLoading(false);
+    }
+  };
+
+  const savePermissions = async () => {
+    if (!permUserId || !permissions) return;
+    setPermSaving(true);
+    try {
+      await apiService.updateModeratorPermissions(permUserId, permissions);
+      message.success('Permissions saqlandi');
+      setPermOpen(false);
+    } finally {
+      setPermSaving(false);
+    }
+  };
 
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -198,6 +249,16 @@ const Moderators = () => {
                     >
                       <Button size="small" danger icon={<Trash2 size={14} />} />
                     </Popconfirm>
+                    <Button
+                      size="small"
+                      icon={<Settings size={14} />}
+                      onClick={() =>
+                        void openPermissions(
+                          mod.id,
+                          `${mod.firstName} ${mod.lastName}`,
+                        )
+                      }
+                    />
                   </div>
                 </Card>
               </motion.div>
@@ -258,6 +319,68 @@ const Moderators = () => {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`Permissions: ${permUserName || ''}`}
+        open={permOpen}
+        onCancel={() => setPermOpen(false)}
+        onOk={() => void savePermissions()}
+        confirmLoading={permSaving}
+        okText={t(T.save)}
+        cancelText={t(T.cancel)}
+        width={720}
+      >
+        {permLoading || !permissions ? (
+          <div className="flex items-center justify-center h-40">
+            <Spin />
+          </div>
+        ) : (
+          <div>
+            {(
+              [
+                ['contentLevels', 'Modullar (Levels)'],
+                ['contentTheories', 'Nazariyalar (Theories)'],
+                ['contentQuestions', 'Savollar (Questions)'],
+                ['organizations', 'Tashkilotlar (Organizations)'],
+                ['students', 'Talabalar (Students)'],
+                ['users', 'Foydalanuvchilar (Users)'],
+                ['moderators', 'Moderatorlar (Moderators)'],
+                ['profile', 'Profil (Profile)'],
+              ] as const
+            ).map(([key, label], idx) => (
+              <div key={key}>
+                {idx > 0 ? <Divider /> : null}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="font-semibold">{label}</div>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">Create</span>
+                      <Switch
+                        checked={permissions[key].create}
+                        onChange={(v) => setCrud(key, 'create', v)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">Update</span>
+                      <Switch
+                        checked={permissions[key].update}
+                        onChange={(v) => setCrud(key, 'update', v)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">Delete</span>
+                      <Switch
+                        checked={permissions[key].delete}
+                        onChange={(v) => setCrud(key, 'delete', v)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );

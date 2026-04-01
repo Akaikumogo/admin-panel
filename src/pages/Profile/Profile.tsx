@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 import { useTranslation } from '@/hooks/useTranslation';
+import { can } from '@/utils/can';
 
 // ─── Module-level constants (zero per-render allocation) ──────
 
@@ -355,6 +356,7 @@ const GeneralTab = memo(function GeneralTab({
               loading={saving}
               icon={<Save size={16} />}
               size="large"
+              disabled={!can('profile', 'update')}
             >
               {t(T.save)}
             </Button>
@@ -440,6 +442,7 @@ const SecurityTab = memo(function SecurityTab({
           loading={changingPw}
           icon={<KeyRound size={16} />}
           size="large"
+          disabled={!can('profile', 'update')}
         >
           {t(T.updatePw)}
         </Button>

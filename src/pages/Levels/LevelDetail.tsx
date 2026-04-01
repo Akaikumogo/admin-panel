@@ -5,6 +5,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, { type Level, type Theory } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Modul', en: 'Module', ru: 'Модуль' },
@@ -63,6 +64,7 @@ export default function LevelDetail() {
 
   const handleSave = async () => {
     if (!levelId) return;
+    if (!can('contentLevels', 'update')) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -113,6 +115,7 @@ export default function LevelDetail() {
             icon={<Save size={16} />}
             loading={saving}
             onClick={handleSave}
+            disabled={!can('contentLevels', 'update')}
           >
             {t(T.save)}
           </Button>

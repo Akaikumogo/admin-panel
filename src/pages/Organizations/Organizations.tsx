@@ -30,6 +30,7 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Organization } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Tashkilotlar', en: 'Organizations', ru: 'Организации' },
@@ -95,6 +96,8 @@ const Organizations = () => {
   const [saving, setSaving] = useState(false);
 
   const openModal = (org?: Organization) => {
+    if (org && !can('organizations', 'update')) return;
+    if (!org && !can('organizations', 'create')) return;
     setEditing(org ?? null);
     setModalOpen(true);
     if (org) {
@@ -105,6 +108,8 @@ const Organizations = () => {
   };
 
   const handleSave = async () => {
+    if (editing && !can('organizations', 'update')) return;
+    if (!editing && !can('organizations', 'create')) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -126,12 +131,14 @@ const Organizations = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!can('organizations', 'delete')) return;
     await apiService.deleteOrganization(id);
     message.success('Tashkilot o`chirildi');
     refetchOrgs();
   };
 
   const handleAssignUser = async () => {
+    if (!can('organizations', 'update')) return;
     try {
       const values = await assignForm.validateFields();
       await apiService.assignUserToOrg(assignModal.orgId, values.userId);
@@ -145,6 +152,7 @@ const Organizations = () => {
   };
 
   const handleRemoveUser = async (orgId: string, userId: string) => {
+    if (!can('organizations', 'update')) return;
     await apiService.removeUserFromOrg(orgId, userId);
     message.success('Foydalanuvchi chiqarildi');
     refetchOrgs();
@@ -174,6 +182,7 @@ const Organizations = () => {
             type="primary"
             icon={<Plus size={16} />}
             onClick={() => openModal()}
+            disabled={!can('organizations', 'create')}
           >
             {t(T.addOrg)}
           </Button>
@@ -226,20 +235,24 @@ const Organizations = () => {
                           setAssignModal({ open: true, orgId: org.id });
                           assignForm.resetFields();
                         }}
+                        disabled={!can('organizations', 'update')}
                       />
                       <Button
                         size="small"
                         icon={<Pencil size={14} />}
                         onClick={() => openModal(org)}
+                        disabled={!can('organizations', 'update')}
                       />
                       <Popconfirm
                         title={t(T.deleteConfirm)}
                         onConfirm={() => handleDelete(org.id)}
+                        disabled={!can('organizations', 'delete')}
                       >
                         <Button
                           size="small"
                           danger
                           icon={<Trash2 size={14} />}
+                          disabled={!can('organizations', 'delete')}
                         />
                       </Popconfirm>
                     </div>
@@ -272,12 +285,14 @@ const Organizations = () => {
                             onConfirm={() =>
                               handleRemoveUser(org.id, uo.user.id)
                             }
+                            disabled={!can('organizations', 'update')}
                           >
                             <Button
                               size="small"
                               danger
                               type="text"
                               icon={<UserMinus size={12} />}
+                              disabled={!can('organizations', 'update')}
                             />
                           </Popconfirm>
                         </div>
@@ -302,6 +317,11 @@ const Organizations = () => {
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
+        okButtonProps={{
+          disabled: editing
+            ? !can('organizations', 'update')
+            : !can('organizations', 'create'),
+        }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -321,6 +341,7 @@ const Organizations = () => {
         onOk={handleAssignUser}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
+        okButtonProps={{ disabled: !can('organizations', 'update') }}
       >
         <Form form={assignForm} layout="vertical">
           <Form.Item

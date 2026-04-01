@@ -32,6 +32,7 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Level, Theory, Question } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
@@ -155,6 +156,8 @@ const Levels = () => {
 
   // Level CRUD
   const openLevelModal = (level?: Level) => {
+    if (level && !can('contentLevels', 'update')) return;
+    if (!level && !can('contentLevels', 'create')) return;
     setLevelModal({ open: true, editing: level ?? null });
     if (level) {
       levelForm.setFieldsValue({
@@ -167,6 +170,8 @@ const Levels = () => {
   };
 
   const handleLevelSave = async () => {
+    if (levelModal.editing && !can('contentLevels', 'update')) return;
+    if (!levelModal.editing && !can('contentLevels', 'create')) return;
     try {
       const values = await levelForm.validateFields();
       setSaving(true);
@@ -187,6 +192,7 @@ const Levels = () => {
   };
 
   const handleLevelDelete = async (id: string) => {
+    if (!can('contentLevels', 'delete')) return;
     await apiService.deleteLevel(id);
     message.success('Modul o`chirildi');
     refetchLevels();
@@ -194,6 +200,8 @@ const Levels = () => {
 
   // Theory CRUD
   const openTheoryModal = (levelId: string, theory?: Theory) => {
+    if (theory && !can('contentTheories', 'update')) return;
+    if (!theory && !can('contentTheories', 'create')) return;
     setTheoryModal({ open: true, editing: theory ?? null, levelId });
     if (theory) {
       theoryForm.setFieldsValue({
@@ -206,6 +214,8 @@ const Levels = () => {
   };
 
   const handleTheorySave = async () => {
+    if (theoryModal.editing && !can('contentTheories', 'update')) return;
+    if (!theoryModal.editing && !can('contentTheories', 'create')) return;
     try {
       const values = await theoryForm.validateFields();
       setSaving(true);
@@ -229,6 +239,7 @@ const Levels = () => {
   };
 
   const handleTheoryDelete = async (id: string, levelId: string) => {
+    if (!can('contentTheories', 'delete')) return;
     await apiService.deleteTheory(id);
     message.success('Nazariya o`chirildi');
     fetchTheories(levelId);
@@ -240,6 +251,8 @@ const Levels = () => {
     theoryId: string,
     question?: Question
   ) => {
+    if (question && !can('contentQuestions', 'update')) return;
+    if (!question && !can('contentQuestions', 'create')) return;
     setQuestionModal({
       open: true,
       editing: question ?? null,
@@ -268,6 +281,8 @@ const Levels = () => {
   };
 
   const handleQuestionSave = async () => {
+    if (questionModal.editing && !can('contentQuestions', 'update')) return;
+    if (!questionModal.editing && !can('contentQuestions', 'create')) return;
     try {
       const values = await questionForm.validateFields();
       setSaving(true);
@@ -303,6 +318,7 @@ const Levels = () => {
   };
 
   const handleQuestionDelete = async (id: string, theoryId: string) => {
+    if (!can('contentQuestions', 'delete')) return;
     await apiService.deleteQuestion(id);
     message.success('Savol o`chirildi');
     fetchQuestions(theoryId);
@@ -352,6 +368,7 @@ const Levels = () => {
             type="primary"
             icon={<Plus size={16} />}
             onClick={() => openLevelModal()}
+            disabled={!can('contentLevels', 'create')}
           >
             {t(T.addLevel)}
           </Button>
@@ -422,15 +439,18 @@ const Levels = () => {
                           size="small"
                           icon={<Pencil size={14} />}
                           onClick={() => openLevelModal(level)}
+                          disabled={!can('contentLevels', 'update')}
                         />
                         <Popconfirm
                           title={t(T.deleteConfirm)}
                           onConfirm={() => handleLevelDelete(level.id)}
+                          disabled={!can('contentLevels', 'delete')}
                         >
                           <Button
                             size="small"
                             danger
                             icon={<Trash2 size={14} />}
+                            disabled={!can('contentLevels', 'delete')}
                           />
                         </Popconfirm>
                       </div>
@@ -447,6 +467,7 @@ const Levels = () => {
                             size="small"
                             icon={<Plus size={12} />}
                             onClick={() => openTheoryModal(level.id)}
+                            disabled={!can('contentTheories', 'create')}
                           >
                             {t(T.addTheory)}
                           </Button>
@@ -497,17 +518,20 @@ const Levels = () => {
                                       onClick={() =>
                                         openTheoryModal(level.id, theory)
                                       }
+                                      disabled={!can('contentTheories', 'update')}
                                     />
                                     <Popconfirm
                                       title={t(T.deleteConfirm)}
                                       onConfirm={() =>
                                         handleTheoryDelete(theory.id, level.id)
                                       }
+                                      disabled={!can('contentTheories', 'delete')}
                                     >
                                       <Button
                                         size="small"
                                         danger
                                         icon={<Trash2 size={12} />}
+                                        disabled={!can('contentTheories', 'delete')}
                                       />
                                     </Popconfirm>
                                   </div>
@@ -530,6 +554,7 @@ const Levels = () => {
                                       onClick={() =>
                                         openQuestionModal(level.id, theory.id)
                                       }
+                                      disabled={!can('contentQuestions', 'create')}
                                     >
                                       {t(T.addQuestion)}
                                     </Button>
@@ -588,6 +613,7 @@ const Levels = () => {
                                                     q
                                                   )
                                                 }
+                                                disabled={!can('contentQuestions', 'update')}
                                               />
                                               <Popconfirm
                                                 title={t(T.deleteConfirm)}
@@ -597,11 +623,13 @@ const Levels = () => {
                                                     theory.id
                                                   )
                                                 }
+                                                disabled={!can('contentQuestions', 'delete')}
                                               >
                                                 <Button
                                                   size="small"
                                                   danger
                                                   icon={<Trash2 size={12} />}
+                                                  disabled={!can('contentQuestions', 'delete')}
                                                 />
                                               </Popconfirm>
                                             </div>
@@ -632,6 +660,11 @@ const Levels = () => {
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
+        okButtonProps={{
+          disabled: levelModal.editing
+            ? !can('contentLevels', 'update')
+            : !can('contentLevels', 'create'),
+        }}
       >
         <Form
           form={levelForm}
@@ -667,6 +700,11 @@ const Levels = () => {
         okText={t(T.save)}
         cancelText={t(T.cancel)}
         width={640}
+        okButtonProps={{
+          disabled: theoryModal.editing
+            ? !can('contentTheories', 'update')
+            : !can('contentTheories', 'create'),
+        }}
       >
         <Form form={theoryForm} layout="vertical">
           <Form.Item
@@ -699,6 +737,11 @@ const Levels = () => {
         okText={t(T.save)}
         cancelText={t(T.cancel)}
         width={640}
+        okButtonProps={{
+          disabled: questionModal.editing
+            ? !can('contentQuestions', 'update')
+            : !can('contentQuestions', 'create'),
+        }}
       >
         <Form form={questionForm} layout="vertical">
           <Form.Item

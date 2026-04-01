@@ -5,6 +5,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, { type Question, type Theory } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Nazariya', en: 'Theory', ru: 'Теория' },
@@ -69,6 +70,7 @@ export default function TheoryDetail() {
 
   const handleSave = async () => {
     if (!theoryId) return;
+    if (!can('contentTheories', 'update')) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -120,7 +122,13 @@ export default function TheoryDetail() {
           )}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button type="primary" icon={<Save size={16} />} loading={saving} onClick={handleSave}>
+          <Button
+            type="primary"
+            icon={<Save size={16} />}
+            loading={saving}
+            onClick={handleSave}
+            disabled={!can('contentTheories', 'update')}
+          >
             {t(T.save)}
           </Button>
         </div>

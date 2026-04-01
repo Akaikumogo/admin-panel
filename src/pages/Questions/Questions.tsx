@@ -23,6 +23,7 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Level, Theory, Question, QuestionType } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
@@ -126,6 +127,8 @@ const Questions = () => {
   }, [handleScroll]);
 
   const openModal = (question?: Question) => {
+    if (question && !can('contentQuestions', 'update')) return;
+    if (!question && !can('contentQuestions', 'create')) return;
     setEditing(question ?? null);
     setModalOpen(true);
     if (question) {
@@ -180,6 +183,8 @@ const Questions = () => {
   };
 
   const handleSave = async () => {
+    if (editing && !can('contentQuestions', 'update')) return;
+    if (!editing && !can('contentQuestions', 'create')) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -211,6 +216,7 @@ const Questions = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!can('contentQuestions', 'delete')) return;
     await apiService.deleteQuestion(id);
     message.success('Savol o`chirildi');
     refetch();
@@ -262,7 +268,12 @@ const Questions = () => {
         />
         <Tag className="text-xs">{total} ta</Tag>
         <div className="ml-auto">
-          <Button type="primary" icon={<Plus size={16} />} onClick={() => openModal()}>
+          <Button
+            type="primary"
+            icon={<Plus size={16} />}
+            onClick={() => openModal()}
+            disabled={!can('contentQuestions', 'create')}
+          >
             {t(T.addQuestion)}
           </Button>
         </div>
@@ -312,9 +323,23 @@ const Questions = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
-                      <Button size="small" icon={<Pencil size={14} />} onClick={() => openModal(q)} />
-                      <Popconfirm title={t(T.deleteConfirm)} onConfirm={() => handleDelete(q.id)}>
-                        <Button size="small" danger icon={<Trash2 size={14} />} />
+                      <Button
+                        size="small"
+                        icon={<Pencil size={14} />}
+                        onClick={() => openModal(q)}
+                        disabled={!can('contentQuestions', 'update')}
+                      />
+                      <Popconfirm
+                        title={t(T.deleteConfirm)}
+                        onConfirm={() => handleDelete(q.id)}
+                        disabled={!can('contentQuestions', 'delete')}
+                      >
+                        <Button
+                          size="small"
+                          danger
+                          icon={<Trash2 size={14} />}
+                          disabled={!can('contentQuestions', 'delete')}
+                        />
                       </Popconfirm>
                     </div>
                   </div>
@@ -342,6 +367,11 @@ const Questions = () => {
         okText={t(T.save)}
         cancelText={t(T.cancel)}
         width={640}
+        okButtonProps={{
+          disabled: editing
+            ? !can('contentQuestions', 'update')
+            : !can('contentQuestions', 'create'),
+        }}
       >
         <Form form={form} layout="vertical">
           {!editing && (
