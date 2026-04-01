@@ -27,6 +27,7 @@ const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
 const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
+const QrScanPage = lazy(() => import('./pages/QrScan/QrScan'));
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -109,6 +110,10 @@ export const routes: RouteObject[] = [
           {
             path: 'leaderboard',
             element: withSuspense(LeaderboardPage)
+          },
+          {
+            path: 'qr-scan',
+            element: withSuspense(QrScanPage)
           }
         ]
       }

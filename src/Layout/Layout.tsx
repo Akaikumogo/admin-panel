@@ -17,7 +17,8 @@ import {
   Maximize2,
   Minimize2,
   HeartPulse,
-  Trophy
+  Trophy,
+  QrCode
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -82,6 +83,11 @@ const navItems = [
     path: '/dashboard/leaderboard',
     label: { uz: 'Reyting', en: 'Leaderboard', ru: 'Рейтинг' },
     icon: Trophy
+  },
+  {
+    path: '/dashboard/qr-scan',
+    label: { uz: 'QR scan', en: 'QR scan', ru: 'QR scan' },
+    icon: QrCode
   },
   {
     path: '/dashboard/violations',
