@@ -31,9 +31,11 @@ export const Sidebar: React.FC<{
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    const activeIndex = navItems.findIndex(
-      (item) => item.path === location.pathname
-    );
+    const activeIndex = navItems.findIndex((item) => {
+      if (item.path === location.pathname) return true;
+      // nested routelar (masalan: /dashboard/students/:id)
+      return location.pathname.startsWith(item.path + '/');
+    });
     const activeEl = itemRefs.current[activeIndex];
     const containerEl = containerRef.current;
 
@@ -63,7 +65,9 @@ export const Sidebar: React.FC<{
 
         {navItems.map((item, index) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive =
+            location.pathname === item.path ||
+            location.pathname.startsWith(item.path + '/');
 
           return (
             <div

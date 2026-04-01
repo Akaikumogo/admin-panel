@@ -124,9 +124,10 @@ const Layout = () => {
   };
 
   const getCurrentPageTitle = () => {
-    const currentItem = navItems.find(
-      (item) => item.path === location.pathname
-    );
+    const currentItem = navItems.find((item) => {
+      if (item.path === location.pathname) return true;
+      return location.pathname.startsWith(item.path + '/');
+    });
     return (
       currentItem?.label || { uz: 'Bosh sahifa', en: 'Home', ru: 'Главная' }
     );

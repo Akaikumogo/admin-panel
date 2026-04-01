@@ -94,8 +94,27 @@ export default function QrScanPage() {
       </Card>
 
       <Card className="!border-slate-200 dark:!border-slate-700/60">
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700/60 bg-black">
-          <video ref={videoRef} className="h-80 w-full object-cover" />
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-black">
+          <video
+            ref={videoRef}
+            className="h-[62vh] min-h-[420px] max-h-[680px] w-full object-cover"
+          />
+
+          {/* Overlay pattern */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="relative h-[70%] w-[70%] max-h-[420px] max-w-[420px]">
+              {/* dim outside */}
+              <div className="absolute inset-0 rounded-3xl ring-1 ring-white/10" />
+              {/* corners */}
+              <div className="absolute -left-1 -top-1 h-10 w-10 rounded-tl-3xl border-l-4 border-t-4 border-emerald-400/90" />
+              <div className="absolute -right-1 -top-1 h-10 w-10 rounded-tr-3xl border-r-4 border-t-4 border-emerald-400/90" />
+              <div className="absolute -left-1 -bottom-1 h-10 w-10 rounded-bl-3xl border-b-4 border-l-4 border-emerald-400/90" />
+              <div className="absolute -right-1 -bottom-1 h-10 w-10 rounded-br-3xl border-b-4 border-r-4 border-emerald-400/90" />
+
+              {/* scan line */}
+              <div className="qr-scan-line absolute left-2 right-2 top-2 h-[2px] rounded-full bg-emerald-400/90 shadow-[0_0_24px_rgba(52,211,153,0.7)]" />
+            </div>
+          </div>
         </div>
 
         {result ? (
@@ -114,6 +133,19 @@ export default function QrScanPage() {
           </div>
         ) : null}
       </Card>
+
+      <style>{`
+        @keyframes qrScanMove {
+          0% { transform: translateY(0); opacity: 0.55; }
+          10% { opacity: 1; }
+          50% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(calc(70% - 12px)); opacity: 0.55; }
+        }
+        .qr-scan-line {
+          animation: qrScanMove 1.9s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
