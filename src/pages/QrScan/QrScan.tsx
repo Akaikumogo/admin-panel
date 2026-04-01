@@ -10,9 +10,9 @@ const T = {
   scanning: { uz: 'Skan qilinyapti…', en: 'Scanning…', ru: 'Сканирование…' },
   result: { uz: 'Natija', en: 'Result', ru: 'Результат' },
   goUsers: {
-    uz: 'User profiliga o‘tyapmiz…',
-    en: 'Opening user…',
-    ru: 'Открываем пользователя…'
+    uz: 'Student profiliga o‘tyapmiz…',
+    en: 'Opening student…',
+    ru: 'Открываем студента…'
   }
 } as const;
 
@@ -48,9 +48,9 @@ export default function QrScanPage() {
               setResult(text);
               controls.stop();
               stopFn = () => controls.stop();
-              // Users sahifasiga qidiruv bilan yo'naltiramiz (id/email/whatever)
-              navigate(`/dashboard/users?search=${encodeURIComponent(text)}`, {
-                replace: true
+              // Student detail sahifasiga yo'naltiramiz
+              navigate(`/dashboard/students/${encodeURIComponent(text)}`, {
+                replace: true,
               });
             }
           },
