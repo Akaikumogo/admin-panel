@@ -293,6 +293,23 @@ export type HeartsLostAnalyticsResponse = {
   }>;
 };
 
+export type LeaderboardRow = {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string | null;
+  xp: number;
+  rank: number;
+};
+
+export type LeaderboardResponse = {
+  scope: 'global' | 'organization';
+  orgId: string | null;
+  me: LeaderboardRow | null;
+  top: LeaderboardRow[];
+};
+
 class ApiService {
   private api: ReturnType<typeof axios.create>;
   private isRefreshing = false;
@@ -482,6 +499,25 @@ class ApiService {
   }): Promise<ModeratorViolationsResponse> {
     const response = await this.api.get<ModeratorViolationsResponse>(
       '/admin/moderator-violations',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getAdminGlobalLeaderboard(limit = 50): Promise<LeaderboardResponse> {
+    const response = await this.api.get<LeaderboardResponse>(
+      '/admin/leaderboard/global',
+      { params: { limit } },
+    );
+    return response.data;
+  }
+
+  async getAdminOrganizationLeaderboard(params: {
+    orgId?: string;
+    limit?: number;
+  }): Promise<LeaderboardResponse> {
+    const response = await this.api.get<LeaderboardResponse>(
+      '/admin/leaderboard/organization',
       { params },
     );
     return response.data;

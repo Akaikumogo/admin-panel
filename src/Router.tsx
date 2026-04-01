@@ -26,6 +26,7 @@ const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
 const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
+const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -104,6 +105,10 @@ export const routes: RouteObject[] = [
           {
             path: 'hearts-analytics',
             element: withSuspense(HeartsAnalyticsPage)
+          },
+          {
+            path: 'leaderboard',
+            element: withSuspense(LeaderboardPage)
           }
         ]
       }

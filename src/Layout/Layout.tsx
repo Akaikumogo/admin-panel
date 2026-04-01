@@ -16,7 +16,8 @@ import {
   Languages,
   Maximize2,
   Minimize2,
-  HeartPulse
+  HeartPulse,
+  Trophy
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -76,6 +77,11 @@ const navItems = [
     path: '/dashboard/hearts-analytics',
     label: { uz: 'Yurak yo‘qotish', en: 'Hearts lost', ru: 'Потеря сердец' },
     icon: HeartPulse,
+  },
+  {
+    path: '/dashboard/leaderboard',
+    label: { uz: 'Reyting', en: 'Leaderboard', ru: 'Рейтинг' },
+    icon: Trophy
   },
   {
     path: '/dashboard/violations',
