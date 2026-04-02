@@ -7,6 +7,7 @@ import {
   Zap,
   User,
   Shield,
+  ScrollText,
   Layers,
   BookOpen,
   HelpCircle,
@@ -93,6 +94,11 @@ const navItems = [
     path: '/dashboard/violations',
     label: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
     icon: Shield
+  },
+  {
+    path: '/dashboard/logs',
+    label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' },
+    icon: ScrollText
   }
 ];
 

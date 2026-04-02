@@ -274,6 +274,31 @@ export type ModeratorViolationsResponse = {
   to: string;
 };
 
+export type AdminAuditLogRow = {
+  id: string;
+  actorUserId: string | null;
+  actorRole: string | null;
+  actorOrganizationIds: string[];
+  method: string;
+  path: string;
+  statusCode: number;
+  errorMessage: string | null;
+  requestBodyPreview: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  durationMs: number | null;
+  createdAt: string;
+};
+
+export type AdminAuditLogsResponse = {
+  data: AdminAuditLogRow[];
+  total: number;
+  page: number;
+  limit: number;
+  from: string;
+  to: string;
+};
+
 export type HeartsLostAnalyticsResponse = {
   orgId: string;
   range: { from: string; to: string };
@@ -499,6 +524,21 @@ class ApiService {
   }): Promise<ModeratorViolationsResponse> {
     const response = await this.api.get<ModeratorViolationsResponse>(
       '/admin/moderator-violations',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getAdminAuditLogs(params: {
+    range: 'today' | 'month' | 'year';
+    actorId?: string;
+    orgId?: string;
+    statusCode?: number;
+    page?: number;
+    limit?: number;
+  }): Promise<AdminAuditLogsResponse> {
+    const response = await this.api.get<AdminAuditLogsResponse>(
+      '/admin/audit-logs',
       { params },
     );
     return response.data;

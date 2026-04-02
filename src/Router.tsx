@@ -25,6 +25,7 @@ const UsersPage = lazy(() => import('./pages/Users/Users'));
 const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
 const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
+const LogsPage = lazy(() => import('./pages/Logs/Logs'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const QrScanPage = lazy(() => import('./pages/QrScan/QrScan'));
@@ -102,6 +103,10 @@ export const routes: RouteObject[] = [
           {
             path: 'violations',
             element: withSuspense(ViolationsPage)
+          },
+          {
+            path: 'logs',
+            element: withSuspense(LogsPage)
           },
           {
             path: 'hearts-analytics',
