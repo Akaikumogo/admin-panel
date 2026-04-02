@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { notification } from 'antd';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'https://elektrolearn-api.uzbekistonmet.uz/api';
+const API_BASE_URL = 'https://elektrolearn-api.uzbekistonmet.uz/api';
 
 export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
@@ -14,7 +13,7 @@ const ERROR_TITLES: Record<number, string> = {
   409: 'Konflikt',
   422: 'Validatsiya xatosi',
   429: 'Juda ko`p so`rov',
-  500: 'Server xatosi',
+  500: 'Server xatosi'
 };
 
 function showErrorNotification(error: unknown) {
@@ -23,7 +22,7 @@ function showErrorNotification(error: unknown) {
       message: 'Kutilmagan xato',
       description: String(error),
       placement: 'topRight',
-      duration: 4,
+      duration: 4
     });
     return;
   }
@@ -44,7 +43,7 @@ function showErrorNotification(error: unknown) {
     message: title,
     description: typeof msg === 'string' ? msg : JSON.stringify(msg),
     placement: 'topRight',
-    duration: 5,
+    duration: 5
   });
 }
 
@@ -148,7 +147,16 @@ export type Organization = {
   name: string;
   parentOrganizationId?: string | null;
   isDefault?: boolean;
-  users?: { id: string; user: { id: string; firstName: string; lastName: string; email: string; role: string } }[];
+  users?: {
+    id: string;
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      role: string;
+    };
+  }[];
   createdAt: string;
   updatedAt: string;
 };
@@ -256,7 +264,12 @@ export type ModeratorPermissionRecord = {
 export type ModeratorViolationRow = {
   id: string;
   moderatorUserId: string;
-  moderator: { id: string; firstName: string; lastName: string; email: string } | null;
+  moderator: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
   organizationId: string | null;
   actionKey: string;
   method: string;
@@ -397,8 +410,8 @@ class ApiService {
     this.api = axios.create({
       baseURL: API_BASE_URL,
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'
+      }
     });
 
     // Request interceptor - Add token to headers
@@ -450,7 +463,7 @@ class ApiService {
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await this.api.post<LoginResponse>('/auth/login', {
       email,
-      password,
+      password
     });
 
     const payload = response.data;
@@ -483,53 +496,76 @@ class ApiService {
     return response.data;
   }
 
-  async uploadMyAvatar(file: File): Promise<{ success: boolean; avatarUrl: string }> {
+  async uploadMyAvatar(
+    file: File
+  ): Promise<{ success: boolean; avatarUrl: string }> {
     const form = new FormData();
     form.append('file', file);
-    const response = await this.api.post<{ success: boolean; avatarUrl: string }>(
-      '/users/me/avatar',
-      form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
+    const response = await this.api.post<{
+      success: boolean;
+      avatarUrl: string;
+    }>('/users/me/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data;
   }
 
-  async uploadUserAvatar(userId: string, file: File): Promise<{ success: boolean; avatarUrl: string; userId: string }> {
+  async uploadUserAvatar(
+    userId: string,
+    file: File
+  ): Promise<{ success: boolean; avatarUrl: string; userId: string }> {
     const form = new FormData();
     form.append('file', file);
-    const response = await this.api.post<{ success: boolean; avatarUrl: string; userId: string }>(
-      `/users/${userId}/avatar`,
-      form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
+    const response = await this.api.post<{
+      success: boolean;
+      avatarUrl: string;
+      userId: string;
+    }>(`/users/${userId}/avatar`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data;
   }
 
-  async updateProfile(data: { firstName?: string; lastName?: string }): Promise<UserProfile> {
+  async updateProfile(data: {
+    firstName?: string;
+    lastName?: string;
+  }): Promise<UserProfile> {
     const response = await this.api.patch<UserProfile>('/auth/me', data);
     return response.data;
   }
 
-  async changePassword(data: { currentPassword: string; newPassword: string }): Promise<{ success: boolean; message: string }> {
-    const response = await this.api.post<{ success: boolean; message: string }>('/auth/change-password', data);
+  async changePassword(data: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<{ success: boolean; message: string }> {
+    const response = await this.api.post<{ success: boolean; message: string }>(
+      '/auth/change-password',
+      data
+    );
     return response.data;
   }
 
   async getAnalyticsSummary(orgId: string): Promise<AnalyticsSummary> {
     const response = await this.api.get<AnalyticsSummary>(
       `/admin/analytics/summary`,
-      { params: { orgId } },
+      { params: { orgId } }
     );
     return response.data;
   }
 
   async getLevelFunnel(orgId: string): Promise<LevelFunnelItem[]> {
-    const response = await this.api.get<LevelFunnelItem[]>('/admin/analytics/level-funnel', { params: { orgId } });
+    const response = await this.api.get<LevelFunnelItem[]>(
+      '/admin/analytics/level-funnel',
+      { params: { orgId } }
+    );
     return response.data;
   }
 
   async getQuestionErrors(orgId: string): Promise<QuestionError[]> {
-    const response = await this.api.get<QuestionError[]>('/admin/analytics/questions', { params: { orgId } });
+    const response = await this.api.get<QuestionError[]>(
+      '/admin/analytics/questions',
+      { params: { orgId } }
+    );
     return response.data;
   }
 
@@ -539,32 +575,36 @@ class ApiService {
   }): Promise<HeartsLostAnalyticsResponse> {
     const response = await this.api.get<HeartsLostAnalyticsResponse>(
       '/admin/analytics/hearts-lost',
-      { params },
+      { params }
     );
     return response.data;
   }
 
-  async getMyModeratorPermissions(): Promise<{ permissions: ModeratorPermissions | null }> {
-    const response = await this.api.get<{ permissions: ModeratorPermissions | null }>(
-      '/admin/my-permissions',
-    );
+  async getMyModeratorPermissions(): Promise<{
+    permissions: ModeratorPermissions | null;
+  }> {
+    const response = await this.api.get<{
+      permissions: ModeratorPermissions | null;
+    }>('/admin/my-permissions');
     return response.data;
   }
 
-  async getModeratorPermissions(moderatorId: string): Promise<ModeratorPermissionRecord> {
+  async getModeratorPermissions(
+    moderatorId: string
+  ): Promise<ModeratorPermissionRecord> {
     const response = await this.api.get<ModeratorPermissionRecord>(
-      `/admin/moderator-permissions/${moderatorId}`,
+      `/admin/moderator-permissions/${moderatorId}`
     );
     return response.data;
   }
 
   async updateModeratorPermissions(
     moderatorId: string,
-    permissions: ModeratorPermissions,
+    permissions: ModeratorPermissions
   ): Promise<ModeratorPermissionRecord> {
     const response = await this.api.put<ModeratorPermissionRecord>(
       `/admin/moderator-permissions/${moderatorId}`,
-      { permissions },
+      { permissions }
     );
     return response.data;
   }
@@ -577,7 +617,7 @@ class ApiService {
   }): Promise<ModeratorViolationsResponse> {
     const response = await this.api.get<ModeratorViolationsResponse>(
       '/admin/moderator-violations',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -592,7 +632,7 @@ class ApiService {
   }): Promise<AdminAuditLogsResponse> {
     const response = await this.api.get<AdminAuditLogsResponse>(
       '/admin/audit-logs',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -608,8 +648,14 @@ class ApiService {
     return response.data;
   }
 
-  async updatePosition(id: string, data: { title?: string }): Promise<Position> {
-    const response = await this.api.put<Position>(`/admin/positions/${id}`, data);
+  async updatePosition(
+    id: string,
+    data: { title?: string }
+  ): Promise<Position> {
+    const response = await this.api.put<Position>(
+      `/admin/positions/${id}`,
+      data
+    );
     return response.data;
   }
 
@@ -622,14 +668,24 @@ class ApiService {
     return response.data;
   }
 
-  async createExam(data: { title: string; description?: string; examType: ExamType; isActive?: boolean }): Promise<Exam> {
+  async createExam(data: {
+    title: string;
+    description?: string;
+    examType: ExamType;
+    isActive?: boolean;
+  }): Promise<Exam> {
     const response = await this.api.post<Exam>('/admin/exams', data);
     return response.data;
   }
 
   async updateExam(
     id: string,
-    data: Partial<{ title: string; description: string | null; examType: ExamType; isActive: boolean }>,
+    data: Partial<{
+      title: string;
+      description: string | null;
+      examType: ExamType;
+      isActive: boolean;
+    }>
   ): Promise<Exam> {
     const response = await this.api.put<Exam>(`/admin/exams/${id}`, data);
     return response.data;
@@ -640,7 +696,9 @@ class ApiService {
   }
 
   async getExamQuestions(): Promise<ExamQuestion[]> {
-    const response = await this.api.get<ExamQuestion[]>('/admin/exam-questions');
+    const response = await this.api.get<ExamQuestion[]>(
+      '/admin/exam-questions'
+    );
     return response.data;
   }
 
@@ -650,9 +708,17 @@ class ApiService {
     isActive?: boolean;
     tags?: string[] | null;
     positionIds?: string[];
-    options: Array<{ optionText: string; matchText?: string | null; isCorrect?: boolean; orderIndex?: number }>;
+    options: Array<{
+      optionText: string;
+      matchText?: string | null;
+      isCorrect?: boolean;
+      orderIndex?: number;
+    }>;
   }): Promise<ExamQuestion> {
-    const response = await this.api.post<ExamQuestion>('/admin/exam-questions', data);
+    const response = await this.api.post<ExamQuestion>(
+      '/admin/exam-questions',
+      data
+    );
     return response.data;
   }
 
@@ -660,41 +726,58 @@ class ApiService {
     await this.api.delete(`/admin/exam-questions/${id}`);
   }
 
-  async getUpcomingExams(params?: { orgId?: string }): Promise<UpcomingExamAssignment[]> {
+  async getUpcomingExams(params?: {
+    orgId?: string;
+  }): Promise<UpcomingExamAssignment[]> {
     const response = await this.api.get<UpcomingExamAssignment[]>(
       '/admin/exams/upcoming',
-      { params },
+      { params }
     );
     return response.data;
   }
 
-  async scheduleExamAssignment(id: string, scheduledAt: string): Promise<UpcomingExamAssignment> {
+  async scheduleExamAssignment(
+    id: string,
+    scheduledAt: string
+  ): Promise<UpcomingExamAssignment> {
     const response = await this.api.post<UpcomingExamAssignment>(
       `/admin/exam-assignments/${id}/schedule`,
-      { scheduledAt },
+      { scheduledAt }
     );
     return response.data;
   }
 
-  async getBasket(): Promise<{ positions: Position[]; exams: Exam[]; examQuestions: ExamQuestion[] }> {
-    const response = await this.api.get<{ positions: Position[]; exams: Exam[]; examQuestions: ExamQuestion[] }>(
-      '/admin/basket',
-    );
+  async getBasket(): Promise<{
+    positions: Position[];
+    exams: Exam[];
+    examQuestions: ExamQuestion[];
+  }> {
+    const response = await this.api.get<{
+      positions: Position[];
+      exams: Exam[];
+      examQuestions: ExamQuestion[];
+    }>('/admin/basket');
     return response.data;
   }
 
-  async restoreBasketItem(type: 'positions' | 'exams' | 'exam-questions', id: string): Promise<void> {
+  async restoreBasketItem(
+    type: 'positions' | 'exams' | 'exam-questions',
+    id: string
+  ): Promise<void> {
     await this.api.post(`/admin/basket/${type}/${id}/restore`);
   }
 
-  async purgeBasketItem(type: 'positions' | 'exams' | 'exam-questions', id: string): Promise<void> {
+  async purgeBasketItem(
+    type: 'positions' | 'exams' | 'exam-questions',
+    id: string
+  ): Promise<void> {
     await this.api.delete(`/admin/basket/${type}/${id}/purge`);
   }
 
   async getAdminGlobalLeaderboard(limit = 50): Promise<LeaderboardResponse> {
     const response = await this.api.get<LeaderboardResponse>(
       '/admin/leaderboard/global',
-      { params: { limit } },
+      { params: { limit } }
     );
     return response.data;
   }
@@ -705,14 +788,16 @@ class ApiService {
   }): Promise<LeaderboardResponse> {
     const response = await this.api.get<LeaderboardResponse>(
       '/admin/leaderboard/organization',
-      { params },
+      { params }
     );
     return response.data;
   }
 
   // ===== Levels =====
   async getLevels(filters?: { search?: string }): Promise<Level[]> {
-    const response = await this.api.get<Level[]>('/admin/levels', { params: filters });
+    const response = await this.api.get<Level[]>('/admin/levels', {
+      params: filters
+    });
     return response.data;
   }
 
@@ -721,12 +806,19 @@ class ApiService {
     return response.data;
   }
 
-  async createLevel(data: { title: string; orderIndex?: number; isActive?: boolean }): Promise<Level> {
+  async createLevel(data: {
+    title: string;
+    orderIndex?: number;
+    isActive?: boolean;
+  }): Promise<Level> {
     const response = await this.api.post<Level>('/admin/levels', data);
     return response.data;
   }
 
-  async updateLevel(id: string, data: { title?: string; orderIndex?: number; isActive?: boolean }): Promise<Level> {
+  async updateLevel(
+    id: string,
+    data: { title?: string; orderIndex?: number; isActive?: boolean }
+  ): Promise<Level> {
     const response = await this.api.put<Level>(`/admin/levels/${id}`, data);
     return response.data;
   }
@@ -736,13 +828,23 @@ class ApiService {
   }
 
   // ===== Theories =====
-  async getTheories(filters?: { levelId?: string; search?: string; page?: number; limit?: number }): Promise<PaginatedResponse<Theory>> {
-    const response = await this.api.get<PaginatedResponse<Theory>>('/admin/theories', { params: filters });
+  async getTheories(filters?: {
+    levelId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<Theory>> {
+    const response = await this.api.get<PaginatedResponse<Theory>>(
+      '/admin/theories',
+      { params: filters }
+    );
     return response.data;
   }
 
   async getTheoriesByLevel(levelId: string): Promise<Theory[]> {
-    const response = await this.api.get<Theory[]>(`/admin/levels/${levelId}/theories`);
+    const response = await this.api.get<Theory[]>(
+      `/admin/levels/${levelId}/theories`
+    );
     return response.data;
   }
 
@@ -751,12 +853,20 @@ class ApiService {
     return response.data;
   }
 
-  async createTheory(data: { levelId: string; title: string; orderIndex?: number; content?: string }): Promise<Theory> {
+  async createTheory(data: {
+    levelId: string;
+    title: string;
+    orderIndex?: number;
+    content?: string;
+  }): Promise<Theory> {
     const response = await this.api.post<Theory>('/admin/theories', data);
     return response.data;
   }
 
-  async updateTheory(id: string, data: { title?: string; orderIndex?: number; content?: string }): Promise<Theory> {
+  async updateTheory(
+    id: string,
+    data: { title?: string; orderIndex?: number; content?: string }
+  ): Promise<Theory> {
     const response = await this.api.put<Theory>(`/admin/theories/${id}`, data);
     return response.data;
   }
@@ -766,8 +876,17 @@ class ApiService {
   }
 
   // ===== Questions =====
-  async getQuestions(filters?: { levelId?: string; theoryId?: string; search?: string; page?: number; limit?: number }): Promise<PaginatedResponse<Question>> {
-    const response = await this.api.get<PaginatedResponse<Question>>('/admin/questions', { params: filters });
+  async getQuestions(filters?: {
+    levelId?: string;
+    theoryId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<Question>> {
+    const response = await this.api.get<PaginatedResponse<Question>>(
+      '/admin/questions',
+      { params: filters }
+    );
     return response.data;
   }
 
@@ -783,20 +902,37 @@ class ApiService {
     type?: QuestionType;
     orderIndex?: number;
     isActive?: boolean;
-    options: { optionText: string; orderIndex?: number; isCorrect: boolean; matchText?: string }[];
+    options: {
+      optionText: string;
+      orderIndex?: number;
+      isCorrect: boolean;
+      matchText?: string;
+    }[];
   }): Promise<Question> {
     const response = await this.api.post<Question>('/admin/questions', data);
     return response.data;
   }
 
-  async updateQuestion(id: string, data: {
-    prompt?: string;
-    type?: QuestionType;
-    orderIndex?: number;
-    isActive?: boolean;
-    options?: { id?: string; optionText?: string; orderIndex?: number; isCorrect?: boolean; matchText?: string }[];
-  }): Promise<Question> {
-    const response = await this.api.put<Question>(`/admin/questions/${id}`, data);
+  async updateQuestion(
+    id: string,
+    data: {
+      prompt?: string;
+      type?: QuestionType;
+      orderIndex?: number;
+      isActive?: boolean;
+      options?: {
+        id?: string;
+        optionText?: string;
+        orderIndex?: number;
+        isCorrect?: boolean;
+        matchText?: string;
+      }[];
+    }
+  ): Promise<Question> {
+    const response = await this.api.put<Question>(
+      `/admin/questions/${id}`,
+      data
+    );
     return response.data;
   }
 
@@ -809,23 +945,39 @@ class ApiService {
   }
 
   // ===== Organizations =====
-  async getOrganizations(filters?: { search?: string }): Promise<Organization[]> {
-    const response = await this.api.get<Organization[]>('/admin/organizations', { params: filters });
+  async getOrganizations(filters?: {
+    search?: string;
+  }): Promise<Organization[]> {
+    const response = await this.api.get<Organization[]>(
+      '/admin/organizations',
+      { params: filters }
+    );
     return response.data;
   }
 
   async getOrganizationById(id: string): Promise<Organization> {
-    const response = await this.api.get<Organization>(`/admin/organizations/${id}`);
+    const response = await this.api.get<Organization>(
+      `/admin/organizations/${id}`
+    );
     return response.data;
   }
 
   async createOrganization(data: { name: string }): Promise<Organization> {
-    const response = await this.api.post<Organization>('/admin/organizations', data);
+    const response = await this.api.post<Organization>(
+      '/admin/organizations',
+      data
+    );
     return response.data;
   }
 
-  async updateOrganization(id: string, data: { name?: string }): Promise<Organization> {
-    const response = await this.api.put<Organization>(`/admin/organizations/${id}`, data);
+  async updateOrganization(
+    id: string,
+    data: { name?: string }
+  ): Promise<Organization> {
+    const response = await this.api.put<Organization>(
+      `/admin/organizations/${id}`,
+      data
+    );
     return response.data;
   }
 
@@ -842,13 +994,28 @@ class ApiService {
   }
 
   // ===== Users / Moderators =====
-  async getUsers(filters?: { role?: string; search?: string; page?: number; limit?: number }): Promise<PaginatedResponse<UserProfile>> {
-    const response = await this.api.get<PaginatedResponse<UserProfile>>('/admin/users', { params: filters });
+  async getUsers(filters?: {
+    role?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<UserProfile>> {
+    const response = await this.api.get<PaginatedResponse<UserProfile>>(
+      '/admin/users',
+      { params: filters }
+    );
     return response.data;
   }
 
-  async getModerators(filters?: { search?: string; page?: number; limit?: number }): Promise<PaginatedResponse<UserProfile>> {
-    const response = await this.api.get<PaginatedResponse<UserProfile>>('/admin/users/moderators', { params: filters });
+  async getModerators(filters?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<UserProfile>> {
+    const response = await this.api.get<PaginatedResponse<UserProfile>>(
+      '/admin/users/moderators',
+      { params: filters }
+    );
     return response.data;
   }
 
@@ -857,8 +1024,17 @@ class ApiService {
     return response.data;
   }
 
-  async createModerator(data: { email: string; password: string; firstName: string; lastName: string; organizationId?: string }): Promise<UserProfile> {
-    const response = await this.api.post<UserProfile>('/admin/users/moderators', data);
+  async createModerator(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    organizationId?: string;
+  }): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      '/admin/users/moderators',
+      data
+    );
     return response.data;
   }
 
@@ -874,7 +1050,10 @@ class ApiService {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<StudentSummary>> {
-    const response = await this.api.get<PaginatedResponse<StudentSummary>>('/admin/students', { params: filters });
+    const response = await this.api.get<PaginatedResponse<StudentSummary>>(
+      '/admin/students',
+      { params: filters }
+    );
     return response.data;
   }
 
@@ -884,17 +1063,25 @@ class ApiService {
   }
 
   async getStudentLostQuestions(id: string): Promise<LostQuestion[]> {
-    const response = await this.api.get<LostQuestion[]>(`/admin/students/${id}/lost-questions`);
+    const response = await this.api.get<LostQuestion[]>(
+      `/admin/students/${id}/lost-questions`
+    );
     return response.data;
   }
 
   async getStudentActivity(id: string): Promise<ActivityDay[]> {
-    const response = await this.api.get<ActivityDay[]>(`/admin/students/${id}/activity`);
+    const response = await this.api.get<ActivityDay[]>(
+      `/admin/students/${id}/activity`
+    );
     return response.data;
   }
 
   // ===== Seed =====
-  async seedContent(): Promise<{ success: boolean; message: string; stats?: { modules: number; theories: number; questions: number } }> {
+  async seedContent(): Promise<{
+    success: boolean;
+    message: string;
+    stats?: { modules: number; theories: number; questions: number };
+  }> {
     const response = await this.api.post('/seed/content');
     return response.data;
   }
