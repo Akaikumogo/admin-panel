@@ -19,7 +19,11 @@ import {
   Minimize2,
   HeartPulse,
   Trophy,
-  QrCode
+  QrCode,
+  ClipboardList,
+  CalendarClock,
+  BriefcaseBusiness,
+  Trash2
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -99,6 +103,31 @@ const navItems = [
     path: '/dashboard/logs',
     label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' },
     icon: ScrollText
+  },
+  {
+    path: '/dashboard/exams',
+    label: { uz: 'Imtihonlar', en: 'Exams', ru: 'Экзамены' },
+    icon: ClipboardList
+  },
+  {
+    path: '/dashboard/exam-schedule',
+    label: { uz: 'Imtihon belgilash', en: 'Scheduling', ru: 'Назначение' },
+    icon: CalendarClock
+  },
+  {
+    path: '/dashboard/exam-questions',
+    label: { uz: 'Imtihon savollari', en: 'Exam questions', ru: 'Вопросы' },
+    icon: HelpCircle
+  },
+  {
+    path: '/dashboard/positions',
+    label: { uz: 'Lavozimlar', en: 'Positions', ru: 'Должности' },
+    icon: BriefcaseBusiness
+  },
+  {
+    path: '/dashboard/basket',
+    label: { uz: 'Korzinka', en: 'Basket', ru: 'Корзина' },
+    icon: Trash2
   }
 ];
 

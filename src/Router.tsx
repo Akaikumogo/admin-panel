@@ -26,6 +26,11 @@ const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
 const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
 const LogsPage = lazy(() => import('./pages/Logs/Logs'));
+const ExamsPage = lazy(() => import('./pages/Exams/Exams'));
+const ExamQuestionsPage = lazy(() => import('./pages/ExamQuestions/ExamQuestions'));
+const ExamSchedulePage = lazy(() => import('./pages/ExamSchedule/ExamSchedule'));
+const PositionsPage = lazy(() => import('./pages/Positions/Positions'));
+const BasketPage = lazy(() => import('./pages/Basket/Basket'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const QrScanPage = lazy(() => import('./pages/QrScan/QrScan'));
@@ -107,6 +112,26 @@ export const routes: RouteObject[] = [
           {
             path: 'logs',
             element: withSuspense(LogsPage)
+          },
+          {
+            path: 'exams',
+            element: withSuspense(ExamsPage)
+          },
+          {
+            path: 'exam-questions',
+            element: withSuspense(ExamQuestionsPage)
+          },
+          {
+            path: 'exam-schedule',
+            element: withSuspense(ExamSchedulePage)
+          },
+          {
+            path: 'positions',
+            element: withSuspense(PositionsPage)
+          },
+          {
+            path: 'basket',
+            element: withSuspense(BasketPage)
           },
           {
             path: 'hearts-analytics',

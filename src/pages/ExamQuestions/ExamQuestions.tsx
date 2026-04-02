@@ -1,0 +1,190 @@
+import { useMemo, useState } from 'react';
+import { Button, Card, Form, Input, Modal, Select, Spin, Switch, Table, Tag, message, Popconfirm } from 'antd';
+import { HelpCircle, Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useFetch } from '@/hooks/useFetch';
+import apiService from '@/services/api';
+import type { ExamQuestion, Position, QuestionType, UserProfile } from '@/services/api';
+
+const T = {
+  title: { uz: 'Imtihon savollari', en: 'Exam questions', ru: 'Вопросы экзамена' },
+  add: { uz: 'Qo‘shish', en: 'Add', ru: 'Добавить' },
+  prompt: { uz: 'Savol', en: 'Prompt', ru: 'Вопрос' },
+  type: { uz: 'Turi', en: 'Type', ru: 'Тип' },
+  active: { uz: 'Aktiv', en: 'Active', ru: 'Активный' },
+  positions: { uz: 'Lavozimlar', en: 'Positions', ru: 'Должности' },
+  options: { uz: 'Variantlar', en: 'Options', ru: 'Варианты' },
+} as const;
+
+export default function ExamQuestionsPage() {
+  const { t } = useTranslation();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form] = Form.useForm();
+
+  const { data: me } = useFetch<UserProfile | null>(['me'], () => apiService.me(), null);
+  const { data: questions, loading, initialLoading, refetch } = useFetch(
+    ['exam-questions'],
+    () => apiService.getExamQuestions(),
+    [] as ExamQuestion[],
+  );
+  const { data: positions } = useFetch(['positions-for-exam-q'], () => apiService.getPositions(), [] as Position[]);
+
+  const openModal = () => {
+    setModalOpen(true);
+    form.resetFields();
+    form.setFieldsValue({
+      type: 'SINGLE_CHOICE',
+      isActive: true,
+      options: [{ optionText: 'Ha' }, { optionText: 'Yo‘q' }],
+    });
+  };
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
+      await apiService.createExamQuestion(values);
+      message.success('Savol yaratildi');
+      setModalOpen(false);
+      refetch();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    await apiService.deleteExamQuestion(id);
+    message.success('Savol o‘chirildi');
+    refetch();
+  };
+
+  const columns = useMemo(
+    () => [
+      { title: '#', dataIndex: 'idx', key: 'idx', width: 60, render: (_: unknown, __: ExamQuestion, i: number) => i + 1 },
+      { title: t(T.prompt), dataIndex: 'prompt', key: 'prompt' },
+      {
+        title: t(T.type),
+        dataIndex: 'type',
+        key: 'type',
+        width: 150,
+        render: (v: QuestionType) => <Tag>{v}</Tag>,
+      },
+      {
+        title: t(T.active),
+        dataIndex: 'isActive',
+        key: 'isActive',
+        width: 90,
+        render: (v: boolean) => (v ? <Tag color="green">ON</Tag> : <Tag>OFF</Tag>),
+      },
+      {
+        title: t({ uz: 'Amallar', en: 'Actions', ru: 'Действия' }),
+        key: 'actions',
+        width: 120,
+        render: (_: unknown, r: ExamQuestion) => (
+          <Popconfirm title="O‘chirish?" onConfirm={() => handleDelete(r.id)}>
+            <Button size="small" danger icon={<Trash2 size={14} />} />
+          </Popconfirm>
+        ),
+      },
+    ],
+    [t],
+  );
+
+  if (me && me.role === 'USER') return null;
+
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+      <Card
+        className="!border-slate-200 dark:!border-slate-700/60"
+        title={
+          <span className="flex items-center gap-2">
+            <HelpCircle size={16} />
+            {t(T.title)}
+          </span>
+        }
+        extra={
+          <Button type="primary" icon={<Plus size={16} />} onClick={openModal}>
+            {t(T.add)}
+          </Button>
+        }
+      >
+        <Table rowKey="id" loading={loading} dataSource={questions} columns={columns} pagination={false} size="small" />
+      </Card>
+
+      <Modal
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onOk={handleSave}
+        confirmLoading={saving}
+        title={t(T.add)}
+        width={720}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="prompt" label={t(T.prompt)} rules={[{ required: true }]}>
+            <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item name="type" label={t(T.type)} rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: 'SINGLE_CHOICE', label: 'SINGLE_CHOICE' },
+                { value: 'YES_NO', label: 'YES_NO' },
+                { value: 'MATCHING', label: 'MATCHING' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="positionIds" label={t(T.positions)}>
+            <Select
+              mode="multiple"
+              allowClear
+              options={positions.map((p) => ({ value: p.id, label: p.title }))}
+            />
+          </Form.Item>
+          <Form.Item name="isActive" label={t(T.active)} valuePropName="checked">
+            <Switch />
+          </Form.Item>
+
+          <Form.List name="options">
+            {(fields, { add, remove }) => (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">{t(T.options)}</div>
+                  <Button onClick={() => add({ optionText: '' })}>+ Variant</Button>
+                </div>
+                {fields.map((f) => (
+                  <div key={f.key} className="grid grid-cols-12 gap-2 items-center">
+                    <Form.Item
+                      className="col-span-7 mb-0"
+                      name={[f.name, 'optionText']}
+                      rules={[{ required: true }]}
+                    >
+                      <Input placeholder="Variant matni" />
+                    </Form.Item>
+                    <Form.Item className="col-span-3 mb-0" name={[f.name, 'matchText']}>
+                      <Input placeholder="matchText (ixtiyoriy)" />
+                    </Form.Item>
+                    <Form.Item className="col-span-1 mb-0" name={[f.name, 'isCorrect']} valuePropName="checked">
+                      <Switch size="small" />
+                    </Form.Item>
+                    <div className="col-span-1">
+                      <Button danger onClick={() => remove(f.name)} icon={<Trash2 size={14} />} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Form.List>
+        </Form>
+      </Modal>
+    </div>
+  );
+}
+

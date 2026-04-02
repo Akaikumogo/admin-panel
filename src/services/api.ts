@@ -146,6 +146,8 @@ export type Question = {
 export type Organization = {
   id: string;
   name: string;
+  parentOrganizationId?: string | null;
+  isDefault?: boolean;
   users?: { id: string; user: { id: string; firstName: string; lastName: string; email: string; role: string } }[];
   createdAt: string;
   updatedAt: string;
@@ -297,6 +299,57 @@ export type AdminAuditLogsResponse = {
   limit: number;
   from: string;
   to: string;
+};
+
+export type Position = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExamType = 'SCHEDULED' | 'EXTRA';
+
+export type Exam = {
+  id: string;
+  title: string;
+  description: string | null;
+  examType: ExamType;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExamQuestionOption = {
+  id: string;
+  optionText: string;
+  orderIndex: number;
+  matchText: string | null;
+};
+
+export type ExamQuestion = {
+  id: string;
+  prompt: string;
+  type: QuestionType;
+  isActive: boolean;
+  tags: string[] | null;
+  options: ExamQuestionOption[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UpcomingExamAssignment = {
+  id: string;
+  examId: string;
+  organizationId: string;
+  userId: string;
+  suggestedAt: string;
+  windowStart: string;
+  windowEnd: string;
+  scheduledAt: string | null;
+  status: string;
+  exam?: { id: string; title: string; examType: ExamType };
+  user?: { id: string; firstName: string; lastName: string; email: string };
 };
 
 export type HeartsLostAnalyticsResponse = {
@@ -542,6 +595,100 @@ class ApiService {
       { params },
     );
     return response.data;
+  }
+
+  // ===== Exams / Positions =====
+  async getPositions(): Promise<Position[]> {
+    const response = await this.api.get<Position[]>('/admin/positions');
+    return response.data;
+  }
+
+  async createPosition(data: { title: string }): Promise<Position> {
+    const response = await this.api.post<Position>('/admin/positions', data);
+    return response.data;
+  }
+
+  async updatePosition(id: string, data: { title?: string }): Promise<Position> {
+    const response = await this.api.put<Position>(`/admin/positions/${id}`, data);
+    return response.data;
+  }
+
+  async deletePosition(id: string): Promise<void> {
+    await this.api.delete(`/admin/positions/${id}`);
+  }
+
+  async getExams(): Promise<Exam[]> {
+    const response = await this.api.get<Exam[]>('/admin/exams');
+    return response.data;
+  }
+
+  async createExam(data: { title: string; description?: string; examType: ExamType; isActive?: boolean }): Promise<Exam> {
+    const response = await this.api.post<Exam>('/admin/exams', data);
+    return response.data;
+  }
+
+  async updateExam(
+    id: string,
+    data: Partial<{ title: string; description: string | null; examType: ExamType; isActive: boolean }>,
+  ): Promise<Exam> {
+    const response = await this.api.put<Exam>(`/admin/exams/${id}`, data);
+    return response.data;
+  }
+
+  async deleteExam(id: string): Promise<void> {
+    await this.api.delete(`/admin/exams/${id}`);
+  }
+
+  async getExamQuestions(): Promise<ExamQuestion[]> {
+    const response = await this.api.get<ExamQuestion[]>('/admin/exam-questions');
+    return response.data;
+  }
+
+  async createExamQuestion(data: {
+    prompt: string;
+    type: QuestionType;
+    isActive?: boolean;
+    tags?: string[] | null;
+    positionIds?: string[];
+    options: Array<{ optionText: string; matchText?: string | null; isCorrect?: boolean; orderIndex?: number }>;
+  }): Promise<ExamQuestion> {
+    const response = await this.api.post<ExamQuestion>('/admin/exam-questions', data);
+    return response.data;
+  }
+
+  async deleteExamQuestion(id: string): Promise<void> {
+    await this.api.delete(`/admin/exam-questions/${id}`);
+  }
+
+  async getUpcomingExams(params?: { orgId?: string }): Promise<UpcomingExamAssignment[]> {
+    const response = await this.api.get<UpcomingExamAssignment[]>(
+      '/admin/exams/upcoming',
+      { params },
+    );
+    return response.data;
+  }
+
+  async scheduleExamAssignment(id: string, scheduledAt: string): Promise<UpcomingExamAssignment> {
+    const response = await this.api.post<UpcomingExamAssignment>(
+      `/admin/exam-assignments/${id}/schedule`,
+      { scheduledAt },
+    );
+    return response.data;
+  }
+
+  async getBasket(): Promise<{ positions: Position[]; exams: Exam[]; examQuestions: ExamQuestion[] }> {
+    const response = await this.api.get<{ positions: Position[]; exams: Exam[]; examQuestions: ExamQuestion[] }>(
+      '/admin/basket',
+    );
+    return response.data;
+  }
+
+  async restoreBasketItem(type: 'positions' | 'exams' | 'exam-questions', id: string): Promise<void> {
+    await this.api.post(`/admin/basket/${type}/${id}/restore`);
+  }
+
+  async purgeBasketItem(type: 'positions' | 'exams' | 'exam-questions', id: string): Promise<void> {
+    await this.api.delete(`/admin/basket/${type}/${id}/purge`);
   }
 
   async getAdminGlobalLeaderboard(limit = 50): Promise<LeaderboardResponse> {
