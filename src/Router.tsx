@@ -18,6 +18,7 @@ const LevelDetailPage = lazy(() => import('./pages/Levels/LevelDetail'));
 const TheoryDetailPage = lazy(() => import('./pages/Theories/TheoryDetail'));
 const QuestionDetailPage = lazy(() => import('./pages/Questions/QuestionDetail'));
 const ModeratorsPage = lazy(() => import('./pages/Moderators/Moderators'));
+const PermissionsPage = lazy(() => import('./pages/Permissions/Permissions'));
 const OrganizationsPage = lazy(
   () => import('./pages/Organizations/Organizations')
 );
@@ -29,6 +30,7 @@ const LogsPage = lazy(() => import('./pages/Logs/Logs'));
 const ExamsPage = lazy(() => import('./pages/Exams/Exams'));
 const ExamQuestionsPage = lazy(() => import('./pages/ExamQuestions/ExamQuestions'));
 const ExamSchedulePage = lazy(() => import('./pages/ExamSchedule/ExamSchedule'));
+const ExamAttemptAnalysisPage = lazy(() => import('./pages/ExamAttemptAnalysis/ExamAttemptAnalysis'));
 const PositionsPage = lazy(() => import('./pages/Positions/Positions'));
 const BasketPage = lazy(() => import('./pages/Basket/Basket'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
@@ -60,6 +62,10 @@ export const routes: RouteObject[] = [
           {
             path: 'moderators',
             element: withSuspense(ModeratorsPage)
+          },
+          {
+            path: 'permissions',
+            element: withSuspense(PermissionsPage)
           },
           {
             path: 'levels',
@@ -124,6 +130,10 @@ export const routes: RouteObject[] = [
           {
             path: 'exam-schedule',
             element: withSuspense(ExamSchedulePage)
+          },
+          {
+            path: 'exam-analysis',
+            element: withSuspense(ExamAttemptAnalysisPage)
           },
           {
             path: 'positions',

@@ -50,7 +50,7 @@ export const Sidebar: React.FC<{
   }, [location.pathname, navItems]);
   const { t } = useTranslation();
   return (
-    <nav className="flex-1 px-4 py-6">
+    <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-6">
       <div className="relative space-y-2" ref={containerRef}>
         {/* Dinamik Background (lekin ref orqali boshqariladi) */}
         <div

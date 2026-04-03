@@ -5,6 +5,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { Exam, ExamType, UserProfile } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Imtihonlar', en: 'Exams', ru: 'Экзамены' },
@@ -41,16 +42,25 @@ export default function ExamsPage() {
         description: row.description ?? undefined,
         examType: row.examType,
         isActive: row.isActive,
+        includesPt: row.includesPt !== false,
+        includesTb: row.includesTb !== false,
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ examType: 'SCHEDULED', isActive: true });
+      form.setFieldsValue({
+        examType: 'SCHEDULED',
+        isActive: true,
+        includesPt: true,
+        includesTb: true,
+      });
     }
   };
 
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+      if (editing && !can('exams', 'update')) return;
+      if (!editing && !can('exams', 'create')) return;
       setSaving(true);
       if (editing) {
         await apiService.updateExam(editing.id, values);
@@ -68,6 +78,7 @@ export default function ExamsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!can('exams', 'delete')) return;
     await apiService.deleteExam(id);
     message.success('Imtihon o‘chirildi');
     refetch();
@@ -101,9 +112,19 @@ export default function ExamsPage() {
         width: 140,
         render: (_: unknown, r: Exam) => (
           <div className="flex items-center gap-2">
-            <Button size="small" icon={<Pencil size={14} />} onClick={() => openModal(r)} />
+            <Button
+              size="small"
+              icon={<Pencil size={14} />}
+              disabled={!can('exams', 'update')}
+              onClick={() => openModal(r)}
+            />
             <Popconfirm title="O‘chirish?" onConfirm={() => handleDelete(r.id)}>
-              <Button size="small" danger icon={<Trash2 size={14} />} />
+              <Button
+                size="small"
+                danger
+                icon={<Trash2 size={14} />}
+                disabled={!can('exams', 'delete')}
+              />
             </Popconfirm>
           </div>
         ),
@@ -133,7 +154,12 @@ export default function ExamsPage() {
           </span>
         }
         extra={
-          <Button type="primary" icon={<Plus size={16} />} onClick={() => openModal()}>
+          <Button
+            type="primary"
+            icon={<Plus size={16} />}
+            disabled={!can('exams', 'create')}
+            onClick={() => openModal()}
+          >
             {t(T.add)}
           </Button>
         }
@@ -164,6 +190,20 @@ export default function ExamsPage() {
             />
           </Form.Item>
           <Form.Item name="isActive" label={t(T.active)} valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <Form.Item
+            name="includesPt"
+            label={t({ uz: 'PT (amaliy)', en: 'PT (practical)', ru: 'PT (практика)' })}
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+          <Form.Item
+            name="includesTb"
+            label={t({ uz: 'TB (nazariy)', en: 'TB (theory)', ru: 'TB (теория)' })}
+            valuePropName="checked"
+          >
             <Switch />
           </Form.Item>
         </Form>

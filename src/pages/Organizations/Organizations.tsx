@@ -197,7 +197,7 @@ const Organizations = () => {
         <NoData text={t(T.noData)} />
       ) : (
         <div
-          className={`grid grid-cols-1 lg:grid-cols-2 gap-4 transition-opacity duration-150 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+          className={`grid grid-cols-1 lg:grid-cols-2 gap-4 items-start transition-opacity duration-150 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <AnimatePresence mode="popLayout">
             {organizations.map((org) => (
@@ -209,7 +209,7 @@ const Organizations = () => {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.2 }}
               >
-                <Card className="!border-slate-200 dark:!border-slate-700/60 h-full">
+                <Card className="!border-slate-200 dark:!border-slate-700/60 w-full">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">

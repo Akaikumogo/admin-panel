@@ -4,7 +4,15 @@ import { HelpCircle, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
-import type { ExamQuestion, Position, QuestionType, UserProfile } from '@/services/api';
+import type {
+  ExamQuestion,
+  ExamQuestionDifficulty,
+  ExamQuestionSection,
+  Position,
+  QuestionType,
+  UserProfile,
+} from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Imtihon savollari', en: 'Exam questions', ru: 'Вопросы экзамена' },
@@ -36,6 +44,8 @@ export default function ExamQuestionsPage() {
     form.setFieldsValue({
       type: 'SINGLE_CHOICE',
       isActive: true,
+      section: 'TB' as ExamQuestionSection,
+      difficulty: 'MEDIUM' as ExamQuestionDifficulty,
       options: [{ optionText: 'Ha' }, { optionText: 'Yo‘q' }],
     });
   };
@@ -43,6 +53,7 @@ export default function ExamQuestionsPage() {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+      if (!can('exams', 'create')) return;
       setSaving(true);
       await apiService.createExamQuestion(values);
       message.success('Savol yaratildi');
@@ -54,6 +65,7 @@ export default function ExamQuestionsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!can('exams', 'delete')) return;
     await apiService.deleteExamQuestion(id);
     message.success('Savol o‘chirildi');
     refetch();
@@ -71,6 +83,20 @@ export default function ExamQuestionsPage() {
         render: (v: QuestionType) => <Tag>{v}</Tag>,
       },
       {
+        title: t({ uz: 'Bo‘lim', en: 'Section', ru: 'Раздел' }),
+        dataIndex: 'section',
+        key: 'section',
+        width: 72,
+        render: (v: ExamQuestionSection | undefined) => (v ? <Tag color="geekblue">{v}</Tag> : '—'),
+      },
+      {
+        title: t({ uz: 'Qiyinlik', en: 'Difficulty', ru: 'Сложность' }),
+        dataIndex: 'difficulty',
+        key: 'difficulty',
+        width: 100,
+        render: (v: ExamQuestionDifficulty | undefined) => (v ? <Tag>{v}</Tag> : '—'),
+      },
+      {
         title: t(T.active),
         dataIndex: 'isActive',
         key: 'isActive',
@@ -83,7 +109,12 @@ export default function ExamQuestionsPage() {
         width: 120,
         render: (_: unknown, r: ExamQuestion) => (
           <Popconfirm title="O‘chirish?" onConfirm={() => handleDelete(r.id)}>
-            <Button size="small" danger icon={<Trash2 size={14} />} />
+            <Button
+              size="small"
+              danger
+              icon={<Trash2 size={14} />}
+              disabled={!can('exams', 'delete')}
+            />
           </Popconfirm>
         ),
       },
@@ -112,7 +143,12 @@ export default function ExamQuestionsPage() {
           </span>
         }
         extra={
-          <Button type="primary" icon={<Plus size={16} />} onClick={openModal}>
+          <Button
+            type="primary"
+            icon={<Plus size={16} />}
+            disabled={!can('exams', 'create')}
+            onClick={openModal}
+          >
             {t(T.add)}
           </Button>
         }
@@ -138,6 +174,23 @@ export default function ExamQuestionsPage() {
                 { value: 'SINGLE_CHOICE', label: 'SINGLE_CHOICE' },
                 { value: 'YES_NO', label: 'YES_NO' },
                 { value: 'MATCHING', label: 'MATCHING' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="section" label={t({ uz: 'Imtihon bo‘limi', en: 'Exam section', ru: 'Раздел экзамена' })} rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: 'PT', label: 'PT' },
+                { value: 'TB', label: 'TB' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="difficulty" label={t({ uz: 'Qiyinlik', en: 'Difficulty', ru: 'Сложность' })} rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: 'EASY', label: 'EASY' },
+                { value: 'MEDIUM', label: 'MEDIUM' },
+                { value: 'HARD', label: 'HARD' },
               ]}
             />
           </Form.Item>

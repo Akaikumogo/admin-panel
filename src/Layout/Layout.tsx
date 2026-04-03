@@ -23,7 +23,9 @@ import {
   ClipboardList,
   CalendarClock,
   BriefcaseBusiness,
-  Trash2
+  Trash2,
+  KeyRound,
+  BarChart2
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -43,6 +45,11 @@ const navItems = [
     path: '/dashboard/moderators',
     label: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
     icon: Shield
+  },
+  {
+    path: '/dashboard/permissions',
+    label: { uz: 'Ruxsatlar', en: 'Permissions', ru: 'Права доступа' },
+    icon: KeyRound
   },
   {
     path: '/dashboard/levels',
@@ -118,6 +125,11 @@ const navItems = [
     path: '/dashboard/exam-questions',
     label: { uz: 'Imtihon savollari', en: 'Exam questions', ru: 'Вопросы' },
     icon: HelpCircle
+  },
+  {
+    path: '/dashboard/exam-analysis',
+    label: { uz: 'Imtihon tahlili', en: 'Exam analytics', ru: 'Анализ экзаменов' },
+    icon: BarChart2
   },
   {
     path: '/dashboard/positions',
@@ -270,7 +282,9 @@ const Layout = () => {
         (item) =>
           item.path !== '/dashboard/moderators' &&
           item.path !== '/dashboard/users' &&
-          item.path !== '/dashboard/violations',
+          item.path !== '/dashboard/violations' &&
+          item.path !== '/dashboard/permissions' &&
+          item.path !== '/dashboard/exam-analysis',
       );
     }
     return [];
@@ -279,7 +293,9 @@ const Layout = () => {
   const isModeratorForbiddenRoute =
     me?.role === 'MODERATOR' &&
     (location.pathname === '/dashboard/moderators' ||
-      location.pathname === '/dashboard/users');
+      location.pathname === '/dashboard/users' ||
+      location.pathname === '/dashboard/permissions' ||
+      location.pathname === '/dashboard/exam-analysis');
 
   useEffect(() => {
     if (meLoading || !me) return;
@@ -312,11 +328,11 @@ const Layout = () => {
           {/* Sidebar */}
           <aside
             style={{ width: isCollapsed ? 100 : 340 }}
-            className="row-span-2 w-full bg-white/80 dark:bg-[#121314]/80 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/60 transition-all duration-300"
+            className="row-span-2 w-full h-screen max-h-screen shrink-0 flex flex-col overflow-hidden bg-white/80 dark:bg-[#121314]/80 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/60 transition-all duration-300"
           >
-            <div className="flex flex-col h-full w-full">
+            <div className="flex flex-col h-full min-h-0 w-full">
               {/* Logo */}
-              <div className="h-18 w-full flex items-center justify-center px-6 border-b border-slate-200/80 dark:border-slate-700/60">
+              <div className="h-18 w-full shrink-0 flex items-center justify-center px-6 border-b border-slate-200/80 dark:border-slate-700/60">
                 <AnimatePresence mode="popLayout">
                   <div className="w-full flex items-center justify-start">
                     <motion.div
@@ -372,7 +388,7 @@ const Layout = () => {
               />
 
               {/* Logout */}
-              <div className="p-4 min-h-[50px]">
+              <div className="p-4 min-h-[50px] shrink-0">
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-black/45">
                   <button
                     onClick={() => {

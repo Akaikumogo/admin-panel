@@ -5,6 +5,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { Position, UserProfile } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Lavozimlar', en: 'Positions', ru: 'Должности' },
@@ -38,6 +39,8 @@ export default function PositionsPage() {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+      if (editing && !can('exams', 'update')) return;
+      if (!editing && !can('exams', 'create')) return;
       setSaving(true);
       if (editing) {
         await apiService.updatePosition(editing.id, values);
@@ -55,6 +58,7 @@ export default function PositionsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!can('exams', 'delete')) return;
     await apiService.deletePosition(id);
     message.success('Lavozim o‘chirildi');
     refetch();
@@ -70,9 +74,19 @@ export default function PositionsPage() {
         width: 140,
         render: (_: unknown, r: Position) => (
           <div className="flex items-center gap-2">
-            <Button size="small" icon={<Pencil size={14} />} onClick={() => openModal(r)} />
+            <Button
+              size="small"
+              icon={<Pencil size={14} />}
+              disabled={!can('exams', 'update')}
+              onClick={() => openModal(r)}
+            />
             <Popconfirm title="O‘chirish?" onConfirm={() => handleDelete(r.id)}>
-              <Button size="small" danger icon={<Trash2 size={14} />} />
+              <Button
+                size="small"
+                danger
+                icon={<Trash2 size={14} />}
+                disabled={!can('exams', 'delete')}
+              />
             </Popconfirm>
           </div>
         ),
@@ -103,7 +117,12 @@ export default function PositionsPage() {
           </span>
         }
         extra={
-          <Button type="primary" icon={<Plus size={16} />} onClick={() => openModal()}>
+          <Button
+            type="primary"
+            icon={<Plus size={16} />}
+            disabled={!can('exams', 'create')}
+            onClick={() => openModal()}
+          >
             {t(T.add)}
           </Button>
         }

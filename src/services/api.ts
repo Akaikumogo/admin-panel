@@ -5,6 +5,11 @@ const API_BASE_URL = 'https://elektrolearn-api.uzbekistonmet.uz/api';
 
 export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
+/** WebSocket + Socket.IO base (global prefix `/api` is HTTP-only). */
+export function getExamLiveSocketUrl(): string {
+  return BACKEND_ORIGIN;
+}
+
 const ERROR_TITLES: Record<number, string> = {
   400: 'Xato so`rov',
   401: 'Avtorizatsiya xatosi',
@@ -251,6 +256,7 @@ export type ModeratorPermissions = {
   users: CrudPermissions;
   moderators: CrudPermissions;
   profile: CrudPermissions;
+  exams: CrudPermissions;
 };
 
 export type ModeratorPermissionRecord = {
@@ -329,6 +335,8 @@ export type Exam = {
   description: string | null;
   examType: ExamType;
   isActive: boolean;
+  includesPt?: boolean;
+  includesTb?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -340,12 +348,17 @@ export type ExamQuestionOption = {
   matchText: string | null;
 };
 
+export type ExamQuestionSection = 'PT' | 'TB';
+export type ExamQuestionDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+
 export type ExamQuestion = {
   id: string;
   prompt: string;
   type: QuestionType;
   isActive: boolean;
   tags: string[] | null;
+  section?: ExamQuestionSection;
+  difficulty?: ExamQuestionDifficulty;
   options: ExamQuestionOption[];
   createdAt: string;
   updatedAt: string;
@@ -361,8 +374,76 @@ export type UpcomingExamAssignment = {
   windowEnd: string;
   scheduledAt: string | null;
   status: string;
+  includesPt?: boolean;
+  includesTb?: boolean;
+  qrToken?: string | null;
+  qrExpiresAt?: string | null;
+  extraReason?: string | null;
   exam?: { id: string; title: string; examType: ExamType };
   user?: { id: string; firstName: string; lastName: string; email: string };
+};
+
+export type ExamLivePendingSession = {
+  sessionId: string;
+  assignmentId: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  organizationName: string | null;
+  examTitle: string | null;
+  includesPt: boolean;
+  includesTb: boolean;
+  suggestedAt: string;
+  createdAt: string;
+};
+
+export type ExamLiveAwaitingOralRow = {
+  sessionId: string;
+  attemptId: string | null;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  organizationName: string | null;
+  examTitle: string | null;
+  scorePercent: number | null;
+  ptScorePercent: number | null;
+  tbScorePercent: number | null;
+};
+
+export type OralResult = 'SATISFACTORY' | 'UNSATISFACTORY';
+
+export type SuperadminAttemptSummary = {
+  id: string;
+  createdAt: string;
+  userName: string | null;
+  examTitle: string | null;
+  ptScorePercent: number | null;
+  tbScorePercent: number | null;
+  finalizedAt: string | null;
+};
+
+export type SuperadminAttemptDetailResponse = {
+  attempt: {
+    id: string;
+    ptScorePercent: number | null;
+    tbScorePercent: number | null;
+    scorePercent: number | null;
+    user: { id: string; name: string; email: string } | null;
+  };
+  answers: Array<{
+    orderIndex: number;
+    section: string;
+    prompt: string | undefined;
+    selectedOptionId: string;
+    selectedText: string | undefined;
+    isCorrect: boolean;
+  }>;
 };
 
 export type HeartsLostAnalyticsResponse = {
@@ -673,6 +754,8 @@ class ApiService {
     description?: string;
     examType: ExamType;
     isActive?: boolean;
+    includesPt?: boolean;
+    includesTb?: boolean;
   }): Promise<Exam> {
     const response = await this.api.post<Exam>('/admin/exams', data);
     return response.data;
@@ -685,6 +768,8 @@ class ApiService {
       description: string | null;
       examType: ExamType;
       isActive: boolean;
+      includesPt: boolean;
+      includesTb: boolean;
     }>
   ): Promise<Exam> {
     const response = await this.api.put<Exam>(`/admin/exams/${id}`, data);
@@ -708,6 +793,8 @@ class ApiService {
     isActive?: boolean;
     tags?: string[] | null;
     positionIds?: string[];
+    section?: ExamQuestionSection;
+    difficulty?: ExamQuestionDifficulty;
     options: Array<{
       optionText: string;
       matchText?: string | null;
@@ -743,6 +830,80 @@ class ApiService {
     const response = await this.api.post<UpcomingExamAssignment>(
       `/admin/exam-assignments/${id}/schedule`,
       { scheduledAt }
+    );
+    return response.data;
+  }
+
+  async getExamLivePending(): Promise<ExamLivePendingSession[]> {
+    const response = await this.api.get<ExamLivePendingSession[]>(
+      '/exams/live/moderator/pending'
+    );
+    return response.data;
+  }
+
+  async getExamLiveAwaitingOral(): Promise<ExamLiveAwaitingOralRow[]> {
+    const response = await this.api.get<ExamLiveAwaitingOralRow[]>(
+      '/exams/live/moderator/awaiting-oral'
+    );
+    return response.data;
+  }
+
+  async approveExamSession(
+    sessionId: string
+  ): Promise<{ ok: boolean; expiresAt: string; code: string }> {
+    const response = await this.api.post<{
+      ok: boolean;
+      expiresAt: string;
+      code: string;
+    }>(`/exams/live/moderator/sessions/${sessionId}/approve`);
+    return response.data;
+  }
+
+  async rejectExamSession(sessionId: string, reason: string): Promise<{ ok: boolean }> {
+    const response = await this.api.post<{ ok: boolean }>(
+      `/exams/live/moderator/sessions/${sessionId}/reject`,
+      { reason }
+    );
+    return response.data;
+  }
+
+  async finalizeExamOral(
+    attemptId: string,
+    body: { oralResult: OralResult; oralFeedback: string; nextExamMonths: number }
+  ): Promise<{ ok: boolean; nextSuggestedAt: string }> {
+    const response = await this.api.post<{ ok: boolean; nextSuggestedAt: string }>(
+      `/exams/live/moderator/attempts/${attemptId}/finalize-oral`,
+      body
+    );
+    return response.data;
+  }
+
+  async createExtraExamAssignment(body: {
+    userId: string;
+    organizationId: string;
+    includesPt: boolean;
+    includesTb: boolean;
+    reason: string;
+  }): Promise<UpcomingExamAssignment> {
+    const response = await this.api.post<UpcomingExamAssignment>(
+      '/exams/live/admin/extra-assignment',
+      body
+    );
+    return response.data;
+  }
+
+  async getSuperadminRecentAttempts(): Promise<SuperadminAttemptSummary[]> {
+    const response = await this.api.get<SuperadminAttemptSummary[]>(
+      '/exams/live/superadmin/recent-attempts'
+    );
+    return response.data;
+  }
+
+  async getSuperadminAttemptDetail(
+    attemptId: string
+  ): Promise<SuperadminAttemptDetailResponse> {
+    const response = await this.api.get<SuperadminAttemptDetailResponse>(
+      `/exams/live/superadmin/attempts/${attemptId}/detail`
     );
     return response.data;
   }

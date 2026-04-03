@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -14,7 +15,7 @@ import {
   Divider,
   Switch
 } from 'antd';
-import { Plus, Trash2, Mail, Shield, Filter, Search, Settings } from 'lucide-react';
+import { Plus, Trash2, Mail, Shield, Filter, Search, Settings, Table2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -50,13 +51,19 @@ const T = {
   },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
   optional: { uz: 'Ixtiyoriy', en: 'Optional', ru: 'Необязательно' },
-  total: { uz: 'Jami', en: 'Total', ru: 'Всего' }
+  total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
+  permissionsPage: {
+    uz: 'Ruxsatlar (jadval)',
+    en: 'Permissions (table)',
+    ru: 'Права (таблица)',
+  },
 } as const;
 
 const QP_DEFAULTS = { search: undefined } as const;
 
 const Moderators = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { params: qp, setParam } =
     useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -173,7 +180,13 @@ const Moderators = () => {
         <Tag className="text-xs">
           {t(T.total)}: {total}
         </Tag>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            icon={<Table2 size={16} />}
+            onClick={() => navigate('/dashboard/permissions')}
+          >
+            {t(T.permissionsPage)}
+          </Button>
           <Button
             type="primary"
             icon={<Plus size={16} />}
@@ -347,6 +360,7 @@ const Moderators = () => {
                 ['users', 'Foydalanuvchilar (Users)'],
                 ['moderators', 'Moderatorlar (Moderators)'],
                 ['profile', 'Profil (Profile)'],
+                ['exams', 'Imtihonlar (Exams)'],
               ] as const
             ).map(([key, label], idx) => (
               <div key={key}>
