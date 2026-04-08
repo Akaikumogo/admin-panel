@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, Form, Input, InputNumber, Spin, message } from 'antd';
-import { ArrowLeft, Save } from 'lucide-react';
+import { Button, Card, Form, Input, InputNumber, Spin, Switch, message } from 'antd';
+import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
-import apiService, { type Question, type Theory } from '@/services/api';
+import apiService, {
+  type Question,
+  type Theory,
+  type TheorySlide,
+} from '@/services/api';
 import { can } from '@/utils/can';
 
 const T = {
@@ -17,7 +21,45 @@ const T = {
   module: { uz: 'Modul', en: 'Module', ru: 'Модуль' },
   questions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
   open: { uz: 'Ochish', en: 'Open', ru: 'Открыть' },
+  slides: { uz: 'Slaydlar', en: 'Slides', ru: 'Слайды' },
+  slideHead: { uz: 'Sarlavha', en: 'Heading', ru: 'Заголовок' },
+  slideItems: {
+    uz: 'Qatorlar (har qator — alohida punkt)',
+    en: 'Lines (one bullet per line)',
+    ru: 'Строки (каждая — отдельный пункт)',
+  },
+  warn: { uz: 'Ogohlantirish', en: 'Warning', ru: 'Предупреждение' },
+  addSlide: { uz: 'Slayd qo‘shish', en: 'Add slide', ru: 'Добавить слайд' },
 } as const;
+
+function isNazariyaTheory(t: Pick<Theory, 'title'> | null | undefined) {
+  return Boolean(t?.title?.trimEnd().endsWith(' · Nazariya'));
+}
+
+function slidesToForm(
+  slides: TheorySlide[] | null | undefined
+): { head: string; warn: boolean; itemsText: string }[] {
+  return (slides ?? []).map((s) => ({
+    head: s.head ?? '',
+    warn: Boolean(s.warn),
+    itemsText: (s.items ?? []).join('\n'),
+  }));
+}
+
+function formToSlides(
+  rows: { head: string; warn: boolean; itemsText: string }[]
+): TheorySlide[] {
+  return rows
+    .map((r) => ({
+      head: r.head.trim(),
+      warn: r.warn,
+      items: r.itemsText
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean),
+    }))
+    .filter((s) => s.head.length > 0 || s.items.length > 0);
+}
 
 export default function TheoryDetail() {
   const { t } = useTranslation();
@@ -37,10 +79,12 @@ export default function TheoryDetail() {
     async () => {
       if (!theoryId) throw new Error('Missing id');
       const res = await apiService.getTheoryById(theoryId);
+      const naz = isNazariyaTheory(res);
       form.setFieldsValue({
         title: res.title,
         orderIndex: res.orderIndex,
         content: res.content,
+        slides: naz ? slidesToForm(res.slides) : undefined,
       });
       return res;
     },
@@ -61,6 +105,7 @@ export default function TheoryDetail() {
   );
 
   const loading = theoryInitialLoading || questionsInitialLoading;
+  const showSlides = isNazariyaTheory(theory);
 
   const moduleLabel = useMemo(() => {
     const lvl = theory?.level;
@@ -74,11 +119,19 @@ export default function TheoryDetail() {
     try {
       const values = await form.validateFields();
       setSaving(true);
-      await apiService.updateTheory(theoryId, {
+      const payload: Parameters<typeof apiService.updateTheory>[1] = {
         title: values.title,
         orderIndex: values.orderIndex,
         content: values.content,
-      });
+      };
+      const nazNow = isNazariyaTheory({ title: values.title });
+      if (nazNow) {
+        const built = formToSlides(values.slides ?? []);
+        payload.slides = built.length > 0 ? built : null;
+      } else if (isNazariyaTheory(theory)) {
+        payload.slides = null;
+      }
+      await apiService.updateTheory(theoryId, payload);
       message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
       refetchTheory();
     } catch {
@@ -115,7 +168,7 @@ export default function TheoryDetail() {
             <button
               type="button"
               className="text-xs text-slate-500 dark:text-slate-400 hover:underline"
-              onClick={() => navigate(`/dashboard/levels/${theory.levelId}`)}
+              onClick={() => navigate(`/dashboard/levels/${theory?.levelId}`)}
             >
               {t(T.module)}: {moduleLabel}
             </button>
@@ -148,8 +201,64 @@ export default function TheoryDetail() {
               <InputNumber className="w-full" min={0} />
             </Form.Item>
             <Form.Item name="content" label={t(T.content)}>
-              <Input.TextArea rows={10} />
+              <Input.TextArea rows={showSlides ? 4 : 10} />
             </Form.Item>
+            {showSlides ? (
+              <>
+                <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t(T.slides)}
+                </p>
+                <Form.List name="slides">
+                  {(fields, { add, remove }) => (
+                    <div className="space-y-4">
+                      {fields.map((field) => (
+                        <Card
+                          key={field.key}
+                          size="small"
+                          className="!border-slate-200 dark:!border-slate-700/60"
+                          title={
+                            <span className="text-sm font-semibold">
+                              #{field.name + 1}
+                            </span>
+                          }
+                          extra={
+                            <Button
+                              type="text"
+                              danger
+                              icon={<Trash2 size={16} />}
+                              onClick={() => remove(field.name)}
+                              aria-label="remove"
+                            />
+                          }
+                        >
+                          <Form.Item name={[field.name, 'head']} label={t(T.slideHead)}>
+                            <Input />
+                          </Form.Item>
+                          <Form.Item name={[field.name, 'itemsText']} label={t(T.slideItems)}>
+                            <Input.TextArea rows={5} />
+                          </Form.Item>
+                          <Form.Item
+                            name={[field.name, 'warn']}
+                            label={t(T.warn)}
+                            valuePropName="checked"
+                          >
+                            <Switch />
+                          </Form.Item>
+                        </Card>
+                      ))}
+                      <Button
+                        type="dashed"
+                        onClick={() => add({ head: '', itemsText: '', warn: false })}
+                        block
+                        icon={<Plus size={16} />}
+                      >
+                        {t(T.addSlide)}
+                      </Button>
+                    </div>
+                  )}
+                </Form.List>
+              </>
+            ) : null}
           </Form>
         )}
       </Card>
@@ -188,4 +297,3 @@ export default function TheoryDetail() {
     </div>
   );
 }
-

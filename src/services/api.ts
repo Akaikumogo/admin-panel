@@ -98,6 +98,12 @@ export type Level = {
   updatedAt: string;
 };
 
+export type TheorySlide = {
+  head: string;
+  items: string[];
+  warn?: boolean;
+};
+
 export type Theory = {
   id: string;
   levelId: string;
@@ -105,6 +111,7 @@ export type Theory = {
   title: string;
   orderIndex: number;
   content: string;
+  slides?: TheorySlide[] | null;
   createdById: string | null;
   createdBy?: { id: string; firstName: string; lastName: string } | null;
   level?: { id: string; title: string; orderIndex: number };
@@ -1115,6 +1122,7 @@ class ApiService {
     title: string;
     orderIndex?: number;
     content?: string;
+    slides?: TheorySlide[] | null;
   }): Promise<Theory> {
     const response = await this.api.post<Theory>('/admin/theories', data);
     return response.data;
@@ -1127,6 +1135,7 @@ class ApiService {
       title?: string;
       orderIndex?: number;
       content?: string;
+      slides?: TheorySlide[] | null;
     }
   ): Promise<Theory> {
     const response = await this.api.put<Theory>(`/admin/theories/${id}`, data);
