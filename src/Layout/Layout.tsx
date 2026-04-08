@@ -25,7 +25,8 @@ import {
   BriefcaseBusiness,
   Trash2,
   KeyRound,
-  BarChart2
+  BarChart2,
+  FolderTree
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -120,6 +121,11 @@ const navItems = [
     path: '/dashboard/exam-schedule',
     label: { uz: 'Imtihon belgilash', en: 'Scheduling', ru: 'Назначение' },
     icon: CalendarClock
+  },
+  {
+    path: '/dashboard/exam-question-catalogs',
+    label: { uz: 'Savol kataloglari', en: 'Question catalogs', ru: 'Каталоги вопросов' },
+    icon: FolderTree
   },
   {
     path: '/dashboard/exam-questions',

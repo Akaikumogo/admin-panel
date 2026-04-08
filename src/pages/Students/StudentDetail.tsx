@@ -1,11 +1,19 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Progress, Spin, Table, Tag, Tooltip } from 'antd';
+import { Avatar, Button, Form, Input, Progress, Select, Spin, Table, Tag, Tooltip } from 'antd';
 import { ArrowLeft, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
-import type { StudentDetail as StudentDetailType, LostQuestion, ActivityDay } from '@/services/api';
+import type {
+  StudentDetail as StudentDetailType,
+  LostQuestion,
+  ActivityDay,
+  EmployeeCertificate,
+  EmployeeCheck,
+  EmployeeCheckType,
+} from '@/services/api';
 
 const T = {
   back: { uz: 'Orqaga', en: 'Back', ru: 'Назад' },
@@ -46,6 +54,26 @@ const StudentDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [certForm] = Form.useForm<{
+    organizationId: string;
+    positionTitle: string;
+    certificateNumber: string;
+    presentedByFullName: string;
+  }>();
+  const [checkForm] = Form.useForm<{
+    type: EmployeeCheckType;
+    checkDate: string;
+    reason?: string;
+    grade?: string;
+    nextCheckDate?: string;
+    commissionLeaderSignature?: string;
+    qualificationGroup?: string;
+    ruleName?: string;
+    conclusion?: string;
+    doctorConclusion?: string;
+    responsibleSignature?: string;
+  }>();
+  const [checksType, setChecksType] = useState<EmployeeCheckType | 'all'>('all');
 
   const { data: student, initialLoading } = useFetch<StudentDetailType | null>(
     ['student-detail', id],
@@ -65,6 +93,18 @@ const StudentDetailPage = () => {
     [],
   );
 
+  const { data: employeeCert } = useFetch<EmployeeCertificate | null>(
+    ['student-employee-certificate', id],
+    () => apiService.getEmployeeCertificate(id!),
+    null,
+  );
+
+  const { data: checks, initialLoading: checksLoading } = useFetch<EmployeeCheck[]>(
+    ['student-checks', id, checksType],
+    () => apiService.listEmployeeChecks(id!, checksType === 'all' ? {} : { type: checksType }),
+    [],
+  );
+
   if (initialLoading || !student) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -72,6 +112,33 @@ const StudentDetailPage = () => {
       </div>
     );
   }
+
+  const orgOptions = student.organizations.map((o) => ({
+    value: o.id,
+    label: o.name,
+  }));
+
+  const saveCertificate = async () => {
+    const values = await certForm.validateFields();
+    await apiService.upsertEmployeeCertificate(id!, values);
+  };
+
+  const addCheck = async () => {
+    const values = await checkForm.validateFields();
+    await apiService.createEmployeeCheck(id!, {
+      ...values,
+      reason: values.reason ?? null,
+      grade: values.grade ?? null,
+      nextCheckDate: values.nextCheckDate ?? null,
+      commissionLeaderSignature: values.commissionLeaderSignature ?? null,
+      qualificationGroup: values.qualificationGroup ?? null,
+      ruleName: values.ruleName ?? null,
+      conclusion: values.conclusion ?? null,
+      doctorConclusion: values.doctorConclusion ?? null,
+      responsibleSignature: values.responsibleSignature ?? null,
+    } as any);
+    checkForm.resetFields();
+  };
 
   const lostColumns = [
     {
@@ -234,6 +301,140 @@ const StudentDetailPage = () => {
             rowKey="questionId"
             pagination={false}
             size="small"
+          />
+        )}
+      </div>
+
+      {/* Employee certificate */}
+      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6 space-y-4">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+          Elektron guvohnoma
+        </h3>
+        <Form
+          form={certForm}
+          layout="vertical"
+          initialValues={{
+            organizationId: employeeCert?.organizationId ?? (student.organizations[0]?.id || undefined),
+            positionTitle: employeeCert?.positionTitle ?? '',
+            certificateNumber: employeeCert?.certificateNumber ?? '',
+            presentedByFullName: employeeCert?.presentedByFullName ?? '',
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Form.Item name="organizationId" label="Ish joyi (organization)" rules={[{ required: true }]}>
+              <Select options={orgOptions} placeholder="Tashkilotni tanlang" />
+            </Form.Item>
+            <Form.Item name="positionTitle" label="Lavozim" rules={[{ required: true }]}>
+              <Input placeholder="Lavozim" />
+            </Form.Item>
+            <Form.Item name="certificateNumber" label="Guvohnoma raqami" rules={[{ required: true }]}>
+              <Input placeholder="Raqam" />
+            </Form.Item>
+            <Form.Item name="presentedByFullName" label="Taqdim etgan shaxs (F.I.Sh.)" rules={[{ required: true }]}>
+              <Input placeholder="Ism Familiya" />
+            </Form.Item>
+          </div>
+          <Button type="primary" onClick={() => void saveCertificate()}>
+            Saqlash
+          </Button>
+        </Form>
+      </div>
+
+      {/* Employee checks */}
+      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+            Tekshiruvlar
+          </h3>
+          <Select
+            value={checksType}
+            onChange={(v) => setChecksType(v)}
+            style={{ width: 280 }}
+            options={[
+              { value: 'all', label: 'Hammasi' },
+              { value: 'GENERAL_KNOWLEDGE', label: 'Umumiy bilim' },
+              { value: 'SAFETY_TECHNIQUE', label: 'Xavfsizlik texnikasi' },
+              { value: 'SPECIAL_WORK_PERMIT', label: 'Maxsus ishlar ruxsati' },
+              { value: 'RESUSCITATION_TRAINING', label: 'Reanimatsiya treningi' },
+              { value: 'MEDICAL_EXAM', label: 'Tibbiy ko‘rik' },
+            ]}
+          />
+        </div>
+
+        <Form form={checkForm} layout="vertical">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+              <Select
+                options={[
+                  { value: 'GENERAL_KNOWLEDGE', label: 'Umumiy bilim' },
+                  { value: 'SAFETY_TECHNIQUE', label: 'Xavfsizlik texnikasi' },
+                  { value: 'SPECIAL_WORK_PERMIT', label: 'Maxsus ishlar ruxsati' },
+                  { value: 'RESUSCITATION_TRAINING', label: 'Reanimatsiya treningi' },
+                  { value: 'MEDICAL_EXAM', label: 'Tibbiy ko‘rik' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="checkDate" label="Tekshiruv sanasi" rules={[{ required: true }]}>
+              <Input type="date" />
+            </Form.Item>
+            <Form.Item name="nextCheckDate" label="Keyingi tekshiruv sanasi">
+              <Input type="date" />
+            </Form.Item>
+            <Form.Item name="reason" label="Sabab">
+              <Input />
+            </Form.Item>
+            <Form.Item name="grade" label="Baho">
+              <Input />
+            </Form.Item>
+            <Form.Item name="commissionLeaderSignature" label="Komissiya rahbari imzosi">
+              <Input />
+            </Form.Item>
+            <Form.Item name="qualificationGroup" label="Malaka guruhi (xavfsizlik)">
+              <Input />
+            </Form.Item>
+            <Form.Item name="ruleName" label="Qoida nomi (maxsus ishlar)">
+              <Input />
+            </Form.Item>
+            <Form.Item name="conclusion" label="Xulosa (maxsus ishlar)">
+              <Input />
+            </Form.Item>
+            <Form.Item name="doctorConclusion" label="Shifokor xulosasi (tibbiy)">
+              <Input />
+            </Form.Item>
+            <Form.Item name="responsibleSignature" label="Mas’ul shaxs imzosi (tibbiy)">
+              <Input />
+            </Form.Item>
+          </div>
+          <Button type="primary" onClick={() => void addCheck()}>
+            Tekshiruv qo‘shish
+          </Button>
+        </Form>
+
+        {checksLoading ? (
+          <div className="flex items-center justify-center h-16"><Spin /></div>
+        ) : (
+          <Table
+            dataSource={checks}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            columns={[
+              { title: 'Sana', dataIndex: 'checkDate', key: 'checkDate', width: 120 },
+              { title: 'Type', dataIndex: 'type', key: 'type', width: 180 },
+              { title: 'Baho', dataIndex: 'grade', key: 'grade', width: 120 },
+              { title: 'Keyingi sana', dataIndex: 'nextCheckDate', key: 'nextCheckDate', width: 140 },
+              { title: 'Sabab', dataIndex: 'reason', key: 'reason', ellipsis: true },
+              {
+                title: '',
+                key: 'actions',
+                width: 90,
+                render: (_: unknown, row: EmployeeCheck) => (
+                  <Button danger size="small" onClick={() => void apiService.deleteEmployeeCheck(id!, row.id)}>
+                    O‘chirish
+                  </Button>
+                ),
+              },
+            ]}
           />
         )}
       </div>

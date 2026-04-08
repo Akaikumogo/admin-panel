@@ -29,6 +29,7 @@ const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
 const LogsPage = lazy(() => import('./pages/Logs/Logs'));
 const ExamsPage = lazy(() => import('./pages/Exams/Exams'));
 const ExamQuestionsPage = lazy(() => import('./pages/ExamQuestions/ExamQuestions'));
+const ExamQuestionCatalogsPage = lazy(() => import('./pages/ExamQuestionCatalogs/ExamQuestionCatalogs'));
 const ExamSchedulePage = lazy(() => import('./pages/ExamSchedule/ExamSchedule'));
 const ExamAttemptAnalysisPage = lazy(() => import('./pages/ExamAttemptAnalysis/ExamAttemptAnalysis'));
 const PositionsPage = lazy(() => import('./pages/Positions/Positions'));
@@ -124,7 +125,15 @@ export const routes: RouteObject[] = [
             element: withSuspense(ExamsPage)
           },
           {
+            path: 'exam-question-catalogs',
+            element: withSuspense(ExamQuestionCatalogsPage)
+          },
+          {
             path: 'exam-questions',
+            element: withSuspense(ExamQuestionsPage)
+          },
+          {
+            path: 'exam-questions/catalog/:catalogId',
             element: withSuspense(ExamQuestionsPage)
           },
           {

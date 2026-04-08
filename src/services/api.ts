@@ -241,6 +241,44 @@ export type ActivityDay = {
   count: number;
 };
 
+export type EmployeeCertificate = {
+  id: string;
+  userId: string;
+  organizationId: string;
+  positionTitle: string;
+  certificateNumber: string;
+  presentedByFullName: string;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EmployeeCheckType =
+  | 'GENERAL_KNOWLEDGE'
+  | 'SAFETY_TECHNIQUE'
+  | 'SPECIAL_WORK_PERMIT'
+  | 'RESUSCITATION_TRAINING'
+  | 'MEDICAL_EXAM';
+
+export type EmployeeCheck = {
+  id: string;
+  userId: string;
+  type: EmployeeCheckType;
+  checkDate: string;
+  reason: string | null;
+  grade: string | null;
+  nextCheckDate: string | null;
+  commissionLeaderSignature: string | null;
+  qualificationGroup: string | null;
+  ruleName: string | null;
+  conclusion: string | null;
+  doctorConclusion: string | null;
+  responsibleSignature: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CrudPermissions = {
   create: boolean;
   update: boolean;
@@ -351,6 +389,15 @@ export type ExamQuestionOption = {
 export type ExamQuestionSection = 'PT' | 'TB';
 export type ExamQuestionDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
+export type ExamQuestionCatalog = {
+  id: string;
+  title: string;
+  section: ExamQuestionSection;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ExamQuestion = {
   id: string;
   prompt: string;
@@ -359,6 +406,8 @@ export type ExamQuestion = {
   tags: string[] | null;
   section?: ExamQuestionSection;
   difficulty?: ExamQuestionDifficulty;
+  catalogId?: string | null;
+  catalog?: ExamQuestionCatalog | null;
   options: ExamQuestionOption[];
   createdAt: string;
   updatedAt: string;
@@ -756,6 +805,8 @@ class ApiService {
     isActive?: boolean;
     includesPt?: boolean;
     includesTb?: boolean;
+    assigneeUserId?: string;
+    assigneeOrganizationId?: string;
   }): Promise<Exam> {
     const response = await this.api.post<Exam>('/admin/exams', data);
     return response.data;
@@ -780,10 +831,44 @@ class ApiService {
     await this.api.delete(`/admin/exams/${id}`);
   }
 
-  async getExamQuestions(): Promise<ExamQuestion[]> {
-    const response = await this.api.get<ExamQuestion[]>(
-      '/admin/exam-questions'
+  async getExamQuestionCatalogs(): Promise<ExamQuestionCatalog[]> {
+    const response = await this.api.get<ExamQuestionCatalog[]>(
+      '/admin/exam-question-catalogs'
     );
+    return response.data;
+  }
+
+  async createExamQuestionCatalog(data: {
+    title: string;
+    section: ExamQuestionSection;
+    sortOrder?: number;
+  }): Promise<ExamQuestionCatalog> {
+    const response = await this.api.post<ExamQuestionCatalog>(
+      '/admin/exam-question-catalogs',
+      data
+    );
+    return response.data;
+  }
+
+  async updateExamQuestionCatalog(
+    id: string,
+    data: Partial<{ title: string; section: ExamQuestionSection; sortOrder: number }>
+  ): Promise<ExamQuestionCatalog> {
+    const response = await this.api.put<ExamQuestionCatalog>(
+      `/admin/exam-question-catalogs/${id}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteExamQuestionCatalog(id: string): Promise<void> {
+    await this.api.delete(`/admin/exam-question-catalogs/${id}`);
+  }
+
+  async getExamQuestions(catalogId?: string): Promise<ExamQuestion[]> {
+    const response = await this.api.get<ExamQuestion[]>('/admin/exam-questions', {
+      params: catalogId ? { catalogId } : undefined
+    });
     return response.data;
   }
 
@@ -795,6 +880,7 @@ class ApiService {
     positionIds?: string[];
     section?: ExamQuestionSection;
     difficulty?: ExamQuestionDifficulty;
+    catalogId?: string;
     options: Array<{
       optionText: string;
       matchText?: string | null;
@@ -1235,6 +1321,69 @@ class ApiService {
       `/admin/students/${id}/activity`
     );
     return response.data;
+  }
+
+  async getEmployeeCertificate(studentId: string): Promise<EmployeeCertificate | null> {
+    const response = await this.api.get<EmployeeCertificate | null>(
+      `/admin/students/${studentId}/employee-certificate`
+    );
+    return response.data;
+  }
+
+  async upsertEmployeeCertificate(
+    studentId: string,
+    data: {
+      organizationId: string;
+      positionTitle: string;
+      certificateNumber: string;
+      presentedByFullName: string;
+    }
+  ): Promise<EmployeeCertificate> {
+    const response = await this.api.put<EmployeeCertificate>(
+      `/admin/students/${studentId}/employee-certificate`,
+      data
+    );
+    return response.data;
+  }
+
+  async listEmployeeChecks(
+    studentId: string,
+    params?: { type?: EmployeeCheckType }
+  ): Promise<EmployeeCheck[]> {
+    const response = await this.api.get<EmployeeCheck[]>(
+      `/admin/students/${studentId}/checks`,
+      { params }
+    );
+    return response.data;
+  }
+
+  async createEmployeeCheck(
+    studentId: string,
+    data: Omit<EmployeeCheck, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'>
+  ): Promise<EmployeeCheck> {
+    const response = await this.api.post<EmployeeCheck>(
+      `/admin/students/${studentId}/checks`,
+      data
+    );
+    return response.data;
+  }
+
+  async updateEmployeeCheck(
+    studentId: string,
+    checkId: string,
+    data: Partial<
+      Omit<EmployeeCheck, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'>
+    >
+  ): Promise<EmployeeCheck> {
+    const response = await this.api.put<EmployeeCheck>(
+      `/admin/students/${studentId}/checks/${checkId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteEmployeeCheck(studentId: string, checkId: string): Promise<void> {
+    await this.api.delete(`/admin/students/${studentId}/checks/${checkId}`);
   }
 
   // ===== Seed =====

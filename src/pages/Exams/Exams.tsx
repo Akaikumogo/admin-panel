@@ -4,7 +4,7 @@ import { ClipboardList, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
-import type { Exam, ExamType, UserProfile } from '@/services/api';
+import type { Exam, ExamType, StudentSummary, UserProfile } from '@/services/api';
 import { can } from '@/utils/can';
 
 const T = {
@@ -32,6 +32,11 @@ export default function ExamsPage() {
     () => apiService.getExams(),
     [] as Exam[],
   );
+  const { data: studentsPage } = useFetch(
+    ['students-for-exam-assign'],
+    () => apiService.getStudents({ limit: 300, page: 1 }),
+    { data: [] as StudentSummary[], total: 0, page: 1, limit: 20 },
+  );
 
   const openModal = (row?: Exam) => {
     setEditing(row ?? null);
@@ -44,6 +49,7 @@ export default function ExamsPage() {
         isActive: row.isActive,
         includesPt: row.includesPt !== false,
         includesTb: row.includesTb !== false,
+        assigneeKey: undefined,
       });
     } else {
       form.resetFields();
@@ -52,6 +58,7 @@ export default function ExamsPage() {
         isActive: true,
         includesPt: true,
         includesTb: true,
+        assigneeKey: undefined,
       });
     }
   };
@@ -63,10 +70,25 @@ export default function ExamsPage() {
       if (!editing && !can('exams', 'create')) return;
       setSaving(true);
       if (editing) {
-        await apiService.updateExam(editing.id, values);
+        const { assigneeKey: _a, ...up } = values;
+        await apiService.updateExam(editing.id, up);
         message.success('Imtihon yangilandi');
       } else {
-        await apiService.createExam(values);
+        const { assigneeKey, ...rest } = values;
+        let assigneeUserId: string | undefined;
+        let assigneeOrganizationId: string | undefined;
+        if (assigneeKey && typeof assigneeKey === 'string') {
+          const [u, o] = assigneeKey.split('|');
+          if (u && o) {
+            assigneeUserId = u;
+            assigneeOrganizationId = o;
+          }
+        }
+        await apiService.createExam({
+          ...rest,
+          assigneeUserId,
+          assigneeOrganizationId,
+        });
         message.success('Imtihon yaratildi');
       }
       setModalOpen(false);
@@ -189,6 +211,24 @@ export default function ExamsPage() {
               ]}
             />
           </Form.Item>
+          {!editing ? (
+            <Form.Item
+              name="assigneeKey"
+              label={t({ uz: 'Xodim (tayinlash, ixtiyoriy)', en: 'Employee (optional assign)', ru: 'Сотрудник (назначение)' })}
+            >
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                options={studentsPage.data.flatMap((s) =>
+                  (s.organizations ?? []).map((o) => ({
+                    value: `${s.id}|${o.id}`,
+                    label: `${s.firstName} ${s.lastName} — ${o.name}`,
+                  })),
+                )}
+              />
+            </Form.Item>
+          ) : null}
           <Form.Item name="isActive" label={t(T.active)} valuePropName="checked">
             <Switch />
           </Form.Item>
