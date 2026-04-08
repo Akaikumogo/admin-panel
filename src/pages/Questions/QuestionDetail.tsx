@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, Form, Input, Modal, Spin, Switch, Tag, message } from 'antd';
-import { ArrowLeft, ArrowLeftRight, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Pencil, Plus, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
@@ -44,6 +44,7 @@ export default function QuestionDetail() {
 
   const [saving, setSaving] = useState(false);
   const [selectedType, setSelectedType] = useState<QuestionType>('SINGLE_CHOICE');
+  const [editMode, setEditMode] = useState(false);
 
   const questionId = id || '';
 
@@ -56,23 +57,32 @@ export default function QuestionDetail() {
     async () => {
       if (!questionId) throw new Error('Missing id');
       const res = await apiService.getQuestionById(questionId);
-      const qType = res.type || 'SINGLE_CHOICE';
-      setSelectedType(qType);
-      form.setFieldsValue({
-        prompt: res.prompt,
-        type: qType,
-        isActive: res.isActive,
-        options: res.options.map((o) => ({
-          id: o.id,
-          optionText: o.optionText,
-          isCorrect: o.isCorrect,
-          matchText: o.matchText ?? '',
-        })),
-      });
       return res;
     },
     null as unknown as Question,
   );
+
+  useEffect(() => {
+    if (!questionId) return;
+    setEditMode(false);
+  }, [questionId]);
+
+  useEffect(() => {
+    if (!question) return;
+    const qType = (question.type || 'SINGLE_CHOICE') as QuestionType;
+    setSelectedType(qType);
+    form.setFieldsValue({
+      prompt: question.prompt,
+      type: qType,
+      isActive: question.isActive,
+      options: (question.options ?? []).map((o) => ({
+        id: o.id,
+        optionText: o.optionText,
+        isCorrect: o.isCorrect,
+        matchText: o.matchText ?? '',
+      })),
+    });
+  }, [question, form]);
 
   const headerMeta = useMemo(() => {
     const levelTitle = question?.level?.title || '';
@@ -105,6 +115,7 @@ export default function QuestionDetail() {
   const handleSave = async () => {
     if (!questionId) return;
     if (!can('contentQuestions', 'update')) return;
+    if (!editMode) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -116,6 +127,7 @@ export default function QuestionDetail() {
       });
       message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
       refetch();
+      setEditMode(false);
     } catch {
       // validation / network
     } finally {
@@ -168,12 +180,20 @@ export default function QuestionDetail() {
           {t(T.back)}
         </Button>,
         <Button
+          key="edit"
+          icon={<Pencil size={16} />}
+          onClick={() => setEditMode(true)}
+          disabled={!can('contentQuestions', 'update') || initialLoading || !question}
+        >
+          {t({ uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' })}
+        </Button>,
+        <Button
           key="save"
           type="primary"
           icon={<Save size={16} />}
           loading={saving}
           onClick={handleSave}
-          disabled={!can('contentQuestions', 'update')}
+          disabled={!can('contentQuestions', 'update') || !editMode}
         >
           {t(T.save)}
         </Button>,
@@ -189,17 +209,21 @@ export default function QuestionDetail() {
             <Form.Item name="type" label={t(T.questionType)} rules={[{ required: true }]}>
               <Input.Group compact>
                 <Form.Item name="type" noStyle>
-                  <SelectQuestionType value={selectedType} onChange={handleTypeChange} />
+                  <SelectQuestionType
+                    value={selectedType}
+                    onChange={handleTypeChange}
+                    disabled={!editMode}
+                  />
                 </Form.Item>
               </Input.Group>
             </Form.Item>
 
             <Form.Item name="prompt" label={t(T.prompt)} rules={[{ required: true }]}>
-              <Input.TextArea rows={3} />
+              <Input.TextArea rows={3} disabled={!editMode} />
             </Form.Item>
 
             <Form.Item name="isActive" label={t(T.active)} valuePropName="checked" initialValue={true}>
-              <Switch />
+              <Switch disabled={!editMode} />
             </Form.Item>
 
             <Form.List name="options">
@@ -214,7 +238,10 @@ export default function QuestionDetail() {
                         className="flex-1 !mb-0"
                         rules={[{ required: true }]}
                       >
-                        <Input placeholder={t(T.optionText)} disabled={selectedType === 'YES_NO'} />
+                        <Input
+                          placeholder={t(T.optionText)}
+                          disabled={!editMode || selectedType === 'YES_NO'}
+                        />
                       </Form.Item>
 
                       {selectedType === 'MATCHING' && (
@@ -224,7 +251,7 @@ export default function QuestionDetail() {
                           className="flex-1 !mb-0"
                           rules={[{ required: true }]}
                         >
-                          <Input placeholder={t(T.matchText)} />
+                          <Input placeholder={t(T.matchText)} disabled={!editMode} />
                         </Form.Item>
                       )}
 
@@ -237,6 +264,7 @@ export default function QuestionDetail() {
                         >
                           <Switch
                             checkedChildren={t(T.correct)}
+                            disabled={!editMode}
                             onChange={(checked) => {
                               if (checked) {
                                 const opts = form.getFieldValue('options');
@@ -257,7 +285,7 @@ export default function QuestionDetail() {
                           valuePropName="checked"
                           className="!mb-0"
                         >
-                          <Switch checkedChildren={t(T.correct)} />
+                          <Switch checkedChildren={t(T.correct)} disabled={!editMode} />
                         </Form.Item>
                       )}
 
@@ -267,6 +295,7 @@ export default function QuestionDetail() {
                           danger
                           icon={<Trash2 size={12} />}
                           onClick={() => remove(name)}
+                          disabled={!editMode}
                         />
                       )}
                     </div>
@@ -284,6 +313,7 @@ export default function QuestionDetail() {
                       }
                       icon={<Plus size={14} />}
                       block
+                      disabled={!editMode}
                     >
                       {t(T.addOption)}
                     </Button>
@@ -305,12 +335,17 @@ export default function QuestionDetail() {
   );
 }
 
-function SelectQuestionType(props: { value: QuestionType; onChange: (v: QuestionType) => void }) {
+function SelectQuestionType(props: {
+  value: QuestionType;
+  onChange: (v: QuestionType) => void;
+  disabled?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <select
       className="w-full h-10 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#141414] px-3 text-sm text-slate-900 dark:text-white"
       value={props.value}
+      disabled={props.disabled}
       onChange={(e) => props.onChange(e.target.value as QuestionType)}
     >
       <option value="SINGLE_CHOICE">{t(QUESTION_TYPE_LABELS.SINGLE_CHOICE)}</option>

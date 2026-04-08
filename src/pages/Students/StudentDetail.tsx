@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Form, Input, Progress, Select, Spin, Table, Tag, Tooltip } from 'antd';
-import { ArrowLeft, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
+import { ArrowLeft, Pencil, X, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import NoData from '@/components/NoData';
@@ -74,6 +74,8 @@ const StudentDetailPage = () => {
     responsibleSignature?: string;
   }>();
   const [checksType, setChecksType] = useState<EmployeeCheckType | 'all'>('all');
+  const [editCert, setEditCert] = useState(false);
+  const [editCheck, setEditCheck] = useState(false);
 
   const { data: student, initialLoading } = useFetch<StudentDetailType | null>(
     ['student-detail', id],
@@ -104,6 +106,23 @@ const StudentDetailPage = () => {
     () => apiService.listEmployeeChecks(id!, checksType === 'all' ? {} : { type: checksType }),
     [],
   );
+
+  useEffect(() => {
+    setEditCert(false);
+    setEditCheck(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!student) return;
+    certForm.setFieldsValue({
+      organizationId:
+        employeeCert?.organizationId ??
+        (student.organizations[0]?.id || undefined),
+      positionTitle: employeeCert?.positionTitle ?? '',
+      certificateNumber: employeeCert?.certificateNumber ?? '',
+      presentedByFullName: employeeCert?.presentedByFullName ?? '',
+    });
+  }, [employeeCert, student, certForm]);
 
   if (initialLoading || !student) {
     return (
@@ -313,12 +332,7 @@ const StudentDetailPage = () => {
         <Form
           form={certForm}
           layout="vertical"
-          initialValues={{
-            organizationId: employeeCert?.organizationId ?? (student.organizations[0]?.id || undefined),
-            positionTitle: employeeCert?.positionTitle ?? '',
-            certificateNumber: employeeCert?.certificateNumber ?? '',
-            presentedByFullName: employeeCert?.presentedByFullName ?? '',
-          }}
+          disabled={!editCert}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item name="organizationId" label="Ish joyi (organization)" rules={[{ required: true }]}>
@@ -334,9 +348,35 @@ const StudentDetailPage = () => {
               <Input placeholder="Ism Familiya" />
             </Form.Item>
           </div>
-          <Button type="primary" onClick={() => void saveCertificate()}>
-            Saqlash
-          </Button>
+          <div className="flex items-center gap-2">
+            {editCert ? (
+              <>
+                <Button
+                  icon={<X size={16} />}
+                  onClick={() => {
+                    certForm.setFieldsValue({
+                      organizationId:
+                        employeeCert?.organizationId ??
+                        (student.organizations[0]?.id || undefined),
+                      positionTitle: employeeCert?.positionTitle ?? '',
+                      certificateNumber: employeeCert?.certificateNumber ?? '',
+                      presentedByFullName: employeeCert?.presentedByFullName ?? '',
+                    });
+                    setEditCert(false);
+                  }}
+                >
+                  Bekor qilish
+                </Button>
+                <Button type="primary" onClick={() => void saveCertificate()}>
+                  Saqlash
+                </Button>
+              </>
+            ) : (
+              <Button icon={<Pencil size={16} />} onClick={() => setEditCert(true)}>
+                Tahrirlash
+              </Button>
+            )}
+          </div>
         </Form>
       </div>
 
@@ -361,7 +401,7 @@ const StudentDetailPage = () => {
           />
         </div>
 
-        <Form form={checkForm} layout="vertical">
+        <Form form={checkForm} layout="vertical" disabled={!editCheck}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Form.Item name="type" label="Type" rules={[{ required: true }]}>
               <Select
@@ -405,9 +445,28 @@ const StudentDetailPage = () => {
               <Input />
             </Form.Item>
           </div>
-          <Button type="primary" onClick={() => void addCheck()}>
-            Tekshiruv qo‘shish
-          </Button>
+          <div className="flex items-center gap-2">
+            {editCheck ? (
+              <>
+                <Button
+                  icon={<X size={16} />}
+                  onClick={() => {
+                    checkForm.resetFields();
+                    setEditCheck(false);
+                  }}
+                >
+                  Bekor qilish
+                </Button>
+                <Button type="primary" onClick={() => void addCheck()}>
+                  Tekshiruv qo‘shish
+                </Button>
+              </>
+            ) : (
+              <Button icon={<Pencil size={16} />} onClick={() => setEditCheck(true)}>
+                Tahrirlash
+              </Button>
+            )}
+          </div>
         </Form>
 
         {checksLoading ? (

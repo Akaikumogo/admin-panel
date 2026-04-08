@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, Form, Input, InputNumber, Spin, Switch, message } from 'antd';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Pencil, Save, X } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, { type Level, type Theory } from '@/services/api';
@@ -25,6 +25,7 @@ export default function LevelDetail() {
   const [form] = Form.useForm();
 
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const levelId = id || '';
   const {
@@ -36,15 +37,24 @@ export default function LevelDetail() {
     async () => {
       if (!levelId) throw new Error('Missing id');
       const res = await apiService.getLevelById(levelId);
-      form.setFieldsValue({
-        title: res.title,
-        orderIndex: res.orderIndex,
-        isActive: res.isActive,
-      });
       return res;
     },
     null as unknown as Level,
   );
+
+  useEffect(() => {
+    if (!levelId) return;
+    setEditMode(false);
+  }, [levelId]);
+
+  useEffect(() => {
+    if (!level) return;
+    form.setFieldsValue({
+      title: level.title,
+      orderIndex: level.orderIndex,
+      isActive: level.isActive,
+    });
+  }, [level, form]);
 
   const {
     data: theories,
@@ -65,6 +75,7 @@ export default function LevelDetail() {
   const handleSave = async () => {
     if (!levelId) return;
     if (!can('contentLevels', 'update')) return;
+    if (!editMode) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -75,11 +86,22 @@ export default function LevelDetail() {
       });
       message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
       refetchLevel();
+      setEditMode(false);
     } catch {
       // validation / network
     } finally {
       setSaving(false);
     }
+  };
+
+  const cancelEdit = () => {
+    if (!level) return;
+    form.setFieldsValue({
+      title: level.title,
+      orderIndex: level.orderIndex,
+      isActive: level.isActive,
+    });
+    setEditMode(false);
   };
 
   if (!levelId) {
@@ -110,12 +132,25 @@ export default function LevelDetail() {
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {editMode ? (
+            <Button icon={<X size={16} />} onClick={cancelEdit}>
+              {t({ uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' })}
+            </Button>
+          ) : (
+            <Button
+              icon={<Pencil size={16} />}
+              onClick={() => setEditMode(true)}
+              disabled={!can('contentLevels', 'update') || loading}
+            >
+              {t({ uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' })}
+            </Button>
+          )}
           <Button
             type="primary"
             icon={<Save size={16} />}
             loading={saving}
             onClick={handleSave}
-            disabled={!can('contentLevels', 'update')}
+            disabled={!can('contentLevels', 'update') || !editMode}
           >
             {t(T.save)}
           </Button>
@@ -128,7 +163,12 @@ export default function LevelDetail() {
             <Spin />
           </div>
         ) : (
-          <Form form={form} layout="vertical" initialValues={{ isActive: true }}>
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{ isActive: true }}
+            disabled={!editMode}
+          >
             <Form.Item name="title" label={t(T.levelName)} rules={[{ required: true }]}>
               <Input size="large" />
             </Form.Item>

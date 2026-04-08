@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, Form, Input, InputNumber, Spin, Switch, message } from 'antd';
-import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, {
@@ -70,6 +70,7 @@ export default function TheoryDetail() {
   const { id } = useParams();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const theoryId = id || '';
 
@@ -82,17 +83,26 @@ export default function TheoryDetail() {
     async () => {
       if (!theoryId) throw new Error('Missing id');
       const res = await apiService.getTheoryById(theoryId);
-      const naz = isNazariyaTheory(res);
-      form.setFieldsValue({
-        title: res.title,
-        orderIndex: res.orderIndex,
-        content: res.content,
-        slides: naz ? slidesToForm(res.slides) : undefined,
-      });
       return res;
     },
     null as unknown as Theory,
   );
+
+  useEffect(() => {
+    if (!theoryId) return;
+    setEditMode(false);
+  }, [theoryId]);
+
+  useEffect(() => {
+    if (!theory) return;
+    const naz = isNazariyaTheory(theory);
+    form.setFieldsValue({
+      title: theory.title,
+      orderIndex: theory.orderIndex,
+      content: theory.content,
+      slides: naz ? slidesToForm(theory.slides) : undefined,
+    });
+  }, [theory, form]);
 
   const {
     data: questions,
@@ -119,6 +129,7 @@ export default function TheoryDetail() {
   const handleSave = async () => {
     if (!theoryId) return;
     if (!can('contentTheories', 'update')) return;
+    if (!editMode) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -139,11 +150,24 @@ export default function TheoryDetail() {
       await apiService.updateTheory(theoryId, payload);
       message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
       refetchTheory();
+      setEditMode(false);
     } catch {
       // validation / network
     } finally {
       setSaving(false);
     }
+  };
+
+  const cancelEdit = () => {
+    if (!theory) return;
+    const naz = isNazariyaTheory(theory);
+    form.setFieldsValue({
+      title: theory.title,
+      orderIndex: theory.orderIndex,
+      content: theory.content,
+      slides: naz ? slidesToForm(theory.slides) : undefined,
+    });
+    setEditMode(false);
   };
 
   if (!theoryId) {
@@ -180,12 +204,25 @@ export default function TheoryDetail() {
           )}
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {editMode ? (
+            <Button icon={<X size={16} />} onClick={cancelEdit}>
+              {t({ uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' })}
+            </Button>
+          ) : (
+            <Button
+              icon={<Pencil size={16} />}
+              onClick={() => setEditMode(true)}
+              disabled={!can('contentTheories', 'update') || loading}
+            >
+              {t({ uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' })}
+            </Button>
+          )}
           <Button
             type="primary"
             icon={<Save size={16} />}
             loading={saving}
             onClick={handleSave}
-            disabled={!can('contentTheories', 'update')}
+            disabled={!can('contentTheories', 'update') || !editMode}
           >
             {t(T.save)}
           </Button>
@@ -198,7 +235,7 @@ export default function TheoryDetail() {
             <Spin />
           </div>
         ) : (
-          <Form form={form} layout="vertical">
+          <Form form={form} layout="vertical" disabled={!editMode}>
             <Form.Item name="title" label={t(T.theoryName)} rules={[{ required: true }]}>
               <Input size="large" />
             </Form.Item>
@@ -233,6 +270,7 @@ export default function TheoryDetail() {
                               icon={<Trash2 size={16} />}
                               onClick={() => remove(field.name)}
                               aria-label="remove"
+                              disabled={!editMode}
                             />
                           }
                         >
@@ -256,6 +294,7 @@ export default function TheoryDetail() {
                         onClick={() => add({ head: '', itemsText: '', warn: false })}
                         block
                         icon={<Plus size={16} />}
+                        disabled={!editMode}
                       >
                         {t(T.addSlide)}
                       </Button>
