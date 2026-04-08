@@ -77,6 +77,16 @@ const Theories = () => {
     [] as Level[]
   );
 
+  const lessonsQ = useQuery({
+    queryKey: ['lessons-for-theories-filter', qp.levelId],
+    queryFn: async () => {
+      if (!qp.levelId) return [] as Theory[];
+      const tree = await apiService.getTheoryTreeByLevel(qp.levelId);
+      return tree.filter((t) => t.theoryRole === 'lesson' || !t.parentTheoryId);
+    },
+    enabled: !!qp.levelId && !qp.lessonId,
+  });
+
   const lessonQ = useQuery({
     queryKey: ['theory-lesson-context', qp.lessonId],
     queryFn: () => apiService.getTheoryById(qp.lessonId!),
@@ -297,6 +307,22 @@ const Theories = () => {
               setParams({ levelId: v, search: qp.search, lessonId: qp.lessonId })
             }
             options={levels.map((l) => ({ value: l.id, label: l.title }))}
+          />
+        )}
+        {!qp.lessonId && qp.levelId && (
+          <Select
+            allowClear
+            placeholder={t({ uz: 'Dars', en: 'Lesson', ru: 'Урок' })}
+            style={{ width: 260 }}
+            value={qp.lessonId}
+            loading={lessonsQ.isLoading}
+            onChange={(v) =>
+              setParams({ levelId: qp.levelId, search: qp.search, lessonId: v })
+            }
+            options={(lessonsQ.data ?? []).map((l) => ({
+              value: l.id,
+              label: `#${l.orderIndex + 1} — ${l.title}`,
+            }))}
           />
         )}
         <Tag className="text-xs">{total} ta</Tag>

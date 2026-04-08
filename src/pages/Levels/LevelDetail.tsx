@@ -162,12 +162,34 @@ export default function LevelDetail() {
           <div className="flex items-center justify-center h-32">
             <Spin />
           </div>
+        ) : !editMode ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.levelName)}</p>
+              <p className="text-base font-semibold text-slate-900 dark:text-white">
+                {level?.title || '—'}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.orderIndex)}</p>
+                <p className="text-base font-semibold text-slate-900 dark:text-white">
+                  {level?.orderIndex ?? '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.active)}</p>
+                <p className="text-base font-semibold text-slate-900 dark:text-white">
+                  {level?.isActive ? t(T.active) : 'Inactive'}
+                </p>
+              </div>
+            </div>
+          </div>
         ) : (
           <Form
             form={form}
             layout="vertical"
             initialValues={{ isActive: true }}
-            disabled={!editMode}
           >
             <Form.Item name="title" label={t(T.levelName)} rules={[{ required: true }]}>
               <Input size="large" />

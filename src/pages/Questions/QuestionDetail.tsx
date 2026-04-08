@@ -175,34 +175,96 @@ export default function QuestionDetail() {
       }
       onCancel={() => navigate(-1)}
       width={860}
-      footer={[
-        <Button key="back" icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>
-          {t(T.back)}
-        </Button>,
-        <Button
-          key="edit"
-          icon={<Pencil size={16} />}
-          onClick={() => setEditMode(true)}
-          disabled={!can('contentQuestions', 'update') || initialLoading || !question}
-        >
-          {t({ uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' })}
-        </Button>,
-        <Button
-          key="save"
-          type="primary"
-          icon={<Save size={16} />}
-          loading={saving}
-          onClick={handleSave}
-          disabled={!can('contentQuestions', 'update') || !editMode}
-        >
-          {t(T.save)}
-        </Button>,
-      ]}
+      footer={
+        editMode
+          ? [
+              <Button
+                key="cancel"
+                onClick={() => {
+                  if (!question) return;
+                  const qType = (question.type || 'SINGLE_CHOICE') as QuestionType;
+                  setSelectedType(qType);
+                  form.setFieldsValue({
+                    prompt: question.prompt,
+                    type: qType,
+                    isActive: question.isActive,
+                    options: (question.options ?? []).map((o) => ({
+                      id: o.id,
+                      optionText: o.optionText,
+                      isCorrect: o.isCorrect,
+                      matchText: o.matchText ?? '',
+                    })),
+                  });
+                  setEditMode(false);
+                }}
+              >
+                {t({ uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' })}
+              </Button>,
+              <Button
+                key="save"
+                type="primary"
+                icon={<Save size={16} />}
+                loading={saving}
+                onClick={handleSave}
+                disabled={!can('contentQuestions', 'update')}
+              >
+                {t(T.save)}
+              </Button>,
+            ]
+          : [
+              <Button
+                key="back"
+                icon={<ArrowLeft size={16} />}
+                onClick={() => navigate(-1)}
+              >
+                {t(T.back)}
+              </Button>,
+              <Button
+                key="edit"
+                icon={<Pencil size={16} />}
+                onClick={() => setEditMode(true)}
+                disabled={!can('contentQuestions', 'update') || initialLoading || !question}
+              >
+                {t({ uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' })}
+              </Button>,
+            ]
+      }
     >
       <Card className="!border-slate-200 dark:!border-slate-700/60">
         {initialLoading ? (
           <div className="flex items-center justify-center h-32">
             <Spin />
+          </div>
+        ) : !editMode ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.questionType)}</p>
+              <p className="text-base font-semibold text-slate-900 dark:text-white">
+                {t(QUESTION_TYPE_LABELS[selectedType])}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.prompt)}</p>
+              <div className="mt-1 whitespace-pre-wrap rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700/60 dark:bg-[#141414] dark:text-slate-200">
+                {question?.prompt || '—'}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.active)}</p>
+              <p className="text-base font-semibold text-slate-900 dark:text-white">
+                {question?.isActive ? t(T.active) : 'Inactive'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.options)}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(question?.options ?? []).map((o) => (
+                  <Tag key={o.id} color={selectedType === 'MATCHING' ? 'purple' : o.isCorrect ? 'green' : 'default'}>
+                    {selectedType === 'MATCHING' ? `${o.optionText} ↔ ${o.matchText ?? ''}` : o.optionText}
+                  </Tag>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <Form form={form} layout="vertical">

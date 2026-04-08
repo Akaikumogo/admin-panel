@@ -332,20 +332,19 @@ const StudentDetailPage = () => {
         <Form
           form={certForm}
           layout="vertical"
-          disabled={!editCert}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item name="organizationId" label="Ish joyi (organization)" rules={[{ required: true }]}>
-              <Select options={orgOptions} placeholder="Tashkilotni tanlang" />
+              <Select options={orgOptions} placeholder="Tashkilotni tanlang" disabled={!editCert} />
             </Form.Item>
             <Form.Item name="positionTitle" label="Lavozim" rules={[{ required: true }]}>
-              <Input placeholder="Lavozim" />
+              <Input placeholder="Lavozim" readOnly={!editCert} />
             </Form.Item>
             <Form.Item name="certificateNumber" label="Guvohnoma raqami" rules={[{ required: true }]}>
-              <Input placeholder="Raqam" />
+              <Input placeholder="Raqam" readOnly={!editCert} />
             </Form.Item>
             <Form.Item name="presentedByFullName" label="Taqdim etgan shaxs (F.I.Sh.)" rules={[{ required: true }]}>
-              <Input placeholder="Ism Familiya" />
+              <Input placeholder="Ism Familiya" readOnly={!editCert} />
             </Form.Item>
           </div>
           <div className="flex items-center gap-2">
@@ -401,10 +400,11 @@ const StudentDetailPage = () => {
           />
         </div>
 
-        <Form form={checkForm} layout="vertical" disabled={!editCheck}>
+        <Form form={checkForm} layout="vertical">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Form.Item name="type" label="Type" rules={[{ required: true }]}>
               <Select
+                disabled={!editCheck}
                 options={[
                   { value: 'GENERAL_KNOWLEDGE', label: 'Umumiy bilim' },
                   { value: 'SAFETY_TECHNIQUE', label: 'Xavfsizlik texnikasi' },
@@ -415,34 +415,34 @@ const StudentDetailPage = () => {
               />
             </Form.Item>
             <Form.Item name="checkDate" label="Tekshiruv sanasi" rules={[{ required: true }]}>
-              <Input type="date" />
+              <Input type="date" readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="nextCheckDate" label="Keyingi tekshiruv sanasi">
-              <Input type="date" />
+              <Input type="date" readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="reason" label="Sabab">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="grade" label="Baho">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="commissionLeaderSignature" label="Komissiya rahbari imzosi">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="qualificationGroup" label="Malaka guruhi (xavfsizlik)">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="ruleName" label="Qoida nomi (maxsus ishlar)">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="conclusion" label="Xulosa (maxsus ishlar)">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="doctorConclusion" label="Shifokor xulosasi (tibbiy)">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
             <Form.Item name="responsibleSignature" label="Mas’ul shaxs imzosi (tibbiy)">
-              <Input />
+              <Input readOnly={!editCheck} />
             </Form.Item>
           </div>
           <div className="flex items-center gap-2">

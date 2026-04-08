@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Card, Select, Spin } from 'antd';
+import { Button, Card, Collapse, Select, Spin, Tag } from 'antd';
 import { BookOpen, ChevronRight, Filter } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
-import type { Level, Theory } from '@/services/api';
+import type { Level, Theory, Question } from '@/services/api';
 import NoData from '@/components/NoData';
 
 const T = {
@@ -71,6 +71,16 @@ const Lessons = () => {
     ) as LessonRow[];
   }, [treeQuery.data]);
 
+  const [questionsByLesson, setQuestionsByLesson] = useState<
+    Record<string, Question[] | undefined>
+  >({});
+
+  const fetchQuestions = async (lessonId: string) => {
+    if (questionsByLesson[lessonId]) return;
+    const res = await apiService.getQuestions({ theoryId: lessonId, limit: 200 });
+    setQuestionsByLesson((p) => ({ ...p, [lessonId]: res.data }));
+  };
+
   if (levelsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -113,14 +123,17 @@ const Lessons = () => {
       ) : lessons.length === 0 ? (
         <NoData text={t(T.noData)} />
       ) : (
-        <div className="space-y-3">
-          {lessons.map((lesson) => (
-            <Card
-              key={lesson.id}
-              className="!border-slate-200 dark:!border-slate-700/60"
-              bodyStyle={{ padding: '14px 18px' }}
-            >
-              <div className="flex items-center justify-between gap-3">
+        <Collapse
+          accordion
+          className="bg-transparent"
+          onChange={(key) => {
+            const lessonId = Array.isArray(key) ? key[0] : key;
+            if (lessonId) void fetchQuestions(lessonId as string);
+          }}
+          items={lessons.map((lesson) => ({
+            key: lesson.id,
+            label: (
+              <div className="flex items-center justify-between gap-3 pr-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/10">
                     <BookOpen size={18} className="text-blue-600" />
@@ -141,21 +154,84 @@ const Lessons = () => {
                 </div>
                 <Button
                   type="primary"
+                  size="small"
                   className="shrink-0"
-                  icon={<ChevronRight size={16} />}
+                  icon={<ChevronRight size={14} />}
                   iconPosition="end"
-                  onClick={() =>
-                    navigate(
-                      `/dashboard/theories?lessonId=${encodeURIComponent(lesson.id)}`,
-                    )
-                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/dashboard/theories?lessonId=${encodeURIComponent(lesson.id)}`);
+                  }}
                 >
                   {t(T.theories)}
                 </Button>
               </div>
-            </Card>
-          ))}
-        </div>
+            ),
+            children: (
+              <div className="space-y-4">
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {t(T.theories)}
+                  </span>
+                  {!lesson.children?.length ? (
+                    <p className="text-xs text-slate-400 pl-1 mt-2">{t(T.noData)}</p>
+                  ) : (
+                    <div className="mt-2 space-y-1 border-l-2 border-slate-200 dark:border-slate-600 pl-3">
+                      {lesson.children.map((child) => (
+                        <div
+                          key={child.id}
+                          className="flex items-center justify-between gap-2 py-1"
+                        >
+                          <button
+                            type="button"
+                            className="text-sm text-slate-800 dark:text-slate-200 hover:underline text-left truncate"
+                            onClick={() => navigate(`/dashboard/theories/${child.id}`)}
+                          >
+                            {child.title}
+                          </button>
+                          <Tag className="text-xs">{child.orderIndex + 1}</Tag>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {t({ uz: 'Mashqlar', en: 'Exercises', ru: 'Упражнения' })}
+                  </span>
+                  {!questionsByLesson[lesson.id] ? (
+                    <div className="mt-2"><Spin size="small" /></div>
+                  ) : questionsByLesson[lesson.id]!.length === 0 ? (
+                    <p className="text-xs text-slate-400 pl-1 mt-2">
+                      {t({ uz: 'Savol yo‘q', en: 'No questions', ru: 'Нет вопросов' })}
+                    </p>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {questionsByLesson[lesson.id]!
+                        .slice()
+                        .sort((a, b) => a.orderIndex - b.orderIndex)
+                        .map((q) => (
+                          <div
+                            key={q.id}
+                            className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 dark:border-slate-700/60 px-3 py-2"
+                          >
+                            <button
+                              type="button"
+                              className="text-sm text-slate-900 dark:text-white hover:underline text-left truncate"
+                              onClick={() => navigate(`/dashboard/questions/${q.id}`)}
+                            >
+                              #{q.orderIndex + 1} — {q.prompt}
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ),
+          }))}
+        />
       )}
     </div>
   );
