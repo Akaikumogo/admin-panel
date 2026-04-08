@@ -1300,6 +1300,29 @@ class ApiService {
     return response.data;
   }
 
+  async createUser(data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    organizationId?: string;
+  }): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>('/admin/users', data);
+    return response.data;
+  }
+
+  async updateUser(
+    id: string,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      organizationId?: string;
+    },
+  ): Promise<UserProfile> {
+    const response = await this.api.put<UserProfile>(`/admin/users/${id}`, data);
+    return response.data;
+  }
+
   async deleteUser(id: string): Promise<void> {
     await this.api.delete(`/admin/users/${id}`);
   }

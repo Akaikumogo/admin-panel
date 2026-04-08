@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Avatar, Card, Input, Select, Spin, Table, Tag } from 'antd';
+import { useEffect, useRef, useState } from 'react';
+import { Avatar, Button, Card, Form, Input, Modal, Popconfirm, Select, Spin, Table, Tag, message } from 'antd';
 import { Filter, Mail, Search } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -8,6 +8,7 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { UserProfile } from '@/services/api';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Foydalanuvchilar', en: 'Users', ru: 'Пользователи' },
@@ -42,10 +43,71 @@ const Users = () => {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
 
-  const { data: users, total, loading, initialLoading } = usePaginatedFetch(
+  const { data: users, total, loading, initialLoading, refetch } = usePaginatedFetch(
     ['users', qp.role, qp.search, currentPage],
     () => apiService.getUsers({ role: qp.role, search: qp.search || undefined, page: currentPage, limit: 20 }),
   );
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<UserProfile | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form] = Form.useForm();
+
+  const openModal = (u?: UserProfile) => {
+    if (u && !can('users', 'update')) return;
+    if (!u && !can('users', 'create')) return;
+    setEditing(u ?? null);
+    setModalOpen(true);
+    if (u) {
+      form.setFieldsValue({
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+      });
+    } else {
+      form.resetFields();
+    }
+  };
+
+  useEffect(() => {
+    if (!modalOpen) form.resetFields();
+  }, [modalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
+      if (editing) {
+        await apiService.updateUser(editing.id, {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          organizationId: values.organizationId || undefined,
+        });
+        message.success(t({ uz: 'Yangilandi', en: 'Updated', ru: 'Обновлено' }));
+      } else {
+        await apiService.createUser({
+          email: values.email,
+          password: values.password,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          organizationId: values.organizationId || undefined,
+        });
+        message.success(t({ uz: 'Yaratildi', en: 'Created', ru: 'Создано' }));
+      }
+      setModalOpen(false);
+      setEditing(null);
+      refetch?.();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!can('users', 'delete')) return;
+    await apiService.deleteUser(id);
+    message.success(t({ uz: 'O`chirildi', en: 'Deleted', ru: 'Удалено' }));
+    refetch?.();
+  };
 
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -98,7 +160,32 @@ const Users = () => {
       render: (_: unknown, record: UserProfile) => (
         <Tag color={ROLE_COLORS[record.role] || 'default'}>{record.role}</Tag>
       )
-    }
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 160,
+      render: (_: unknown, record: UserProfile) => (
+        <div className="flex gap-2 justify-end">
+          <Button
+            size="small"
+            onClick={() => openModal(record)}
+            disabled={!can('users', 'update')}
+          >
+            Edit
+          </Button>
+          <Popconfirm
+            title="Delete?"
+            onConfirm={() => handleDelete(record.id)}
+            disabled={!can('users', 'delete')}
+          >
+            <Button size="small" danger disabled={!can('users', 'delete')}>
+              Delete
+            </Button>
+          </Popconfirm>
+        </div>
+      )
+    },
   ];
 
   return (
@@ -128,6 +215,9 @@ const Users = () => {
         <Tag className="text-sm ml-auto">
           {t(T.total)}: {total}
         </Tag>
+        <Button type="primary" onClick={() => openModal()} disabled={!can('users', 'create')}>
+          Add
+        </Button>
       </div>
 
       {initialLoading ? (
@@ -157,6 +247,42 @@ const Users = () => {
           />
         </Card>
       )}
+
+      <Modal
+        title={editing ? 'Edit user' : 'Add user'}
+        open={modalOpen}
+        onCancel={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
+        onOk={handleSave}
+        confirmLoading={saving}
+        okButtonProps={{
+          disabled: editing ? !can('users', 'update') : !can('users', 'create'),
+        }}
+      >
+        <Form form={form} layout="vertical">
+          {!editing && (
+            <>
+              <Form.Item name="email" label="Email" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="password" label="Password" rules={[{ required: true, min: 6 }]}>
+                <Input.Password />
+              </Form.Item>
+            </>
+          )}
+          <Form.Item name="firstName" label="First name" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="lastName" label="Last name" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="organizationId" label="OrganizationId">
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
