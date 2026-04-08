@@ -95,6 +95,9 @@ const Theories = () => {
   const [editing, setEditing] = useState<Theory | null>(null);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [parentOptions, setParentOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -128,6 +131,7 @@ const Theories = () => {
     if (theory) {
       form.setFieldsValue({
         levelId: theory.levelId,
+        parentTheoryId: theory.parentTheoryId ?? null,
         title: theory.title,
         content: theory.content
       });
@@ -139,6 +143,29 @@ const Theories = () => {
     }
   };
 
+  const buildParentOptions = async (levelId?: string, excludeId?: string) => {
+    if (!levelId) {
+      setParentOptions([]);
+      return;
+    }
+    const list = await apiService.getTheoriesByLevel(levelId);
+    const opts = list
+      .filter((x) => x.id !== excludeId)
+      .slice()
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((x) => ({
+        value: x.id,
+        label: `#${x.orderIndex + 1} — ${x.title}`,
+      }));
+    setParentOptions(opts);
+  };
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const lvlId = editing?.levelId ?? form.getFieldValue('levelId');
+    buildParentOptions(lvlId, editing?.id);
+  }, [modalOpen, editing]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSave = async () => {
     if (editing && !can('contentTheories', 'update')) return;
     if (!editing && !can('contentTheories', 'create')) return;
@@ -147,6 +174,7 @@ const Theories = () => {
       setSaving(true);
       if (editing) {
         await apiService.updateTheory(editing.id, {
+          parentTheoryId: values.parentTheoryId ?? null,
           title: values.title,
           content: values.content
         });
@@ -160,6 +188,7 @@ const Theories = () => {
       } else {
         await apiService.createTheory({
           levelId: values.levelId,
+          parentTheoryId: values.parentTheoryId ?? null,
           title: values.title,
           content: values.content
         });
@@ -356,9 +385,21 @@ const Theories = () => {
               <Select
                 placeholder={t(T.level)}
                 options={levels.map((l) => ({ value: l.id, label: l.title }))}
+                onChange={(v) => {
+                  form.setFieldValue('parentTheoryId', null);
+                  buildParentOptions(v, undefined);
+                }}
               />
             </Form.Item>
           )}
+          <Form.Item name="parentTheoryId" label="Sub nazariya (parent)">
+            <Select
+              allowClear
+              placeholder="Root nazariya"
+              options={parentOptions}
+              disabled={!form.getFieldValue('levelId') && !editing}
+            />
+          </Form.Item>
           <Form.Item
             name="title"
             label={t(T.theoryName)}

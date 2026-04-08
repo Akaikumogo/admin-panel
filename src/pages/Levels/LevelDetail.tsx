@@ -51,7 +51,7 @@ export default function LevelDetail() {
     initialLoading: theoriesInitialLoading,
   } = useFetch(
     ['theories-by-level', levelId],
-    () => (levelId ? apiService.getTheoriesByLevel(levelId) : Promise.resolve([])),
+    () => (levelId ? apiService.getTheoryTreeByLevel(levelId) : Promise.resolve([])),
     [] as Theory[],
   );
 
@@ -152,27 +152,37 @@ export default function LevelDetail() {
           </p>
         ) : (
           <div className="space-y-2">
-            {theories
-              .slice()
-              .sort((a, b) => a.orderIndex - b.orderIndex)
-              .map((th) => (
-                <div
-                  key={th.id}
-                  className="flex items-center gap-3 rounded-lg border border-slate-200/70 dark:border-slate-700/60 px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                      #{th.orderIndex + 1} — {th.title}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                      {th.content || ''}
-                    </p>
+            {(() => {
+              const renderNode = (th: Theory, depth: number) => (
+                <div key={th.id}>
+                  <div
+                    className="flex items-center gap-3 rounded-lg border border-slate-200/70 dark:border-slate-700/60 px-3 py-2"
+                    style={{ marginLeft: depth * 16 }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                        #{th.orderIndex + 1} — {th.title}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                        {th.content || ''}
+                      </p>
+                    </div>
+                    <Button onClick={() => navigate(`/dashboard/theories/${th.id}`)}>
+                      {t(T.open)}
+                    </Button>
                   </div>
-                  <Button onClick={() => navigate(`/dashboard/theories/${th.id}`)}>
-                    {t(T.open)}
-                  </Button>
+                  {(th.children ?? [])
+                    .slice()
+                    .sort((a, b) => a.orderIndex - b.orderIndex)
+                    .map((c) => renderNode(c, depth + 1))}
                 </div>
-              ))}
+              );
+
+              return theories
+                .slice()
+                .sort((a, b) => a.orderIndex - b.orderIndex)
+                .map((th) => renderNode(th, 0));
+            })()}
           </div>
         )}
       </Card>

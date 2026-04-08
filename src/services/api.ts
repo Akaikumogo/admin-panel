@@ -101,6 +101,7 @@ export type Level = {
 export type Theory = {
   id: string;
   levelId: string;
+  parentTheoryId?: string | null;
   title: string;
   orderIndex: number;
   content: string;
@@ -108,6 +109,7 @@ export type Theory = {
   createdBy?: { id: string; firstName: string; lastName: string } | null;
   level?: { id: string; title: string; orderIndex: number };
   questions?: Question[];
+  children?: Theory[];
   createdAt: string;
   updatedAt: string;
 };
@@ -1095,6 +1097,13 @@ class ApiService {
     return response.data;
   }
 
+  async getTheoryTreeByLevel(levelId: string): Promise<Theory[]> {
+    const response = await this.api.get<Theory[]>(
+      `/admin/levels/${levelId}/theories-tree`,
+    );
+    return response.data;
+  }
+
   async getTheoryById(id: string): Promise<Theory> {
     const response = await this.api.get<Theory>(`/admin/theories/${id}`);
     return response.data;
@@ -1102,6 +1111,7 @@ class ApiService {
 
   async createTheory(data: {
     levelId: string;
+    parentTheoryId?: string | null;
     title: string;
     orderIndex?: number;
     content?: string;
@@ -1112,7 +1122,12 @@ class ApiService {
 
   async updateTheory(
     id: string,
-    data: { title?: string; orderIndex?: number; content?: string }
+    data: {
+      parentTheoryId?: string | null;
+      title?: string;
+      orderIndex?: number;
+      content?: string;
+    }
   ): Promise<Theory> {
     const response = await this.api.put<Theory>(`/admin/theories/${id}`, data);
     return response.data;
