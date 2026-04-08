@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Card, Collapse, Select, Spin, Tag } from 'antd';
+import { Button, Collapse, Select, Spin, Tag } from 'antd';
 import { BookOpen, ChevronRight, Filter } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
