@@ -26,7 +26,8 @@ import {
   Trash2,
   KeyRound,
   BarChart2,
-  FolderTree
+  FolderTree,
+  Library
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -56,6 +57,11 @@ const navItems = [
     path: '/dashboard/levels',
     label: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
     icon: Layers
+  },
+  {
+    path: '/dashboard/lessons',
+    label: { uz: 'Darslar', en: 'Lessons', ru: 'Уроки' },
+    icon: Library
   },
   {
     path: '/dashboard/theories',

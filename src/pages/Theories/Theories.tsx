@@ -14,6 +14,7 @@ import {
 import { Plus, Pencil, Trash2, Filter, Search, BookOpen } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch } from '@/hooks/useFetch';
@@ -55,7 +56,11 @@ const T = {
 
 const PAGE_SIZE = 15;
 
-const QP_DEFAULTS = { search: undefined, levelId: undefined } as const;
+const QP_DEFAULTS = {
+  search: undefined,
+  levelId: undefined,
+  lessonId: undefined
+} as const;
 
 const Theories = () => {
   const { t } = useTranslation();
@@ -71,6 +76,13 @@ const Theories = () => {
     () => apiService.getLevels(),
     [] as Level[]
   );
+
+  const lessonQ = useQuery({
+    queryKey: ['theory-lesson-context', qp.lessonId],
+    queryFn: () => apiService.getTheoryById(qp.lessonId!),
+    enabled: !!qp.lessonId
+  });
+
   const {
     data: theories,
     total,
@@ -81,10 +93,11 @@ const Theories = () => {
     loadMore,
     refetch
   } = useInfiniteList(
-    ['theories', qp.levelId, qp.search],
+    ['theories', qp.levelId, qp.search, qp.lessonId],
     (pg) =>
       apiService.getTheories({
-        levelId: qp.levelId,
+        levelId: qp.lessonId ? undefined : qp.levelId,
+        parentTheoryId: qp.lessonId || undefined,
         search: qp.search || undefined,
         page: pg,
         limit: PAGE_SIZE
@@ -137,7 +150,12 @@ const Theories = () => {
       });
     } else {
       form.resetFields();
-      if (qp.levelId) {
+      if (qp.lessonId && lessonQ.data) {
+        form.setFieldsValue({
+          levelId: lessonQ.data.levelId,
+          parentTheoryId: qp.lessonId
+        });
+      } else if (qp.levelId) {
         form.setFieldValue('levelId', qp.levelId);
       }
     }
@@ -190,7 +208,8 @@ const Theories = () => {
           levelId: values.levelId,
           parentTheoryId: values.parentTheoryId ?? null,
           title: values.title,
-          content: values.content
+          content: values.content,
+          theoryRole: values.parentTheoryId ? 'nazariya' : undefined
         });
         message.success(
           t({
@@ -228,6 +247,36 @@ const Theories = () => {
       ref={scrollRef}
       className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]"
     >
+      {qp.lessonId && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm dark:border-slate-700/60 dark:bg-white/5">
+          <Button size="small" onClick={() => navigate('/dashboard/lessons')}>
+            ← {t({ uz: 'Darslar', en: 'Lessons', ru: 'Уроки' })}
+          </Button>
+          {lessonQ.data && (
+            <span className="text-slate-700 dark:text-slate-200">
+              {t({ uz: 'Dars:', en: 'Lesson:', ru: 'Урок:' })}{' '}
+              <strong>{lessonQ.data.title}</strong>
+            </span>
+          )}
+          {lessonQ.isError && (
+            <span className="text-red-500">
+              {t({ uz: 'Dars topilmadi', en: 'Lesson not found', ru: 'Урок не найден' })}
+            </span>
+          )}
+          <Button
+            type="link"
+            size="small"
+            className="ml-auto"
+            onClick={() => setParam('lessonId', undefined)}
+          >
+            {t({
+              uz: 'Barcha nazariyalar',
+              en: 'All theories',
+              ru: 'Все теории'
+            })}
+          </Button>
+        </div>
+      )}
       <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
         <Input
@@ -238,21 +287,29 @@ const Theories = () => {
           style={{ width: 200 }}
           onChange={(e) => handleSearchChange(e.target.value)}
         />
-        <Select
-          allowClear
-          placeholder={t(T.allLevels)}
-          style={{ width: 220 }}
-          value={qp.levelId}
-          onChange={(v) => setParams({ levelId: v, search: qp.search })}
-          options={levels.map((l) => ({ value: l.id, label: l.title }))}
-        />
+        {!qp.lessonId && (
+          <Select
+            allowClear
+            placeholder={t(T.allLevels)}
+            style={{ width: 220 }}
+            value={qp.levelId}
+            onChange={(v) =>
+              setParams({ levelId: v, search: qp.search, lessonId: qp.lessonId })
+            }
+            options={levels.map((l) => ({ value: l.id, label: l.title }))}
+          />
+        )}
         <Tag className="text-xs">{total} ta</Tag>
         <div className="ml-auto">
           <Button
             type="primary"
             icon={<Plus size={16} />}
             onClick={() => openModal()}
-            disabled={!can('contentTheories', 'create')}
+            disabled={
+              !can('contentTheories', 'create') ||
+              (!!qp.lessonId &&
+                (lessonQ.isPending || lessonQ.isError || !lessonQ.data))
+            }
           >
             {t(T.addTheory)}
           </Button>
@@ -376,7 +433,21 @@ const Theories = () => {
         }}
       >
         <Form form={form} layout="vertical">
-          {!editing && (
+          {!editing && qp.lessonId && lessonQ.data ? (
+            <>
+              <Form.Item name="levelId" hidden rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="parentTheoryId" hidden rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
+                {t({ uz: 'Dars:', en: 'Lesson:', ru: 'Урок:' })}{' '}
+                <strong>{lessonQ.data.title}</strong>
+              </p>
+            </>
+          ) : null}
+          {!editing && !qp.lessonId && (
             <Form.Item
               name="levelId"
               label={t(T.level)}
@@ -392,14 +463,16 @@ const Theories = () => {
               />
             </Form.Item>
           )}
-          <Form.Item name="parentTheoryId" label="Sub nazariya (parent)">
-            <Select
-              allowClear
-              placeholder="Root nazariya"
-              options={parentOptions}
-              disabled={!form.getFieldValue('levelId') && !editing}
-            />
-          </Form.Item>
+          {(editing || !qp.lessonId) && (
+            <Form.Item name="parentTheoryId" label="Sub nazariya (parent)">
+              <Select
+                allowClear
+                placeholder="Root nazariya"
+                options={parentOptions}
+                disabled={!form.getFieldValue('levelId') && !editing}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             name="title"
             label={t(T.theoryName)}

@@ -12,6 +12,7 @@ const LoginPage = lazy(() => import('./pages/Login/Login'));
 const HomePage = lazy(() => import('./pages/Home'));
 const ProfilePage = lazy(() => import('./pages/Profile/Profile'));
 const LevelsPage = lazy(() => import('./pages/Levels/Levels'));
+const LessonsPage = lazy(() => import('./pages/Lessons/Lessons'));
 const TheoriesPage = lazy(() => import('./pages/Theories/Theories'));
 const QuestionsPage = lazy(() => import('./pages/Questions/Questions'));
 const LevelDetailPage = lazy(() => import('./pages/Levels/LevelDetail'));
@@ -75,6 +76,10 @@ export const routes: RouteObject[] = [
           {
             path: 'levels/:id',
             element: withSuspense(LevelDetailPage)
+          },
+          {
+            path: 'lessons',
+            element: withSuspense(LessonsPage)
           },
           {
             path: 'theories',

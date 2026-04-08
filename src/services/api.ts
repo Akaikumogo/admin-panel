@@ -1089,6 +1089,8 @@ class ApiService {
   // ===== Theories =====
   async getTheories(filters?: {
     levelId?: string;
+    /** Dars (lesson) theory UUID — faqat shu darsga bog'langan nazariyalar */
+    parentTheoryId?: string;
     search?: string;
     page?: number;
     limit?: number;
