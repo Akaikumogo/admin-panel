@@ -301,7 +301,7 @@ const Questions = () => {
                       <button
                         type="button"
                         className="font-medium text-slate-900 dark:text-white text-base hover:underline text-left"
-                        onClick={() => navigate(`/dashboard/questions/${q.id}`)}
+                        onClick={() => openModal(q)}
                       >
                         {idx + 1}. <HighlightText text={q.prompt} highlight={qp.search} />
                       </button>

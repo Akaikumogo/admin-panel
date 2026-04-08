@@ -31,7 +31,7 @@ import { useFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
-import type { Level, Theory, Question } from '@/services/api';
+import type { Level, Theory, Question, QuestionType } from '@/services/api';
 import { can } from '@/utils/can';
 
 const T = {
@@ -110,6 +110,7 @@ const T = {
     ru: 'Варианты ответов'
   },
   optionText: { uz: 'Javob matni', en: 'Option text', ru: 'Текст варианта' },
+  matchText: { uz: 'Mos javob', en: 'Match', ru: 'Соответствие' },
   correct: { uz: 'To`g`ri', en: 'Correct', ru: 'Верный' },
   addOption: {
     uz: 'Variant qo`shish',
@@ -119,6 +120,15 @@ const T = {
   noData: { uz: 'Ma`lumot yo`q', en: 'No data', ru: 'Нет данных' },
   loading: { uz: 'Yuklanmoqda...', en: 'Loading...', ru: 'Загрузка...' }
 } as const;
+
+const QUESTION_TYPE_LABELS: Record<
+  QuestionType,
+  { uz: string; en: string; ru: string }
+> = {
+  SINGLE_CHOICE: { uz: 'Test (tanlash)', en: 'Single choice', ru: 'Одиночный выбор' },
+  YES_NO: { uz: 'Ha / Yo`q', en: 'Yes / No', ru: 'Да / Нет' },
+  MATCHING: { uz: 'Moslashtirish', en: 'Matching', ru: 'Сопоставление' },
+};
 
 const QP_DEFAULTS = { search: undefined, status: undefined } as const;
 
@@ -157,6 +167,8 @@ const Levels = () => {
   const [theoryForm] = Form.useForm();
   const [questionForm] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [selectedQuestionType, setSelectedQuestionType] =
+    useState<QuestionType>('SINGLE_CHOICE');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const fetchTheories = useCallback(async (levelId: string) => {
@@ -313,23 +325,59 @@ const Levels = () => {
       theoryId
     });
     if (question) {
+      const qType = (question.type || 'SINGLE_CHOICE') as QuestionType;
+      setSelectedQuestionType(qType);
       questionForm.setFieldsValue({
         prompt: question.prompt,
+        type: qType,
         isActive: question.isActive,
         options: question.options.map((o) => ({
           id: o.id,
           optionText: o.optionText,
-          isCorrect: o.isCorrect
+          isCorrect: o.isCorrect,
+          matchText: o.matchText ?? ''
         }))
       });
     } else {
+      setSelectedQuestionType('SINGLE_CHOICE');
       questionForm.resetFields();
       questionForm.setFieldsValue({
+        type: 'SINGLE_CHOICE',
         options: [
-          { optionText: '', isCorrect: false },
-          { optionText: '', isCorrect: false }
+          { optionText: '', isCorrect: false, matchText: '' },
+          { optionText: '', isCorrect: false, matchText: '' }
         ]
       });
+    }
+  };
+
+  const handleQuestionTypeChange = (val: QuestionType) => {
+    setSelectedQuestionType(val);
+    if (val === 'YES_NO') {
+      questionForm.setFieldsValue({
+        options: [
+          { optionText: 'Ha', isCorrect: true, matchText: '' },
+          { optionText: "Yo`q", isCorrect: false, matchText: '' },
+        ],
+      });
+    } else if (val === 'MATCHING') {
+      const current = questionForm.getFieldValue('options') || [];
+      if (current.length < 2) {
+        questionForm.setFieldsValue({
+          options: [
+            { optionText: '', isCorrect: true, matchText: '' },
+            { optionText: '', isCorrect: true, matchText: '' },
+          ],
+        });
+      } else {
+        questionForm.setFieldsValue({
+          options: current.map((o: any) => ({
+            ...o,
+            isCorrect: true,
+            matchText: o.matchText ?? '',
+          })),
+        });
+      }
     }
   };
 
@@ -342,6 +390,7 @@ const Levels = () => {
       if (questionModal.editing) {
         await apiService.updateQuestion(questionModal.editing.id, {
           prompt: values.prompt,
+          type: values.type,
           isActive: values.isActive,
           options: values.options
         });
@@ -351,6 +400,7 @@ const Levels = () => {
           levelId: questionModal.levelId,
           theoryId: questionModal.theoryId,
           prompt: values.prompt,
+          type: values.type,
           isActive: values.isActive ?? true,
           options: values.options
         });
@@ -722,8 +772,10 @@ const Levels = () => {
                                                   type="button"
                                                   className="text-sm font-medium text-slate-900 dark:text-white hover:underline text-left"
                                                   onClick={() =>
-                                                    navigate(
-                                                      `/dashboard/questions/${q.id}`
+                                                    openQuestionModal(
+                                                      level.id,
+                                                      lesson.id,
+                                                      q
                                                     )
                                                   }
                                                 >
@@ -734,19 +786,30 @@ const Levels = () => {
                                                   />
                                                 </button>
                                                 <div className="mt-2 flex flex-wrap gap-1">
-                                                  {q.options.map((opt) => (
-                                                    <Tag
-                                                      key={opt.id}
-                                                      color={
-                                                        opt.isCorrect
-                                                          ? 'green'
-                                                          : 'default'
-                                                      }
-                                                      className="text-xs"
-                                                    >
-                                                      {opt.optionText}
-                                                    </Tag>
-                                                  ))}
+                                                  {q.type === 'MATCHING'
+                                                    ? q.options.map((opt) => (
+                                                        <Tag
+                                                          key={opt.id}
+                                                          color="purple"
+                                                          className="text-xs"
+                                                        >
+                                                          {opt.optionText} ↔{' '}
+                                                          {opt.matchText}
+                                                        </Tag>
+                                                      ))
+                                                    : q.options.map((opt) => (
+                                                        <Tag
+                                                          key={opt.id}
+                                                          color={
+                                                            opt.isCorrect
+                                                              ? 'green'
+                                                              : 'default'
+                                                          }
+                                                          className="text-xs"
+                                                        >
+                                                          {opt.optionText}
+                                                        </Tag>
+                                                      ))}
                                                 </div>
                                               </div>
                                               <div className="flex items-center gap-1 ml-2">
@@ -916,6 +979,21 @@ const Levels = () => {
       >
         <Form form={questionForm} layout="vertical">
           <Form.Item
+            name="type"
+            label={t({ uz: 'Savol turi', en: 'Question type', ru: 'Тип вопроса' })}
+            rules={[{ required: true }]}
+          >
+            <Select
+              value={selectedQuestionType}
+              onChange={(v) => handleQuestionTypeChange(v as QuestionType)}
+              options={[
+                { value: 'SINGLE_CHOICE', label: t(QUESTION_TYPE_LABELS.SINGLE_CHOICE) },
+                { value: 'YES_NO', label: t(QUESTION_TYPE_LABELS.YES_NO) },
+                { value: 'MATCHING', label: t(QUESTION_TYPE_LABELS.MATCHING) },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
             name="prompt"
             label={t(T.questionPrompt)}
             rules={[{ required: true }]}
@@ -942,17 +1020,47 @@ const Levels = () => {
                       className="flex-1 !mb-0"
                       rules={[{ required: true }]}
                     >
-                      <Input placeholder={t(T.optionText)} />
+                      <Input
+                        placeholder={t(T.optionText)}
+                        disabled={selectedQuestionType === 'YES_NO'}
+                      />
                     </Form.Item>
+                    {selectedQuestionType === 'MATCHING' && (
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'matchText']}
+                        className="flex-1 !mb-0"
+                        rules={[{ required: true }]}
+                      >
+                        <Input placeholder={t(T.matchText)} />
+                      </Form.Item>
+                    )}
                     <Form.Item
                       {...restField}
                       name={[name, 'isCorrect']}
                       valuePropName="checked"
                       className="!mb-0"
                     >
-                      <Switch checkedChildren={t(T.correct)} />
+                      {selectedQuestionType === 'YES_NO' ? (
+                        <Switch
+                          checkedChildren={t(T.correct)}
+                          onChange={(checked) => {
+                            if (checked) {
+                              const opts = questionForm.getFieldValue('options');
+                              questionForm.setFieldsValue({
+                                options: opts.map((o: any, i: number) => ({
+                                  ...o,
+                                  isCorrect: i === name,
+                                })),
+                              });
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Switch checkedChildren={t(T.correct)} />
+                      )}
                     </Form.Item>
-                    {fields.length > 2 && (
+                    {selectedQuestionType !== 'YES_NO' && fields.length > 2 && (
                       <Button
                         size="small"
                         danger
@@ -962,14 +1070,22 @@ const Levels = () => {
                     )}
                   </div>
                 ))}
-                <Button
-                  type="dashed"
-                  onClick={() => add({ optionText: '', isCorrect: false })}
-                  icon={<Plus size={14} />}
-                  block
-                >
-                  {t(T.addOption)}
-                </Button>
+                {selectedQuestionType !== 'YES_NO' && (
+                  <Button
+                    type="dashed"
+                    onClick={() =>
+                      add({
+                        optionText: '',
+                        isCorrect: selectedQuestionType === 'MATCHING',
+                        matchText: '',
+                      })
+                    }
+                    icon={<Plus size={14} />}
+                    block
+                  >
+                    {t(T.addOption)}
+                  </Button>
+                )}
               </div>
             )}
           </Form.List>

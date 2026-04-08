@@ -18,9 +18,14 @@ const T = {
   },
   module: { uz: 'Modul', en: 'Module', ru: 'Модуль' },
   allModules: { uz: 'Modulni tanlang', en: 'Select module', ru: 'Модуль' },
+  all: { uz: 'Barcha modullar', en: 'All modules', ru: 'Все модули' },
   theories: { uz: 'Nazariyalar', en: 'Theories', ru: 'Теории' },
   noData: { uz: 'Dars yo\'q', en: 'No lessons', ru: 'Нет уроков' },
 } as const;
+
+const ALL_LEVELS = '__all__';
+
+type LessonRow = Theory & { _levelTitle?: string };
 
 const Lessons = () => {
   const { t } = useTranslation();
@@ -41,7 +46,20 @@ const Lessons = () => {
 
   const treeQuery = useQuery({
     queryKey: ['theory-tree', levelId],
-    queryFn: () => apiService.getTheoryTreeByLevel(levelId!),
+    queryFn: async () => {
+      if (!levelId) return [];
+      if (levelId !== ALL_LEVELS) {
+        return apiService.getTheoryTreeByLevel(levelId);
+      }
+      const byId = new Map(levels.map((l) => [l.id, l.title] as const));
+      const chunks = await Promise.all(
+        levels.map(async (l) => {
+          const rows = await apiService.getTheoryTreeByLevel(l.id);
+          return rows.map((r) => ({ ...r, _levelTitle: byId.get(l.id) }));
+        }),
+      );
+      return chunks.flat();
+    },
     enabled: !!levelId,
   });
 
@@ -50,7 +68,7 @@ const Lessons = () => {
     return roots.filter(
       (r: Theory) =>
         r.theoryRole === 'lesson' || !r.parentTheoryId,
-    ) as Theory[];
+    ) as LessonRow[];
   }, [treeQuery.data]);
 
   if (levelsLoading) {
@@ -79,7 +97,10 @@ const Lessons = () => {
           placeholder={t(T.allModules)}
           value={levelId}
           onChange={(v) => setLevelId(v)}
-          options={levels.map((l) => ({ value: l.id, label: l.title }))}
+          options={[
+            { value: ALL_LEVELS, label: t(T.all) },
+            ...levels.map((l) => ({ value: l.id, label: l.title })),
+          ]}
         />
       </div>
 
@@ -111,6 +132,11 @@ const Lessons = () => {
                     <p className="font-semibold text-slate-900 dark:text-white truncate">
                       {lesson.title}
                     </p>
+                    {levelId === ALL_LEVELS && lesson._levelTitle && (
+                      <p className="text-xs text-slate-400 truncate">
+                        {lesson._levelTitle}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <Button

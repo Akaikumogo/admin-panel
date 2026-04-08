@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, Form, Input, Spin, Switch, Tag, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Spin, Switch, Tag, message } from 'antd';
 import { ArrowLeft, ArrowLeftRight, Plus, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
@@ -137,52 +137,48 @@ export default function QuestionDetail() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Button icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>
-          {t(T.back)}
-        </Button>
+    <Modal
+      open
+      title={
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white truncate">
+          <div className="text-base font-semibold truncate">
             {t(T.title)} — {question?.prompt || '...'}
-          </h1>
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <Tag color={QUESTION_TYPE_COLORS[selectedType]}>
               {t(QUESTION_TYPE_LABELS[selectedType])}
             </Tag>
             {question?.levelId && (
-              <button
-                type="button"
-                className="hover:underline"
-                onClick={() => navigate(`/dashboard/levels/${question.levelId}`)}
-              >
+              <span className="truncate">
                 {t(T.module)}: {headerMeta.levelTitle || question.levelId}
-              </button>
+              </span>
             )}
             {question?.theoryId && (
-              <button
-                type="button"
-                className="hover:underline"
-                onClick={() => navigate(`/dashboard/theories/${question.theoryId}`)}
-              >
+              <span className="truncate">
                 {t(T.theory)}: {headerMeta.theoryTitle || question.theoryId}
-              </button>
+              </span>
             )}
           </div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            type="primary"
-            icon={<Save size={16} />}
-            loading={saving}
-            onClick={handleSave}
-            disabled={!can('contentQuestions', 'update')}
-          >
-            {t(T.save)}
-          </Button>
-        </div>
-      </div>
-
+      }
+      onCancel={() => navigate(-1)}
+      width={860}
+      footer={[
+        <Button key="back" icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>
+          {t(T.back)}
+        </Button>,
+        <Button
+          key="save"
+          type="primary"
+          icon={<Save size={16} />}
+          loading={saving}
+          onClick={handleSave}
+          disabled={!can('contentQuestions', 'update')}
+        >
+          {t(T.save)}
+        </Button>,
+      ]}
+    >
       <Card className="!border-slate-200 dark:!border-slate-700/60">
         {initialLoading ? (
           <div className="flex items-center justify-center h-32">
@@ -279,7 +275,13 @@ export default function QuestionDetail() {
                   {selectedType !== 'YES_NO' && (
                     <Button
                       type="dashed"
-                      onClick={() => add({ optionText: '', isCorrect: selectedType === 'MATCHING', matchText: '' })}
+                      onClick={() =>
+                        add({
+                          optionText: '',
+                          isCorrect: selectedType === 'MATCHING',
+                          matchText: '',
+                        })
+                      }
                       icon={<Plus size={14} />}
                       block
                     >
@@ -299,7 +301,7 @@ export default function QuestionDetail() {
           </Form>
         )}
       </Card>
-    </div>
+    </Modal>
   );
 }
 
