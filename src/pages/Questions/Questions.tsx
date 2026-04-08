@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { Plus, Pencil, Trash2, Filter, ArrowLeftRight, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch } from '@/hooks/useFetch';
@@ -69,7 +69,7 @@ const QP_DEFAULTS = { search: undefined, levelId: undefined, theoryId: undefined
 
 const Questions = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+// eslint-disable-line @typescript-eslint/no-unused-vars
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
 
   const { data: levels } = useFetch(['levels'], () => apiService.getLevels(), [] as Level[]);
