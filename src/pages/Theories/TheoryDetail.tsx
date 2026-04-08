@@ -32,8 +32,11 @@ const T = {
   addSlide: { uz: 'Slayd qo‘shish', en: 'Add slide', ru: 'Добавить слайд' },
 } as const;
 
-function isNazariyaTheory(t: Pick<Theory, 'title'> | null | undefined) {
-  return Boolean(t?.title?.trimEnd().endsWith(' · Nazariya'));
+function isNazariyaTheory(t: Pick<Theory, 'title' | 'theoryRole'> | null | undefined) {
+  return (
+    t?.theoryRole === 'nazariya' ||
+    Boolean(t?.title?.trimEnd().endsWith(' · Nazariya'))
+  );
 }
 
 function slidesToForm(
@@ -128,8 +131,10 @@ export default function TheoryDetail() {
       if (nazNow) {
         const built = formToSlides(values.slides ?? []);
         payload.slides = built.length > 0 ? built : null;
+        payload.theoryRole = 'nazariya';
       } else if (isNazariyaTheory(theory)) {
         payload.slides = null;
+        payload.theoryRole = 'lesson';
       }
       await apiService.updateTheory(theoryId, payload);
       message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
