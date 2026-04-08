@@ -61,6 +61,17 @@ const T = {
     ru: 'Вы уверены?'
   },
   theories: { uz: 'Nazariyalar', en: 'Theories', ru: 'Теории' },
+  lessons: { uz: 'Darslar', en: 'Lessons', ru: 'Уроки' },
+  addLesson: {
+    uz: 'Dars qo`shish',
+    en: 'Add lesson',
+    ru: 'Добавить урок'
+  },
+  editLesson: {
+    uz: 'Darsni tahrirlash',
+    en: 'Edit lesson',
+    ru: 'Редактировать урок'
+  },
   addTheory: {
     uz: 'Nazariya qo`shish',
     en: 'Add Theory',
@@ -125,7 +136,19 @@ const Levels = () => {
   );
 
   const [levelModal, setLevelModal] = useState<{ open: boolean; editing: Level | null }>({ open: false, editing: null });
-  const [theoryModal, setTheoryModal] = useState<{ open: boolean; editing: Theory | null; levelId: string }>({ open: false, editing: null, levelId: '' });
+  const [theoryModal, setTheoryModal] = useState<{
+    open: boolean;
+    editing: Theory | null;
+    levelId: string;
+    parentTheoryId: string | null;
+    kind: 'lesson' | 'nazariya';
+  }>({
+    open: false,
+    editing: null,
+    levelId: '',
+    parentTheoryId: null,
+    kind: 'lesson'
+  });
   const [questionModal, setQuestionModal] = useState<{ open: boolean; editing: Question | null; levelId: string; theoryId: string }>({ open: false, editing: null, levelId: '', theoryId: '' });
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
   const [theories, setTheories] = useState<Record<string, Theory[]>>({});
@@ -138,7 +161,7 @@ const Levels = () => {
 
   const fetchTheories = useCallback(async (levelId: string) => {
     try {
-      const data = await apiService.getTheoriesByLevel(levelId);
+      const data = await apiService.getTheoryTreeByLevel(levelId);
       setTheories((prev) => ({ ...prev, [levelId]: data }));
     } catch { /* empty */ }
   }, []);
@@ -199,10 +222,28 @@ const Levels = () => {
   };
 
   // Theory CRUD
-  const openTheoryModal = (levelId: string, theory?: Theory) => {
+  const openTheoryModal = (
+    levelId: string,
+    theory?: Theory,
+    opts?: { parentTheoryId?: string | null; kind?: 'lesson' | 'nazariya' }
+  ) => {
     if (theory && !can('contentTheories', 'update')) return;
     if (!theory && !can('contentTheories', 'create')) return;
-    setTheoryModal({ open: true, editing: theory ?? null, levelId });
+    const kind = theory
+      ? theory.parentTheoryId
+        ? ('nazariya' as const)
+        : ('lesson' as const)
+      : opts?.kind ?? 'lesson';
+    const parentTheoryId = theory
+      ? theory.parentTheoryId ?? null
+      : opts?.parentTheoryId ?? null;
+    setTheoryModal({
+      open: true,
+      editing: theory ?? null,
+      levelId,
+      parentTheoryId,
+      kind
+    });
     if (theory) {
       theoryForm.setFieldsValue({
         title: theory.title,
@@ -221,15 +262,27 @@ const Levels = () => {
       setSaving(true);
       if (theoryModal.editing) {
         await apiService.updateTheory(theoryModal.editing.id, values);
-        message.success('Nazariya yangilandi');
+        message.success(
+          theoryModal.kind === 'lesson' ? 'Dars yangilandi' : 'Nazariya yangilandi'
+        );
       } else {
         await apiService.createTheory({
           ...values,
-          levelId: theoryModal.levelId
+          levelId: theoryModal.levelId,
+          parentTheoryId: theoryModal.parentTheoryId ?? null,
+          theoryRole: theoryModal.kind
         });
-        message.success('Nazariya yaratildi');
+        message.success(
+          theoryModal.kind === 'lesson' ? 'Dars yaratildi' : 'Nazariya yaratildi'
+        );
       }
-      setTheoryModal({ open: false, editing: null, levelId: '' });
+      setTheoryModal({
+        open: false,
+        editing: null,
+        levelId: '',
+        parentTheoryId: null,
+        kind: 'lesson'
+      });
       fetchTheories(theoryModal.levelId);
     } catch {
       /* validation */
@@ -456,20 +509,24 @@ const Levels = () => {
                       </div>
                     </div>
 
-                    {/* Expanded: Theories */}
                     {expandedLevel === level.id && (
                       <div className="border-t border-slate-200 dark:border-slate-700/60 px-6 py-4">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                            <BookOpen size={14} /> {t(T.theories)}
+                            <BookOpen size={14} /> {t(T.lessons)}
                           </h4>
                           <Button
                             size="small"
                             icon={<Plus size={12} />}
-                            onClick={() => openTheoryModal(level.id)}
+                            onClick={() =>
+                              openTheoryModal(level.id, undefined, {
+                                kind: 'lesson',
+                                parentTheoryId: null
+                              })
+                            }
                             disabled={!can('contentTheories', 'create')}
                           >
-                            {t(T.addTheory)}
+                            {t(T.addLesson)}
                           </Button>
                         </div>
 
@@ -485,13 +542,13 @@ const Levels = () => {
                             accordion
                             ghost
                             onChange={(key) => {
-                              const theoryId = Array.isArray(key)
+                              const lessonId = Array.isArray(key)
                                 ? key[0]
                                 : key;
-                              if (theoryId) fetchQuestions(theoryId);
+                              if (lessonId) fetchQuestions(lessonId as string);
                             }}
-                            items={theories[level.id].map((theory) => ({
-                              key: theory.id,
+                            items={theories[level.id].map((lesson) => ({
+                              key: lesson.id,
                               label: (
                                 <div className="flex items-center justify-between w-full">
                                   <button
@@ -499,12 +556,12 @@ const Levels = () => {
                                     className="font-medium hover:underline text-left"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      navigate(`/dashboard/theories/${theory.id}`);
+                                      navigate(`/dashboard/theories/${lesson.id}`);
                                     }}
                                   >
-                                    #{theory.orderIndex + 1} —{' '}
+                                    #{lesson.orderIndex + 1} —{' '}
                                     <HighlightText
-                                      text={theory.title}
+                                      text={lesson.title}
                                       highlight={qp.search}
                                     />
                                   </button>
@@ -516,14 +573,14 @@ const Levels = () => {
                                       size="small"
                                       icon={<Pencil size={12} />}
                                       onClick={() =>
-                                        openTheoryModal(level.id, theory)
+                                        openTheoryModal(level.id, lesson)
                                       }
                                       disabled={!can('contentTheories', 'update')}
                                     />
                                     <Popconfirm
                                       title={t(T.deleteConfirm)}
                                       onConfirm={() =>
-                                        handleTheoryDelete(theory.id, level.id)
+                                        handleTheoryDelete(lesson.id, level.id)
                                       }
                                       disabled={!can('contentTheories', 'delete')}
                                     >
@@ -538,106 +595,206 @@ const Levels = () => {
                                 </div>
                               ),
                               children: (
-                                <div className="space-y-3">
-                                  {theory.content && (
-                                    <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-black/20 p-3 rounded-lg max-h-[min(70vh,720px)] overflow-y-auto whitespace-pre-wrap">
-                                      {theory.content}
+                                <div className="space-y-4">
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        {t(T.theories)}
+                                      </span>
+                                      <Button
+                                        size="small"
+                                        type="link"
+                                        className="!h-auto !p-0"
+                                        icon={<Plus size={12} />}
+                                        onClick={() =>
+                                          openTheoryModal(level.id, undefined, {
+                                            kind: 'nazariya',
+                                            parentTheoryId: lesson.id
+                                          })
+                                        }
+                                        disabled={!can('contentTheories', 'create')}
+                                      >
+                                        {t(T.addTheory)}
+                                      </Button>
                                     </div>
-                                  )}
-                                  <div className="flex items-center justify-between">
-                                    <h5 className="text-sm font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                                      <HelpCircle size={14} /> {t(T.questions)}
-                                    </h5>
-                                    <Button
-                                      size="small"
-                                      icon={<Plus size={12} />}
-                                      onClick={() =>
-                                        openQuestionModal(level.id, theory.id)
-                                      }
-                                      disabled={!can('contentQuestions', 'create')}
-                                    >
-                                      {t(T.addQuestion)}
-                                    </Button>
-                                  </div>
-                                  {!questions[theory.id] ? (
-                                    <Spin size="small" />
-                                  ) : !Array.isArray(questions[theory.id]) ||
-                                    questions[theory.id].length === 0 ? (
-                                    <p className="text-xs text-slate-400">
-                                      {t(T.noData)}
-                                    </p>
-                                  ) : (
-                                    <div className="space-y-2">
-                                      {questions[theory.id].map((q, idx) => (
-                                        <div
-                                          key={q.id}
-                                          className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 rounded-lg p-3"
-                                        >
-                                          <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                              <button
-                                                type="button"
-                                                className="text-sm font-medium text-slate-900 dark:text-white hover:underline text-left"
-                                                onClick={() => navigate(`/dashboard/questions/${q.id}`)}
-                                              >
-                                                {idx + 1}.{' '}
-                                                <HighlightText
-                                                  text={q.prompt}
-                                                  highlight={qp.search}
-                                                />
-                                              </button>
-                                              <div className="mt-2 flex flex-wrap gap-1">
-                                                {q.options.map((opt) => (
-                                                  <Tag
-                                                    key={opt.id}
-                                                    color={
-                                                      opt.isCorrect
-                                                        ? 'green'
-                                                        : 'default'
-                                                    }
-                                                    className="text-xs"
-                                                  >
-                                                    {opt.optionText}
-                                                  </Tag>
-                                                ))}
-                                              </div>
-                                            </div>
-                                            <div className="flex items-center gap-1 ml-2">
+                                    {!lesson.children?.length ? (
+                                      <p className="text-xs text-slate-400 pl-1">
+                                        {t(T.noData)}
+                                      </p>
+                                    ) : (
+                                      <div className="space-y-1 border-l-2 border-slate-200 dark:border-slate-600 pl-3">
+                                        {lesson.children.map((child) => (
+                                          <div
+                                            key={child.id}
+                                            className="flex items-center justify-between gap-2 py-1"
+                                          >
+                                            <button
+                                              type="button"
+                                              className="text-sm text-slate-800 dark:text-slate-200 hover:underline text-left truncate"
+                                              onClick={() =>
+                                                navigate(
+                                                  `/dashboard/theories/${child.id}`
+                                                )
+                                              }
+                                            >
+                                              <HighlightText
+                                                text={child.title}
+                                                highlight={qp.search}
+                                              />
+                                            </button>
+                                            <div className="flex items-center gap-1 shrink-0">
                                               <Button
                                                 size="small"
                                                 icon={<Pencil size={12} />}
                                                 onClick={() =>
-                                                  openQuestionModal(
+                                                  openTheoryModal(
                                                     level.id,
-                                                    theory.id,
-                                                    q
+                                                    child
                                                   )
                                                 }
-                                                disabled={!can('contentQuestions', 'update')}
+                                                disabled={!can(
+                                                  'contentTheories',
+                                                  'update'
+                                                )}
                                               />
                                               <Popconfirm
                                                 title={t(T.deleteConfirm)}
                                                 onConfirm={() =>
-                                                  handleQuestionDelete(
-                                                    q.id,
-                                                    theory.id
+                                                  handleTheoryDelete(
+                                                    child.id,
+                                                    level.id
                                                   )
                                                 }
-                                                disabled={!can('contentQuestions', 'delete')}
+                                                disabled={!can(
+                                                  'contentTheories',
+                                                  'delete'
+                                                )}
                                               >
                                                 <Button
                                                   size="small"
                                                   danger
                                                   icon={<Trash2 size={12} />}
-                                                  disabled={!can('contentQuestions', 'delete')}
+                                                  disabled={!can(
+                                                    'contentTheories',
+                                                    'delete'
+                                                  )}
                                                 />
                                               </Popconfirm>
                                             </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h5 className="text-sm font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                                        <HelpCircle size={14} /> {t(T.questions)}
+                                      </h5>
+                                      <Button
+                                        size="small"
+                                        icon={<Plus size={12} />}
+                                        onClick={() =>
+                                          openQuestionModal(level.id, lesson.id)
+                                        }
+                                        disabled={!can('contentQuestions', 'create')}
+                                      >
+                                        {t(T.addQuestion)}
+                                      </Button>
                                     </div>
-                                  )}
+                                    {!questions[lesson.id] ? (
+                                      <Spin size="small" />
+                                    ) : !Array.isArray(questions[lesson.id]) ||
+                                      questions[lesson.id].length === 0 ? (
+                                      <p className="text-xs text-slate-400">
+                                        {t(T.noData)}
+                                      </p>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        {questions[lesson.id].map((q, idx) => (
+                                          <div
+                                            key={q.id}
+                                            className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 rounded-lg p-3"
+                                          >
+                                            <div className="flex items-start justify-between">
+                                              <div className="flex-1">
+                                                <button
+                                                  type="button"
+                                                  className="text-sm font-medium text-slate-900 dark:text-white hover:underline text-left"
+                                                  onClick={() =>
+                                                    navigate(
+                                                      `/dashboard/questions/${q.id}`
+                                                    )
+                                                  }
+                                                >
+                                                  {idx + 1}.{' '}
+                                                  <HighlightText
+                                                    text={q.prompt}
+                                                    highlight={qp.search}
+                                                  />
+                                                </button>
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                  {q.options.map((opt) => (
+                                                    <Tag
+                                                      key={opt.id}
+                                                      color={
+                                                        opt.isCorrect
+                                                          ? 'green'
+                                                          : 'default'
+                                                      }
+                                                      className="text-xs"
+                                                    >
+                                                      {opt.optionText}
+                                                    </Tag>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center gap-1 ml-2">
+                                                <Button
+                                                  size="small"
+                                                  icon={<Pencil size={12} />}
+                                                  onClick={() =>
+                                                    openQuestionModal(
+                                                      level.id,
+                                                      lesson.id,
+                                                      q
+                                                    )
+                                                  }
+                                                  disabled={!can(
+                                                    'contentQuestions',
+                                                    'update'
+                                                  )}
+                                                />
+                                                <Popconfirm
+                                                  title={t(T.deleteConfirm)}
+                                                  onConfirm={() =>
+                                                    handleQuestionDelete(
+                                                      q.id,
+                                                      lesson.id
+                                                    )
+                                                  }
+                                                  disabled={!can(
+                                                    'contentQuestions',
+                                                    'delete'
+                                                  )}
+                                                >
+                                                  <Button
+                                                    size="small"
+                                                    danger
+                                                    icon={<Trash2 size={12} />}
+                                                    disabled={!can(
+                                                      'contentQuestions',
+                                                      'delete'
+                                                    )}
+                                                  />
+                                                </Popconfirm>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )
                             }))}
@@ -690,10 +847,24 @@ const Levels = () => {
 
       {/* Theory Modal */}
       <Modal
-        title={theoryModal.editing ? t(T.editTheory) : t(T.addTheory)}
+        title={
+          theoryModal.editing
+            ? theoryModal.kind === 'lesson'
+              ? t(T.editLesson)
+              : t(T.editTheory)
+            : theoryModal.kind === 'lesson'
+              ? t(T.addLesson)
+              : t(T.addTheory)
+        }
         open={theoryModal.open}
         onCancel={() =>
-          setTheoryModal({ open: false, editing: null, levelId: '' })
+          setTheoryModal({
+            open: false,
+            editing: null,
+            levelId: '',
+            parentTheoryId: null,
+            kind: 'lesson'
+          })
         }
         onOk={handleTheorySave}
         confirmLoading={saving}
