@@ -27,7 +27,8 @@ import {
   KeyRound,
   BarChart2,
   FolderTree,
-  Library
+  Library,
+  Bot
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -92,6 +93,11 @@ const navItems = [
     path: '/dashboard/profile',
     label: { uz: 'Profil', en: 'Profile', ru: 'Профиль' },
     icon: User
+  },
+  {
+    path: '/dashboard/ai-assistant',
+    label: { uz: 'AI yordamchi', en: 'AI assistant', ru: 'AI помощник' },
+    icon: Bot
   },
   {
     path: '/dashboard/hearts-analytics',
