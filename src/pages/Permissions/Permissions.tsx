@@ -61,6 +61,7 @@ const MODULES: {
   { key: 'moderators', label: { uz: 'Moderatorlar', en: 'Mods', ru: 'Мод.' } },
   { key: 'profile', label: { uz: 'Profil', en: 'Profile', ru: 'Профиль' } },
   { key: 'exams', label: { uz: 'Imtihonlar', en: 'Exams', ru: 'Экзамены' } },
+  { key: 'audioLibrary', label: { uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' } },
 ];
 
 const CRUD_ORDER: (keyof CrudPermissions)[] = ['create', 'update', 'delete'];

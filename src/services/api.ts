@@ -291,6 +291,43 @@ export type EmployeeCheck = {
   updatedAt: string;
 };
 
+// ─── Audio Library (Admin) ────────────────────────────────────────────────
+export type AdminAudioBookRow = {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+  description: string | null;
+  isActive: boolean;
+  chaptersCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminAudioParagraph = {
+  id: string;
+  text: string;
+  order: number;
+  chapterId: string;
+  audioUrl: string;
+};
+
+export type AdminAudioChapter = {
+  id: string;
+  title: string;
+  order: number;
+  bookId: string;
+  paragraphs: AdminAudioParagraph[];
+};
+
+export type AdminAudioBookDetail = {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+  description: string | null;
+  isActive: boolean;
+  chapters: AdminAudioChapter[];
+};
+
 export type CrudPermissions = {
   create: boolean;
   update: boolean;
@@ -307,6 +344,7 @@ export type ModeratorPermissions = {
   moderators: CrudPermissions;
   profile: CrudPermissions;
   exams: CrudPermissions;
+  audioLibrary: CrudPermissions;
 };
 
 export type ModeratorPermissionRecord = {
@@ -1438,6 +1476,87 @@ class ApiService {
 
   async deleteEmployeeCheck(studentId: string, checkId: string): Promise<void> {
     await this.api.delete(`/admin/students/${studentId}/checks/${checkId}`);
+  }
+
+  // ─── Audio Library (Admin CRUD) ─────────────────────────────────────────
+  async adminListAudioBooks(params?: { search?: string }): Promise<AdminAudioBookRow[]> {
+    const response = await this.api.get<AdminAudioBookRow[]>('/admin/audio-books', { params });
+    return response.data;
+  }
+
+  async adminGetAudioBook(bookId: string): Promise<AdminAudioBookDetail> {
+    const response = await this.api.get<AdminAudioBookDetail>(`/admin/audio-books/${bookId}`);
+    return response.data;
+  }
+
+  async adminCreateAudioBook(data: {
+    title: string;
+    description?: string | null;
+    coverUrl?: string | null;
+    isActive?: boolean;
+  }): Promise<AdminAudioBookDetail> {
+    const response = await this.api.post<AdminAudioBookDetail>('/admin/audio-books', data);
+    return response.data;
+  }
+
+  async adminUpdateAudioBook(
+    bookId: string,
+    data: {
+      title?: string;
+      description?: string | null;
+      coverUrl?: string | null;
+      isActive?: boolean;
+    },
+  ): Promise<AdminAudioBookDetail> {
+    const response = await this.api.put<AdminAudioBookDetail>(`/admin/audio-books/${bookId}`, data);
+    return response.data;
+  }
+
+  async adminDeleteAudioBook(bookId: string): Promise<{ ok: boolean }> {
+    const response = await this.api.delete<{ ok: boolean }>(`/admin/audio-books/${bookId}`);
+    return response.data;
+  }
+
+  async adminCreateAudioChapter(bookId: string, data: { title: string; orderIndex: number }) {
+    const response = await this.api.post<{ ok: boolean; id: string }>(
+      `/admin/audio-books/${bookId}/chapters`,
+      data,
+    );
+    return response.data;
+  }
+
+  async adminUpdateAudioChapter(chapterId: string, data: { title?: string; orderIndex?: number }) {
+    const response = await this.api.put<{ ok: boolean }>(`/admin/audio-chapters/${chapterId}`, data);
+    return response.data;
+  }
+
+  async adminDeleteAudioChapter(chapterId: string) {
+    const response = await this.api.delete<{ ok: boolean }>(`/admin/audio-chapters/${chapterId}`);
+    return response.data;
+  }
+
+  async adminCreateAudioParagraph(
+    chapterId: string,
+    data: { text: string; orderIndex: number; audioUrl: string },
+  ) {
+    const response = await this.api.post<{ ok: boolean; id: string }>(
+      `/admin/audio-chapters/${chapterId}/paragraphs`,
+      data,
+    );
+    return response.data;
+  }
+
+  async adminUpdateAudioParagraph(
+    paragraphId: string,
+    data: { text?: string; orderIndex?: number; audioUrl?: string },
+  ) {
+    const response = await this.api.put<{ ok: boolean }>(`/admin/audio-paragraphs/${paragraphId}`, data);
+    return response.data;
+  }
+
+  async adminDeleteAudioParagraph(paragraphId: string) {
+    const response = await this.api.delete<{ ok: boolean }>(`/admin/audio-paragraphs/${paragraphId}`);
+    return response.data;
   }
 
   // ===== Seed =====

@@ -28,6 +28,7 @@ import {
   BarChart2,
   FolderTree,
   Library,
+  LibraryBig,
   Bot
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -37,6 +38,7 @@ import { Button, Select, Spin } from 'antd';
 import { Sidebar } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 import { cacheModeratorPermissions } from '@/utils/permissions';
+import { can } from '@/utils/can';
 
 const navItems = [
   {
@@ -63,6 +65,11 @@ const navItems = [
     path: '/dashboard/lessons',
     label: { uz: 'Darslar', en: 'Lessons', ru: 'Уроки' },
     icon: Library
+  },
+  {
+    path: '/dashboard/audio-library',
+    label: { uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' },
+    icon: LibraryBig,
   },
   {
     path: '/dashboard/theories',
@@ -256,13 +263,18 @@ const Layout = () => {
     if (!me) return [];
     if (me.role === 'SUPERADMIN') return navItems;
     if (me.role === 'MODERATOR') {
+      const hasAudioPerm =
+        can('audioLibrary', 'create') ||
+        can('audioLibrary', 'update') ||
+        can('audioLibrary', 'delete');
       return navItems.filter(
         (item) =>
           item.path !== '/dashboard/moderators' &&
           item.path !== '/dashboard/users' &&
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
-          item.path !== '/dashboard/exam-analysis',
+          item.path !== '/dashboard/exam-analysis' &&
+          (hasAudioPerm || item.path !== '/dashboard/audio-library'),
       );
     }
     return [];
@@ -273,7 +285,13 @@ const Layout = () => {
     (location.pathname === '/dashboard/moderators' ||
       location.pathname === '/dashboard/users' ||
       location.pathname === '/dashboard/permissions' ||
-      location.pathname === '/dashboard/exam-analysis');
+      location.pathname === '/dashboard/exam-analysis' ||
+      (location.pathname === '/dashboard/audio-library' &&
+        !(
+          can('audioLibrary', 'create') ||
+          can('audioLibrary', 'update') ||
+          can('audioLibrary', 'delete')
+        )));
 
   useEffect(() => {
     if (meLoading || !me) return;
