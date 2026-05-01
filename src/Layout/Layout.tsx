@@ -19,14 +19,14 @@ import {
   Minimize2,
   HeartPulse,
   Trophy,
-  QrCode,
-  ClipboardList,
-  CalendarClock,
-  BriefcaseBusiness,
-  Trash2,
+  // QrCode,
+  // ClipboardList,
+  // CalendarClock,
+  // BriefcaseBusiness,
+  // Trash2,
   KeyRound,
-  BarChart2,
-  FolderTree,
+  // BarChart2,
+  // FolderTree,
   Library,
   LibraryBig,
   Bot
@@ -69,7 +69,7 @@ const navItems = [
   {
     path: '/dashboard/audio-library',
     label: { uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' },
-    icon: LibraryBig,
+    icon: LibraryBig
   },
   {
     path: '/dashboard/theories',
@@ -109,7 +109,7 @@ const navItems = [
   {
     path: '/dashboard/hearts-analytics',
     label: { uz: 'Yurak yo‘qotish', en: 'Hearts lost', ru: 'Потеря сердец' },
-    icon: HeartPulse,
+    icon: HeartPulse
   },
   {
     path: '/dashboard/leaderboard',
@@ -125,13 +125,13 @@ const navItems = [
     path: '/dashboard/logs',
     label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' },
     icon: ScrollText
-  },
+  }
 ];
 
 const Layout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(
-    () => typeof document !== 'undefined' && !!document.fullscreenElement,
+    () => typeof document !== 'undefined' && !!document.fullscreenElement
   );
   const { t, lang, setLang } = useTranslation();
   const colorFrom = '#3B82F6';
@@ -274,7 +274,7 @@ const Layout = () => {
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
           item.path !== '/dashboard/exam-analysis' &&
-          (hasAudioPerm || item.path !== '/dashboard/audio-library'),
+          (hasAudioPerm || item.path !== '/dashboard/audio-library')
       );
     }
     return [];
@@ -448,14 +448,22 @@ const Layout = () => {
                     size="large"
                     onClick={toggleFullscreen}
                     title={t({
-                      uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                      uz: isFullscreen
+                        ? 'To‘liq ekrandan chiqish'
+                        : 'To‘liq ekran',
                       en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
-                      ru: isFullscreen ? 'Выйти из полноэкранного режима' : 'Полный экран',
+                      ru: isFullscreen
+                        ? 'Выйти из полноэкранного режима'
+                        : 'Полный экран'
                     })}
                     aria-label={t({
-                      uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                      uz: isFullscreen
+                        ? 'To‘liq ekrandan chiqish'
+                        : 'To‘liq ekran',
                       en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
-                      ru: isFullscreen ? 'Выйти из полноэкранного режима' : 'Полный экран',
+                      ru: isFullscreen
+                        ? 'Выйти из полноэкранного режима'
+                        : 'Полный экран'
                     })}
                     icon={
                       isFullscreen ? (
@@ -521,7 +529,9 @@ const Layout = () => {
               <div className="p-2 grid grid-cols-1 grid-row-1">
                 <div className="col-span-1 row-span-1 rounded-lg w-full h-[calc(100vh-100px)]">
                   <AnimatePresence mode="sync">
-                    {me?.role !== 'USER' && !isModeratorForbiddenRoute ? <Outlet /> : null}
+                    {me?.role !== 'USER' && !isModeratorForbiddenRoute ? (
+                      <Outlet />
+                    ) : null}
                   </AnimatePresence>
                 </div>
               </div>
