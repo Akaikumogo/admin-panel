@@ -28,16 +28,8 @@ const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
 const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
 const LogsPage = lazy(() => import('./pages/Logs/Logs'));
-const ExamsPage = lazy(() => import('./pages/Exams/Exams'));
-const ExamQuestionsPage = lazy(() => import('./pages/ExamQuestions/ExamQuestions'));
-const ExamQuestionCatalogsPage = lazy(() => import('./pages/ExamQuestionCatalogs/ExamQuestionCatalogs'));
-const ExamSchedulePage = lazy(() => import('./pages/ExamSchedule/ExamSchedule'));
-const ExamAttemptAnalysisPage = lazy(() => import('./pages/ExamAttemptAnalysis/ExamAttemptAnalysis'));
-const PositionsPage = lazy(() => import('./pages/Positions/Positions'));
-const BasketPage = lazy(() => import('./pages/Basket/Basket'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
-const QrScanPage = lazy(() => import('./pages/QrScan/QrScan'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 
 const withSuspense = (
@@ -127,38 +119,6 @@ export const routes: RouteObject[] = [
             element: withSuspense(LogsPage)
           },
           {
-            path: 'exams',
-            element: withSuspense(ExamsPage)
-          },
-          {
-            path: 'exam-question-catalogs',
-            element: withSuspense(ExamQuestionCatalogsPage)
-          },
-          {
-            path: 'exam-questions',
-            element: withSuspense(ExamQuestionsPage)
-          },
-          {
-            path: 'exam-questions/catalog/:catalogId',
-            element: withSuspense(ExamQuestionsPage)
-          },
-          {
-            path: 'exam-schedule',
-            element: withSuspense(ExamSchedulePage)
-          },
-          {
-            path: 'exam-analysis',
-            element: withSuspense(ExamAttemptAnalysisPage)
-          },
-          {
-            path: 'positions',
-            element: withSuspense(PositionsPage)
-          },
-          {
-            path: 'basket',
-            element: withSuspense(BasketPage)
-          },
-          {
             path: 'hearts-analytics',
             element: withSuspense(HeartsAnalyticsPage)
           },
@@ -169,10 +129,6 @@ export const routes: RouteObject[] = [
           {
             path: 'ai-assistant',
             element: withSuspense(AiAssistantPage)
-          },
-          {
-            path: 'qr-scan',
-            element: withSuspense(QrScanPage)
           }
         ]
       }

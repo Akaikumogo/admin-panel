@@ -110,11 +110,6 @@ const navItems = [
     icon: Trophy
   },
   {
-    path: '/dashboard/qr-scan',
-    label: { uz: 'QR scan', en: 'QR scan', ru: 'QR scan' },
-    icon: QrCode
-  },
-  {
     path: '/dashboard/violations',
     label: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
     icon: Shield
@@ -124,41 +119,6 @@ const navItems = [
     label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' },
     icon: ScrollText
   },
-  {
-    path: '/dashboard/exams',
-    label: { uz: 'Imtihonlar', en: 'Exams', ru: 'Экзамены' },
-    icon: ClipboardList
-  },
-  {
-    path: '/dashboard/exam-schedule',
-    label: { uz: 'Imtihon belgilash', en: 'Scheduling', ru: 'Назначение' },
-    icon: CalendarClock
-  },
-  {
-    path: '/dashboard/exam-question-catalogs',
-    label: { uz: 'Savol kataloglari', en: 'Question catalogs', ru: 'Каталоги вопросов' },
-    icon: FolderTree
-  },
-  {
-    path: '/dashboard/exam-questions',
-    label: { uz: 'Imtihon savollari', en: 'Exam questions', ru: 'Вопросы' },
-    icon: HelpCircle
-  },
-  {
-    path: '/dashboard/exam-analysis',
-    label: { uz: 'Imtihon tahlili', en: 'Exam analytics', ru: 'Анализ экзаменов' },
-    icon: BarChart2
-  },
-  {
-    path: '/dashboard/positions',
-    label: { uz: 'Lavozimlar', en: 'Positions', ru: 'Должности' },
-    icon: BriefcaseBusiness
-  },
-  {
-    path: '/dashboard/basket',
-    label: { uz: 'Korzinka', en: 'Basket', ru: 'Корзина' },
-    icon: Trash2
-  }
 ];
 
 const Layout = () => {
