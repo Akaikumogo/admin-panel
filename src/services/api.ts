@@ -633,6 +633,7 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: API_BASE_URL,
+      timeout: 900000,
       headers: {
         'Content-Type': 'application/json'
       }
@@ -946,7 +947,11 @@ class ApiService {
 
   async updateExamQuestionCatalog(
     id: string,
-    data: Partial<{ title: string; section: ExamQuestionSection; sortOrder: number }>
+    data: Partial<{
+      title: string;
+      section: ExamQuestionSection;
+      sortOrder: number;
+    }>
   ): Promise<ExamQuestionCatalog> {
     const response = await this.api.put<ExamQuestionCatalog>(
       `/admin/exam-question-catalogs/${id}`,
@@ -960,9 +965,12 @@ class ApiService {
   }
 
   async getExamQuestions(catalogId?: string): Promise<ExamQuestion[]> {
-    const response = await this.api.get<ExamQuestion[]>('/admin/exam-questions', {
-      params: catalogId ? { catalogId } : undefined
-    });
+    const response = await this.api.get<ExamQuestion[]>(
+      '/admin/exam-questions',
+      {
+        params: catalogId ? { catalogId } : undefined
+      }
+    );
     return response.data;
   }
 
@@ -1039,7 +1047,10 @@ class ApiService {
     return response.data;
   }
 
-  async rejectExamSession(sessionId: string, reason: string): Promise<{ ok: boolean }> {
+  async rejectExamSession(
+    sessionId: string,
+    reason: string
+  ): Promise<{ ok: boolean }> {
     const response = await this.api.post<{ ok: boolean }>(
       `/exams/live/moderator/sessions/${sessionId}/reject`,
       { reason }
@@ -1049,12 +1060,16 @@ class ApiService {
 
   async finalizeExamOral(
     attemptId: string,
-    body: { oralResult: OralResult; oralFeedback: string; nextExamMonths: number }
+    body: {
+      oralResult: OralResult;
+      oralFeedback: string;
+      nextExamMonths: number;
+    }
   ): Promise<{ ok: boolean; nextSuggestedAt: string }> {
-    const response = await this.api.post<{ ok: boolean; nextSuggestedAt: string }>(
-      `/exams/live/moderator/attempts/${attemptId}/finalize-oral`,
-      body
-    );
+    const response = await this.api.post<{
+      ok: boolean;
+      nextSuggestedAt: string;
+    }>(`/exams/live/moderator/attempts/${attemptId}/finalize-oral`, body);
     return response.data;
   }
 
@@ -1193,7 +1208,7 @@ class ApiService {
 
   async getTheoryTreeByLevel(levelId: string): Promise<Theory[]> {
     const response = await this.api.get<Theory[]>(
-      `/admin/levels/${levelId}/theories-tree`,
+      `/admin/levels/${levelId}/theories-tree`
     );
     return response.data;
   }
@@ -1415,9 +1430,12 @@ class ApiService {
       firstName?: string;
       lastName?: string;
       organizationId?: string;
-    },
+    }
   ): Promise<UserProfile> {
-    const response = await this.api.put<UserProfile>(`/admin/users/${id}`, data);
+    const response = await this.api.put<UserProfile>(
+      `/admin/users/${id}`,
+      data
+    );
     return response.data;
   }
 
@@ -1441,7 +1459,9 @@ class ApiService {
   }
 
   async getStudent(id: string): Promise<StudentDetail> {
-    const response = await this.api.get<StudentDetail>(`/admin/employees/${id}`);
+    const response = await this.api.get<StudentDetail>(
+      `/admin/employees/${id}`
+    );
     return response.data;
   }
 
@@ -1459,7 +1479,9 @@ class ApiService {
     return response.data;
   }
 
-  async getEmployeeCertificate(studentId: string): Promise<EmployeeCertificate | null> {
+  async getEmployeeCertificate(
+    studentId: string
+  ): Promise<EmployeeCertificate | null> {
     const response = await this.api.get<EmployeeCertificate | null>(
       `/admin/employees/${studentId}/employee-certificate`
     );
@@ -1495,7 +1517,10 @@ class ApiService {
 
   async createEmployeeCheck(
     studentId: string,
-    data: Omit<EmployeeCheck, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'>
+    data: Omit<
+      EmployeeCheck,
+      'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'
+    >
   ): Promise<EmployeeCheck> {
     const response = await this.api.post<EmployeeCheck>(
       `/admin/employees/${studentId}/checks`,
@@ -1508,7 +1533,10 @@ class ApiService {
     studentId: string,
     checkId: string,
     data: Partial<
-      Omit<EmployeeCheck, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'>
+      Omit<
+        EmployeeCheck,
+        'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'
+      >
     >
   ): Promise<EmployeeCheck> {
     const response = await this.api.put<EmployeeCheck>(
@@ -1523,13 +1551,20 @@ class ApiService {
   }
 
   // ─── Audio Library (Admin CRUD) ─────────────────────────────────────────
-  async adminListAudioBooks(params?: { search?: string }): Promise<AdminAudioBookRow[]> {
-    const response = await this.api.get<AdminAudioBookRow[]>('/admin/audio-books', { params });
+  async adminListAudioBooks(params?: {
+    search?: string;
+  }): Promise<AdminAudioBookRow[]> {
+    const response = await this.api.get<AdminAudioBookRow[]>(
+      '/admin/audio-books',
+      { params }
+    );
     return response.data;
   }
 
   async adminGetAudioBook(bookId: string): Promise<AdminAudioBookDetail> {
-    const response = await this.api.get<AdminAudioBookDetail>(`/admin/audio-books/${bookId}`);
+    const response = await this.api.get<AdminAudioBookDetail>(
+      `/admin/audio-books/${bookId}`
+    );
     return response.data;
   }
 
@@ -1539,7 +1574,10 @@ class ApiService {
     coverUrl?: string | null;
     isActive?: boolean;
   }): Promise<AdminAudioBookDetail> {
-    const response = await this.api.post<AdminAudioBookDetail>('/admin/audio-books', data);
+    const response = await this.api.post<AdminAudioBookDetail>(
+      '/admin/audio-books',
+      data
+    );
     return response.data;
   }
 
@@ -1550,56 +1588,77 @@ class ApiService {
       description?: string | null;
       coverUrl?: string | null;
       isActive?: boolean;
-    },
+    }
   ): Promise<AdminAudioBookDetail> {
-    const response = await this.api.put<AdminAudioBookDetail>(`/admin/audio-books/${bookId}`, data);
-    return response.data;
-  }
-
-  async adminDeleteAudioBook(bookId: string): Promise<{ ok: boolean }> {
-    const response = await this.api.delete<{ ok: boolean }>(`/admin/audio-books/${bookId}`);
-    return response.data;
-  }
-
-  async adminCreateAudioChapter(bookId: string, data: { title: string; orderIndex: number }) {
-    const response = await this.api.post<{ ok: boolean; id: string }>(
-      `/admin/audio-books/${bookId}/chapters`,
-      data,
+    const response = await this.api.put<AdminAudioBookDetail>(
+      `/admin/audio-books/${bookId}`,
+      data
     );
     return response.data;
   }
 
-  async adminUpdateAudioChapter(chapterId: string, data: { title?: string; orderIndex?: number }) {
-    const response = await this.api.put<{ ok: boolean }>(`/admin/audio-chapters/${chapterId}`, data);
+  async adminDeleteAudioBook(bookId: string): Promise<{ ok: boolean }> {
+    const response = await this.api.delete<{ ok: boolean }>(
+      `/admin/audio-books/${bookId}`
+    );
+    return response.data;
+  }
+
+  async adminCreateAudioChapter(
+    bookId: string,
+    data: { title: string; orderIndex: number }
+  ) {
+    const response = await this.api.post<{ ok: boolean; id: string }>(
+      `/admin/audio-books/${bookId}/chapters`,
+      data
+    );
+    return response.data;
+  }
+
+  async adminUpdateAudioChapter(
+    chapterId: string,
+    data: { title?: string; orderIndex?: number }
+  ) {
+    const response = await this.api.put<{ ok: boolean }>(
+      `/admin/audio-chapters/${chapterId}`,
+      data
+    );
     return response.data;
   }
 
   async adminDeleteAudioChapter(chapterId: string) {
-    const response = await this.api.delete<{ ok: boolean }>(`/admin/audio-chapters/${chapterId}`);
+    const response = await this.api.delete<{ ok: boolean }>(
+      `/admin/audio-chapters/${chapterId}`
+    );
     return response.data;
   }
 
   async adminCreateAudioParagraph(
     chapterId: string,
-    data: { text: string; orderIndex: number; audioUrl: string },
+    data: { text: string; orderIndex: number; audioUrl: string }
   ) {
     const response = await this.api.post<{ ok: boolean; id: string }>(
       `/admin/audio-chapters/${chapterId}/paragraphs`,
-      data,
+      data
     );
     return response.data;
   }
 
   async adminUpdateAudioParagraph(
     paragraphId: string,
-    data: { text?: string; orderIndex?: number; audioUrl?: string },
+    data: { text?: string; orderIndex?: number; audioUrl?: string }
   ) {
-    const response = await this.api.put<{ ok: boolean }>(`/admin/audio-paragraphs/${paragraphId}`, data);
+    const response = await this.api.put<{ ok: boolean }>(
+      `/admin/audio-paragraphs/${paragraphId}`,
+      data
+    );
     return response.data;
   }
 
   async adminDeleteAudioParagraph(paragraphId: string) {
-    const response = await this.api.delete<{ ok: boolean }>(`/admin/audio-paragraphs/${paragraphId}`);
+    const response = await this.api.delete<{ ok: boolean }>(
+      `/admin/audio-paragraphs/${paragraphId}`
+    );
     return response.data;
   }
 
@@ -1613,45 +1672,53 @@ class ApiService {
   }): Promise<PaginatedResponse<NesEmployee>> {
     const response = await this.api.get<PaginatedResponse<NesEmployee>>(
       '/admin/nes-employees',
-      { params: filters },
+      { params: filters }
     );
     return response.data;
   }
 
-  async getNesEmployeesFilterOptions(): Promise<{ organizations: string[]; divisions: string[] }> {
-    const response = await this.api.get<{ organizations: string[]; divisions: string[] }>(
-      '/admin/nes-employees/filter-options',
-    );
+  async getNesEmployeesFilterOptions(): Promise<{
+    organizations: string[];
+    divisions: string[];
+  }> {
+    const response = await this.api.get<{
+      organizations: string[];
+      divisions: string[];
+    }>('/admin/nes-employees/filter-options');
     return response.data;
   }
 
-  async deleteAllNesEmployees(): Promise<{ success: boolean; deleted: number }> {
-    const response = await this.api.delete<{ success: boolean; deleted: number }>(
-      '/admin/nes-employees',
-    );
+  async deleteAllNesEmployees(): Promise<{
+    success: boolean;
+    deleted: number;
+  }> {
+    const response = await this.api.delete<{
+      success: boolean;
+      deleted: number;
+    }>('/admin/nes-employees');
     return response.data;
   }
 
   async syncNesEmployees(date: string): Promise<NesEmployeeSyncResponse> {
     const response = await this.api.post<NesEmployeeSyncResponse>(
       '/admin/nes-employees/sync',
-      { date },
+      { date }
     );
     return response.data;
   }
 
   async getNesEmployeesSyncStatus(): Promise<NesEmployeesSyncStatus> {
     const response = await this.api.get<NesEmployeesSyncStatus>(
-      '/admin/nes-employees/sync-status',
+      '/admin/nes-employees/sync-status'
     );
     return response.data;
   }
 
   async getNesEmployeePositions(
-    personnelNumber: string,
+    employeeId: string,
   ): Promise<NesEmployeePositionHistory[]> {
     const response = await this.api.get<NesEmployeePositionHistory[]>(
-      `/admin/nes-employees/${personnelNumber}/positions`,
+      `/admin/nes-employees/${employeeId}/positions`,
     );
     return response.data;
   }

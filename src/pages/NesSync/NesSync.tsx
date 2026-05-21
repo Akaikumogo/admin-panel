@@ -130,7 +130,9 @@ export default function NesSync() {
     setPositionsOpen(true);
     setPositionsLoading(true);
     try {
-      const data = await apiService.getNesEmployeePositions(record.personnelNumber);
+      // record.id (UUID) bo'yicha — tabel raqami emas, aks holda boshqa tashkilotdagi
+      // bir xil raqamli xodim bilan aralashib ketadi
+      const data = await apiService.getNesEmployeePositions(record.id);
       setPositions(data as PositionWithCurrent[]);
     } finally {
       setPositionsLoading(false);
