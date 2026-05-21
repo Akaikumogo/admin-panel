@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button, Card, DatePicker, Input, Modal, Select, Table, Tag, message } from 'antd';
 import dayjs from 'dayjs';
 import { Filter, RefreshCw, Search } from 'lucide-react';
 import NoData from '@/components/NoData';
+import { useNesSyncSocket, type SyncDoneEvent } from '@/hooks/useNesSyncSocket';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import apiService, {
@@ -17,28 +18,33 @@ const QP_DEFAULTS = {
   page: undefined,
 } as const;
 
+type PositionWithCurrent = NesEmployeePositionHistory & { isCurrent?: boolean };
+
 export default function NesSync() {
   const { params: qp, setParam, setParams } =
     useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   const [syncDate, setSyncDate] = useState(dayjs());
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
-  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [positionsLoading, setPositionsLoading] = useState(false);
-  const [positions, setPositions] = useState<NesEmployeePositionHistory[]>([]);
+  const [positions, setPositions] = useState<PositionWithCurrent[]>([]);
+
   const [filterOptions, setFilterOptions] = useState<{ organizations: string[]; divisions: string[] }>({
     organizations: [],
     divisions: [],
   });
 
-  useEffect(() => {
+  // Filter options bir marta yuklanadi (sync tugagach yangilanadi)
+  useState(() => {
     apiService.getNesEmployeesFilterOptions()
       .then(setFilterOptions)
       .catch(() => {});
-  }, []);
+  });
 
   const {
     data: employees,
@@ -58,6 +64,27 @@ export default function NesSync() {
       }),
   );
 
+  // WebSocket — polling o'rniga real-time progress
+  useNesSyncSocket({
+    onProgress: ({ current, total }) => {
+      setSyncProgress({ current, total });
+    },
+    onDone: (res: SyncDoneEvent) => {
+      setSyncing(false);
+      setSyncProgress({ current: 0, total: 0 });
+      message.success(
+        `1C sync: ${res.total} ta, yangi ${res.created}, yangilangan ${res.updated}, o'zgarmagan ${res.unchanged}`,
+      );
+      apiService.getNesEmployeesFilterOptions().then(setFilterOptions).catch(() => {});
+      refetch?.();
+    },
+    onError: (msg) => {
+      setSyncing(false);
+      setSyncProgress({ current: 0, total: 0 });
+      message.error(`Sync xatosi: ${msg}`);
+    },
+  });
+
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
@@ -65,43 +92,15 @@ export default function NesSync() {
     }, 400);
   };
 
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
-
-  const startPolling = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const status = await apiService.getNesEmployeesSyncStatus();
-        setSyncProgress({ current: status.current, total: status.total });
-        if (!status.running) {
-          clearInterval(pollRef.current);
-        }
-      } catch {
-        // polling xatosi e'tiborga olinmaydi
-      }
-    }, 1500);
-  };
-
   const handleSync = async () => {
     setSyncing(true);
     setSyncProgress({ current: 0, total: 0 });
-    startPolling();
     try {
-      const res = await apiService.syncNesEmployees(syncDate.format('YYYY-MM-DD'));
-      message.success(
-        `1C sync: ${res.total} ta, yangi ${res.created}, yangilangan ${res.updated}`,
-      );
-      const opts = await apiService.getNesEmployeesFilterOptions();
-      setFilterOptions(opts);
-      refetch?.();
-    } finally {
+      await apiService.syncNesEmployees(syncDate.format('YYYY-MM-DD'));
+      // onDone WebSocket orqali keladi
+    } catch {
       setSyncing(false);
       setSyncProgress({ current: 0, total: 0 });
-      if (pollRef.current) clearInterval(pollRef.current);
     }
   };
 
@@ -109,30 +108,21 @@ export default function NesSync() {
     setPositionsOpen(true);
     setPositionsLoading(true);
     try {
-      setPositions(await apiService.getNesEmployeePositions(record.personnelNumber));
+      const data = await apiService.getNesEmployeePositions(record.personnelNumber);
+      setPositions(data as PositionWithCurrent[]);
     } finally {
       setPositionsLoading(false);
     }
   };
 
+  // Button label
+  const syncLabel = (() => {
+    if (!syncing) return '1C bilan sinxronlash';
+    if (syncProgress.total > 0) return `${syncProgress.current} / ${syncProgress.total}`;
+    return 'Yuklanmoqda...';
+  })();
+
   const columns = [
-    {
-      title: '№',
-      key: 'rowNumber',
-      width: 64,
-      render: (_: unknown, __: NesEmployee, index: number) => (
-        <span className="text-sm font-medium text-slate-500">
-          {(currentPage - 1) * 20 + index + 1}
-        </span>
-      ),
-    },
-    {
-      title: 'Tabel',
-      dataIndex: 'personnelNumber',
-      key: 'personnelNumber',
-      width: 110,
-      render: (value: string) => <Tag>{value}</Tag>,
-    },
     {
       title: 'Xodim',
       key: 'name',
@@ -141,7 +131,7 @@ export default function NesSync() {
           <p className="font-semibold text-slate-900 dark:text-white">
             {record.fullName || '—'}
           </p>
-          <p className="text-xs text-slate-500">{record.login}</p>
+          <p className="text-xs text-slate-500">#{record.personnelNumber}</p>
         </div>
       ),
     },
@@ -237,11 +227,7 @@ export default function NesSync() {
           loading={syncing}
           onClick={handleSync}
         >
-          {syncing && syncProgress.total > 0
-            ? `${syncProgress.current} / ${syncProgress.total}`
-            : syncing
-              ? 'Yuklanmoqda...'
-              : '1C bilan sinxronlash'}
+          {syncLabel}
         </Button>
 
         <Tag className="text-sm ml-auto">Jami: {total}</Tag>
@@ -270,12 +256,13 @@ export default function NesSync() {
         </Card>
       )}
 
+      {/* Xronologiya modal */}
       <Modal
         title="Lavozim xronologiyasi"
         open={positionsOpen}
         onCancel={() => setPositionsOpen(false)}
         footer={null}
-        width={900}
+        width={1000}
       >
         <Table
           dataSource={positions}
@@ -283,9 +270,24 @@ export default function NesSync() {
           loading={positionsLoading}
           pagination={false}
           columns={[
-            { title: 'Sana', dataIndex: 'effectiveAt', render: (v) => v ? new Date(v).toLocaleString() : '—' },
+            {
+              title: 'Holat',
+              key: 'isCurrent',
+              width: 90,
+              render: (_: unknown, record: PositionWithCurrent) =>
+                record.isCurrent ? (
+                  <Tag color="green">Joriy</Tag>
+                ) : (
+                  <Tag color="default">Avvalgi</Tag>
+                ),
+            },
+            {
+              title: 'Sana',
+              dataIndex: 'effectiveAt',
+              render: (v: string | null) => v ? new Date(v).toLocaleDateString() : '—',
+            },
             { title: 'Filial', dataIndex: 'organizationName' },
-            { title: 'Bo`lim', dataIndex: 'division' },
+            { title: "Bo'lim", dataIndex: 'division' },
             { title: 'Lavozim', dataIndex: 'post' },
           ]}
         />

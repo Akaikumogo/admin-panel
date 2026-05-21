@@ -622,6 +622,7 @@ export type NesEmployeePositionHistory = {
   sourceCreatedAt: string | null;
   sourceUpdatedAt: string | null;
   createdAt: string;
+  isCurrent?: boolean;
 };
 
 class ApiService {
