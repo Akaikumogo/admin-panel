@@ -10,9 +10,9 @@ const T = {
   scanning: { uz: 'Skan qilinyapti…', en: 'Scanning…', ru: 'Сканирование…' },
   result: { uz: 'Natija', en: 'Result', ru: 'Результат' },
   goUsers: {
-    uz: 'Student profiliga o‘tyapmiz…',
-    en: 'Opening student…',
-    ru: 'Открываем студента…'
+    uz: 'Xodim profiliga o‘tyapmiz…',
+    en: 'Opening employee…',
+    ru: 'Открываем сотрудника…'
   }
 } as const;
 
@@ -48,8 +48,8 @@ export default function QrScanPage() {
               setResult(text);
               controls.stop();
               stopFn = () => controls.stop();
-              // Student detail sahifasiga yo'naltiramiz
-              navigate(`/dashboard/students/${encodeURIComponent(text)}`, {
+              // Xodim detail sahifasiga yo'naltiramiz
+              navigate(`/dashboard/employees/${encodeURIComponent(text)}`, {
                 replace: true,
               });
             }
@@ -149,4 +149,3 @@ export default function QrScanPage() {
     </div>
   );
 }
-

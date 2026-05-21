@@ -56,7 +56,7 @@ const MODULES: {
   { key: 'contentTheories', label: { uz: 'Nazariyalar', en: 'Theories', ru: 'Теории' } },
   { key: 'contentQuestions', label: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' } },
   { key: 'organizations', label: { uz: 'Tashkilotlar', en: 'Orgs', ru: 'Орг.' } },
-  { key: 'students', label: { uz: 'Talabalar', en: 'Students', ru: 'Студ.' } },
+  { key: 'students', label: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотр.' } },
   { key: 'users', label: { uz: 'Foydalanuvchilar', en: 'Users', ru: 'Польз.' } },
   { key: 'moderators', label: { uz: 'Moderatorlar', en: 'Mods', ru: 'Мод.' } },
   { key: 'profile', label: { uz: 'Profil', en: 'Profile', ru: 'Профиль' } },

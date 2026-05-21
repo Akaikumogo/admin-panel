@@ -356,7 +356,7 @@ const Moderators = () => {
                 ['contentTheories', 'Nazariyalar (Theories)'],
                 ['contentQuestions', 'Savollar (Questions)'],
                 ['organizations', 'Tashkilotlar (Organizations)'],
-                ['students', 'Talabalar (Students)'],
+                ['students', 'Xodimlar (Employees)'],
                 ['users', 'Foydalanuvchilar (Users)'],
                 ['moderators', 'Moderatorlar (Moderators)'],
                 ['profile', 'Profil (Profile)'],

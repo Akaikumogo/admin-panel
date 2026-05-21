@@ -24,6 +24,7 @@ import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Level, Theory, Question, QuestionType } from '@/services/api';
 import { can } from '@/utils/can';
+import { latinizeQuestionPayload } from '@/utils/cyrillicToLatin';
 
 const T = {
   title: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
@@ -189,22 +190,22 @@ const Questions = () => {
       const values = await form.validateFields();
       setSaving(true);
       if (editing) {
-        await apiService.updateQuestion(editing.id, {
+        await apiService.updateQuestion(editing.id, latinizeQuestionPayload({
           prompt: values.prompt,
           type: values.type,
           isActive: values.isActive,
           options: values.options,
-        });
+        }));
         message.success('Savol yangilandi');
       } else {
-        await apiService.createQuestion({
+        await apiService.createQuestion(latinizeQuestionPayload({
           levelId: values.levelId,
           theoryId: values.theoryId,
           prompt: values.prompt,
           type: values.type,
           isActive: values.isActive ?? true,
           options: values.options,
-        });
+        }));
         message.success('Savol yaratildi');
       }
       setModalOpen(false);

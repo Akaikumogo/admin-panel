@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -33,6 +32,7 @@ import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Level, Theory, Question, QuestionType } from '@/services/api';
 import { can } from '@/utils/can';
+import { latinizeQuestionPayload } from '@/utils/cyrillicToLatin';
 
 const T = {
   title: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
@@ -135,7 +135,6 @@ const QP_DEFAULTS = { search: undefined, status: undefined } as const;
 const Levels = () => {
   const { t } = useTranslation();
   const { params: qp, setParam } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
-  const navigate = useNavigate();
 
   const {
     data: levels, loading, initialLoading, refetch: refetchLevels,
@@ -388,22 +387,22 @@ const Levels = () => {
       const values = await questionForm.validateFields();
       setSaving(true);
       if (questionModal.editing) {
-        await apiService.updateQuestion(questionModal.editing.id, {
+        await apiService.updateQuestion(questionModal.editing.id, latinizeQuestionPayload({
           prompt: values.prompt,
           type: values.type,
           isActive: values.isActive,
           options: values.options
-        });
+        }));
         message.success('Savol yangilandi');
       } else {
-        await apiService.createQuestion({
+        await apiService.createQuestion(latinizeQuestionPayload({
           levelId: questionModal.levelId,
           theoryId: questionModal.theoryId,
           prompt: values.prompt,
           type: values.type,
           isActive: values.isActive ?? true,
           options: values.options
-        });
+        }));
         message.success('Savol yaratildi');
       }
       setQuestionModal({
@@ -521,7 +520,7 @@ const Levels = () => {
                           className="font-semibold text-slate-900 dark:text-white hover:underline text-left"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/dashboard/levels/${level.id}`);
+                            setExpandedLevel(level.id);
                           }}
                         >
                           #{level.orderIndex + 1} —{' '}
@@ -606,7 +605,7 @@ const Levels = () => {
                                     className="font-medium hover:underline text-left"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      navigate(`/dashboard/theories/${lesson.id}`);
+                                      openTheoryModal(level.id, lesson);
                                     }}
                                   >
                                     #{lesson.orderIndex + 1} —{' '}
@@ -682,9 +681,7 @@ const Levels = () => {
                                               type="button"
                                               className="text-sm text-slate-800 dark:text-slate-200 hover:underline text-left truncate"
                                               onClick={() =>
-                                                navigate(
-                                                  `/dashboard/theories/${child.id}`
-                                                )
+                                                openTheoryModal(level.id, child)
                                               }
                                             >
                                               <HighlightText

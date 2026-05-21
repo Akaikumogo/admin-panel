@@ -11,7 +11,7 @@ import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
 
 const T = {
-  title: { uz: 'Talabalar', en: 'Students', ru: 'Студенты' },
+  title: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
   name: { uz: 'Ism', en: 'Name', ru: 'Имя' },
   email: { uz: 'Email', en: 'Email', ru: 'Email' },
   xp: { uz: 'XP', en: 'XP', ru: 'XP' },
@@ -21,7 +21,7 @@ const T = {
   allOrgs: { uz: 'Barcha tashkilotlar', en: 'All organizations', ru: 'Все организации' },
   allLevels: { uz: 'Barcha darajalar', en: 'All levels', ru: 'Все уровни' },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
-  noData: { uz: 'Talabalar yo`q', en: 'No students', ru: 'Нет студентов' },
+  noData: { uz: 'Xodimlar yo`q', en: 'No employees', ru: 'Нет сотрудников' },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
 } as const;
 
@@ -189,7 +189,7 @@ const Students = () => {
             rowKey="id"
             loading={false}
             onRow={(record) => ({
-              onClick: () => navigate(`/dashboard/students/${record.id}`),
+              onClick: () => navigate(`/dashboard/employees/${record.id}`),
               className: 'cursor-pointer',
             })}
             pagination={{

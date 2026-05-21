@@ -29,7 +29,8 @@ import {
   // FolderTree,
   Library,
   LibraryBig,
-  Bot
+  Bot,
+  RefreshCw
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -87,8 +88,8 @@ const navItems = [
     icon: Building2
   },
   {
-    path: '/dashboard/students',
-    label: { uz: 'Talabalar', en: 'Students', ru: 'Студенты' },
+    path: '/dashboard/employees',
+    label: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
     icon: GraduationCap
   },
   {
@@ -105,6 +106,11 @@ const navItems = [
     path: '/dashboard/ai-assistant',
     label: { uz: 'AI yordamchi', en: 'AI assistant', ru: 'AI помощник' },
     icon: Bot
+  },
+  {
+    path: '/dashboard/nes-sync',
+    label: { uz: '1C bilan sinxronlash', en: '1C sync', ru: 'Синхронизация 1C' },
+    icon: RefreshCw
   },
   {
     path: '/dashboard/hearts-analytics',
@@ -249,7 +255,7 @@ const Layout = () => {
   useEffect(() => {
     if (meLoading || !me) return;
 
-    // Role USER (student) admin panelga kirmaydi.
+    // Role USER (xodim) admin panelga kirmaydi.
     if (me.role === 'USER') {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -273,6 +279,7 @@ const Layout = () => {
           item.path !== '/dashboard/users' &&
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
+          item.path !== '/dashboard/nes-sync' &&
           item.path !== '/dashboard/exam-analysis' &&
           (hasAudioPerm || item.path !== '/dashboard/audio-library')
       );
@@ -285,6 +292,7 @@ const Layout = () => {
     (location.pathname === '/dashboard/moderators' ||
       location.pathname === '/dashboard/users' ||
       location.pathname === '/dashboard/permissions' ||
+      location.pathname === '/dashboard/nes-sync' ||
       location.pathname === '/dashboard/exam-analysis' ||
       (location.pathname === '/dashboard/audio-library' &&
         !(

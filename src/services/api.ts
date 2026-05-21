@@ -581,6 +581,41 @@ export type LeaderboardResponse = {
   top: LeaderboardRow[];
 };
 
+export type NesEmployee = {
+  id: string;
+  personnelNumber: string;
+  organizationName: string;
+  division: string;
+  post: string;
+  fullName: string;
+  login: string;
+  initialPassword: string | null;
+  lastSyncedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type NesEmployeeSyncResponse = {
+  success: boolean;
+  date: string;
+  total: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+};
+
+export type NesEmployeePositionHistory = {
+  id: string;
+  personnelNumber: string;
+  organizationName: string;
+  division: string;
+  post: string;
+  effectiveAt: string | null;
+  sourceCreatedAt: string | null;
+  sourceUpdatedAt: string | null;
+  createdAt: string;
+};
+
 class ApiService {
   private api: ReturnType<typeof axios.create>;
   private isRefreshing = false;
@@ -1381,7 +1416,7 @@ class ApiService {
     await this.api.delete(`/admin/users/${id}`);
   }
 
-  // ===== Students =====
+  // ===== Employees =====
   async getStudents(filters?: {
     orgId?: string;
     levelId?: string;
@@ -1390,34 +1425,34 @@ class ApiService {
     limit?: number;
   }): Promise<PaginatedResponse<StudentSummary>> {
     const response = await this.api.get<PaginatedResponse<StudentSummary>>(
-      '/admin/students',
+      '/admin/employees',
       { params: filters }
     );
     return response.data;
   }
 
   async getStudent(id: string): Promise<StudentDetail> {
-    const response = await this.api.get<StudentDetail>(`/admin/students/${id}`);
+    const response = await this.api.get<StudentDetail>(`/admin/employees/${id}`);
     return response.data;
   }
 
   async getStudentLostQuestions(id: string): Promise<LostQuestion[]> {
     const response = await this.api.get<LostQuestion[]>(
-      `/admin/students/${id}/lost-questions`
+      `/admin/employees/${id}/lost-questions`
     );
     return response.data;
   }
 
   async getStudentActivity(id: string): Promise<ActivityDay[]> {
     const response = await this.api.get<ActivityDay[]>(
-      `/admin/students/${id}/activity`
+      `/admin/employees/${id}/activity`
     );
     return response.data;
   }
 
   async getEmployeeCertificate(studentId: string): Promise<EmployeeCertificate | null> {
     const response = await this.api.get<EmployeeCertificate | null>(
-      `/admin/students/${studentId}/employee-certificate`
+      `/admin/employees/${studentId}/employee-certificate`
     );
     return response.data;
   }
@@ -1432,7 +1467,7 @@ class ApiService {
     }
   ): Promise<EmployeeCertificate> {
     const response = await this.api.put<EmployeeCertificate>(
-      `/admin/students/${studentId}/employee-certificate`,
+      `/admin/employees/${studentId}/employee-certificate`,
       data
     );
     return response.data;
@@ -1443,7 +1478,7 @@ class ApiService {
     params?: { type?: EmployeeCheckType }
   ): Promise<EmployeeCheck[]> {
     const response = await this.api.get<EmployeeCheck[]>(
-      `/admin/students/${studentId}/checks`,
+      `/admin/employees/${studentId}/checks`,
       { params }
     );
     return response.data;
@@ -1454,7 +1489,7 @@ class ApiService {
     data: Omit<EmployeeCheck, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'>
   ): Promise<EmployeeCheck> {
     const response = await this.api.post<EmployeeCheck>(
-      `/admin/students/${studentId}/checks`,
+      `/admin/employees/${studentId}/checks`,
       data
     );
     return response.data;
@@ -1468,14 +1503,14 @@ class ApiService {
     >
   ): Promise<EmployeeCheck> {
     const response = await this.api.put<EmployeeCheck>(
-      `/admin/students/${studentId}/checks/${checkId}`,
+      `/admin/employees/${studentId}/checks/${checkId}`,
       data
     );
     return response.data;
   }
 
   async deleteEmployeeCheck(studentId: string, checkId: string): Promise<void> {
-    await this.api.delete(`/admin/students/${studentId}/checks/${checkId}`);
+    await this.api.delete(`/admin/employees/${studentId}/checks/${checkId}`);
   }
 
   // ─── Audio Library (Admin CRUD) ─────────────────────────────────────────
@@ -1556,6 +1591,36 @@ class ApiService {
 
   async adminDeleteAudioParagraph(paragraphId: string) {
     const response = await this.api.delete<{ ok: boolean }>(`/admin/audio-paragraphs/${paragraphId}`);
+    return response.data;
+  }
+
+  // ===== NES / 1C Sync =====
+  async getNesEmployees(filters?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<NesEmployee>> {
+    const response = await this.api.get<PaginatedResponse<NesEmployee>>(
+      '/admin/nes-employees',
+      { params: filters },
+    );
+    return response.data;
+  }
+
+  async syncNesEmployees(date: string): Promise<NesEmployeeSyncResponse> {
+    const response = await this.api.post<NesEmployeeSyncResponse>(
+      '/admin/nes-employees/sync',
+      { date },
+    );
+    return response.data;
+  }
+
+  async getNesEmployeePositions(
+    personnelNumber: string,
+  ): Promise<NesEmployeePositionHistory[]> {
+    const response = await this.api.get<NesEmployeePositionHistory[]>(
+      `/admin/nes-employees/${personnelNumber}/positions`,
+    );
     return response.data;
   }
 

@@ -198,7 +198,7 @@ const StudentDetailPage = () => {
       <Button
         type="text"
         icon={<ArrowLeft size={16} />}
-        onClick={() => navigate('/dashboard/students')}
+        onClick={() => navigate('/dashboard/employees')}
         className="!px-2"
       >
         {t(T.back)}
