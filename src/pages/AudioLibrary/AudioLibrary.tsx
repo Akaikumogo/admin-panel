@@ -553,10 +553,11 @@ export default function AudioLibraryPage() {
           onFinish={async (values) => {
             if (!paragraphChapterId || !detail) return;
             await apiService.adminCreateAudioParagraph(paragraphChapterId, values);
-            message.success(t({ uz: 'Qo‘shildi', en: 'Added', ru: 'Добавлено' }));
+            message.success(t({ uz: ‘Qo’shildi’, en: ‘Added’, ru: ‘Добавлено’ }));
             setParagraphModalOpen(false);
             const d = await apiService.adminGetAudioBook(detail.id);
             setDetail(d);
+            void refetch();
           }}
         >
           <Form.Item name="text" label="Text" rules={[{ required: true }]}>
