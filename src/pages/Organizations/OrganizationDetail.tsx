@@ -18,7 +18,6 @@ export default function OrganizationDetail() {
       if (!org?.name) return Promise.resolve({ data: [], total: 0, page: 1, limit: 100 });
       return apiService.getNesEmployees({
         organizationName: org.name,
-        post: 'direktor',
         page: 1,
         limit: 100,
       });
