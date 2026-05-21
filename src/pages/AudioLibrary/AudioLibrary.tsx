@@ -524,7 +524,7 @@ export default function AudioLibraryPage() {
           onFinish={async (values) => {
             if (!chapterBookId) return;
             await apiService.adminCreateAudioChapter(chapterBookId, values);
-            message.success(t({ uz: 'Qo‘shildi', en: 'Added', ru: 'Добавлено' }));
+            message.success(t({ uz: "Qo’shildi", en: ‘Added’, ru: ‘Добавлено’ }));
             setChapterModalOpen(false);
             const d = await apiService.adminGetAudioBook(chapterBookId);
             setDetail(d);
