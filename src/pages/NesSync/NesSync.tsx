@@ -223,9 +223,14 @@ export default function NesSync() {
           allowClear
           showSearch
           placeholder="Tashkilot"
-          style={{ width: 200 }}
+          style={{ width: 260 }}
+          popupMatchSelectWidth={false}
+          popupClassName="nes-select-popup"
           value={qp.organizationName ?? undefined}
           options={filterOptions.organizations.map((o) => ({ label: o, value: o }))}
+          filterOption={(input, option) =>
+            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+          }
           onChange={(val) => setParams({ organizationName: val ?? undefined, page: undefined })}
         />
 
@@ -233,9 +238,14 @@ export default function NesSync() {
           allowClear
           showSearch
           placeholder="Bo'lim"
-          style={{ width: 200 }}
+          style={{ width: 220 }}
+          popupMatchSelectWidth={false}
+          popupClassName="nes-select-popup"
           value={qp.division ?? undefined}
           options={filterOptions.divisions.map((d) => ({ label: d, value: d }))}
+          filterOption={(input, option) =>
+            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+          }
           onChange={(val) => setParams({ division: val ?? undefined, page: undefined })}
         />
 

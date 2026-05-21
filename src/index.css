@@ -168,3 +168,22 @@ body {
     }
   }
 }
+
+/* ─── NES Select dropdown — uzun nomlar uchun ───────────────────────────── */
+.nes-select-popup {
+  max-width: min(600px, 90vw);
+}
+
+.nes-select-popup .ant-select-item-option-content {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+
+/* Tanlangan qiymat trigger ichida ellipsis bilan */
+.ant-select-selection-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
