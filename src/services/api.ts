@@ -207,6 +207,7 @@ export type StudentSummary = {
   lastName: string;
   email: string;
   avatarUrl: string | null;
+  personnelNumber: string | null;
   completedLevels: number;
   totalXp: number;
   currentLevelId: string | null;

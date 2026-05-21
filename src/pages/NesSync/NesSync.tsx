@@ -117,6 +117,23 @@ export default function NesSync() {
 
   const columns = [
     {
+      title: '№',
+      key: 'rowNumber',
+      width: 64,
+      render: (_: unknown, __: NesEmployee, index: number) => (
+        <span className="text-sm font-medium text-slate-500">
+          {(currentPage - 1) * 20 + index + 1}
+        </span>
+      ),
+    },
+    {
+      title: 'Tabel',
+      dataIndex: 'personnelNumber',
+      key: 'personnelNumber',
+      width: 110,
+      render: (value: string) => <Tag>{value}</Tag>,
+    },
+    {
       title: 'Xodim',
       key: 'name',
       render: (_: unknown, record: NesEmployee) => (
@@ -124,7 +141,7 @@ export default function NesSync() {
           <p className="font-semibold text-slate-900 dark:text-white">
             {record.fullName || '—'}
           </p>
-          <p className="text-xs text-slate-500">#{record.personnelNumber}</p>
+          <p className="text-xs text-slate-500">{record.login}</p>
         </div>
       ),
     },

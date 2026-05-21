@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Avatar, Button, Card, Form, Input, Modal, Popconfirm, Select, Spin, Table, Tag, message } from 'antd';
+import { Avatar, Button, Card, Form, Input, Modal, Popconfirm, Spin, Table, Tag, message } from 'antd';
 import { Filter, Mail, Search } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -15,7 +15,6 @@ const T = {
   name: { uz: 'Ism', en: 'Name', ru: 'Имя' },
   email: { uz: 'Email', en: 'Email', ru: 'Email' },
   role: { uz: 'Rol', en: 'Role', ru: 'Роль' },
-  allRoles: { uz: 'Barcha rollar', en: 'All roles', ru: 'Все роли' },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
   noData: {
     uz: 'Foydalanuvchilar yo`q',
@@ -31,11 +30,7 @@ const ROLE_COLORS: Record<string, string> = {
   USER: 'default'
 };
 
-const QP_DEFAULTS = {
-  search: undefined,
-  role: undefined,
-  page: undefined
-} as const;
+const QP_DEFAULTS = { search: undefined, page: undefined } as const;
 
 const Users = () => {
   const { t } = useTranslation();
@@ -44,8 +39,8 @@ const Users = () => {
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
 
   const { data: users, total, loading, initialLoading, refetch } = usePaginatedFetch(
-    ['users', qp.role, qp.search, currentPage],
-    () => apiService.getUsers({ role: qp.role, search: qp.search || undefined, page: currentPage, limit: 20 }),
+    ['users', 'MODERATOR', qp.search, currentPage],
+    () => apiService.getUsers({ role: 'MODERATOR', search: qp.search || undefined, page: currentPage, limit: 20 }),
   );
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -117,6 +112,16 @@ const Users = () => {
   };
 
   const columns = [
+    {
+      title: '№',
+      key: 'rowNumber',
+      width: 64,
+      render: (_: unknown, __: UserProfile, index: number) => (
+        <span className="text-sm font-medium text-slate-500">
+          {(currentPage - 1) * 20 + index + 1}
+        </span>
+      )
+    },
     {
       title: t(T.name),
       key: 'name',
@@ -200,18 +205,7 @@ const Users = () => {
           style={{ width: 220 }}
           onChange={(e) => handleSearchChange(e.target.value)}
         />
-        <Select
-          allowClear
-          placeholder={t(T.allRoles)}
-          style={{ width: 180 }}
-          value={qp.role}
-          onChange={(v) => setParams({ role: v, page: undefined })}
-          options={[
-            { value: 'SUPERADMIN', label: 'SuperAdmin' },
-              { value: 'MODERATOR', label: 'Moderator' },
-              { value: 'USER', label: 'User' }
-            ]}
-          />
+        <Tag color="blue">Faqat moderatorlar</Tag>
         <Tag className="text-sm ml-auto">
           {t(T.total)}: {total}
         </Tag>
