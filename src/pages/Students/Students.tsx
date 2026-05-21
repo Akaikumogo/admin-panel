@@ -71,6 +71,24 @@ const Students = () => {
 
   const columns = [
     {
+      title: '№',
+      key: 'rowNumber',
+      width: 64,
+      render: (_: unknown, __: StudentSummary, index: number) => (
+        <span className="text-sm font-medium text-slate-500">
+          {(currentPage - 1) * 20 + index + 1}
+        </span>
+      ),
+    },
+    {
+      title: 'Tabel',
+      key: 'personnelNumber',
+      width: 120,
+      render: (_: unknown, record: StudentSummary) => (
+        <Tag>{record.personnelNumber || '—'}</Tag>
+      ),
+    },
+    {
       title: t(T.name),
       key: 'name',
       render: (_: unknown, record: StudentSummary) => (

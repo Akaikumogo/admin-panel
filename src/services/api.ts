@@ -207,6 +207,7 @@ export type StudentSummary = {
   lastName: string;
   email: string;
   avatarUrl: string | null;
+  personnelNumber: string | null;
   completedLevels: number;
   totalXp: number;
   currentLevelId: string | null;
@@ -1597,6 +1598,10 @@ class ApiService {
   // ===== NES / 1C Sync =====
   async getNesEmployees(filters?: {
     search?: string;
+    organizationName?: string;
+    division?: string;
+    post?: string;
+    personnelNumber?: string;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<NesEmployee>> {

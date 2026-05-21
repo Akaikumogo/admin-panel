@@ -12,6 +12,10 @@ import apiService, {
 
 const QP_DEFAULTS = {
   search: undefined,
+  organizationName: undefined,
+  division: undefined,
+  post: undefined,
+  personnelNumber: undefined,
   page: undefined,
 } as const;
 
@@ -33,10 +37,14 @@ export default function NesSync() {
     initialLoading,
     refetch,
   } = usePaginatedFetch<NesEmployee>(
-    ['nes-employees', qp.search, currentPage],
+    ['nes-employees', qp.search, qp.organizationName, qp.division, qp.post, qp.personnelNumber, currentPage],
     () =>
       apiService.getNesEmployees({
         search: qp.search || undefined,
+        organizationName: qp.organizationName || undefined,
+        division: qp.division || undefined,
+        post: qp.post || undefined,
+        personnelNumber: qp.personnelNumber || undefined,
         page: currentPage,
         limit: 20,
       }),
@@ -76,6 +84,23 @@ export default function NesSync() {
 
   const columns = [
     {
+      title: '№',
+      key: 'rowNumber',
+      width: 64,
+      render: (_: unknown, __: NesEmployee, index: number) => (
+        <span className="text-sm font-medium text-slate-500">
+          {(currentPage - 1) * 20 + index + 1}
+        </span>
+      ),
+    },
+    {
+      title: 'Tabel',
+      dataIndex: 'personnelNumber',
+      key: 'personnelNumber',
+      width: 110,
+      render: (value: string) => <Tag>{value}</Tag>,
+    },
+    {
       title: 'Xodim',
       key: 'name',
       render: (_: unknown, record: NesEmployee) => (
@@ -83,7 +108,7 @@ export default function NesSync() {
           <p className="font-semibold text-slate-900 dark:text-white">
             {record.fullName || '—'}
           </p>
-          <p className="text-xs text-slate-500">#{record.personnelNumber}</p>
+          <p className="text-xs text-slate-500">{record.login}</p>
         </div>
       ),
     },
@@ -144,6 +169,34 @@ export default function NesSync() {
           placeholder="Xodim, login yoki personnel number"
           style={{ width: 260 }}
           onChange={(e) => handleSearchChange(e.target.value)}
+        />
+        <Input
+          allowClear
+          defaultValue={qp.personnelNumber}
+          placeholder="Tabel raqami"
+          style={{ width: 140 }}
+          onChange={(e) => setParams({ personnelNumber: e.target.value || undefined, page: undefined })}
+        />
+        <Input
+          allowClear
+          defaultValue={qp.organizationName}
+          placeholder="Organizatsiya"
+          style={{ width: 220 }}
+          onChange={(e) => setParams({ organizationName: e.target.value || undefined, page: undefined })}
+        />
+        <Input
+          allowClear
+          defaultValue={qp.post}
+          placeholder="Lavozim"
+          style={{ width: 180 }}
+          onChange={(e) => setParams({ post: e.target.value || undefined, page: undefined })}
+        />
+        <Input
+          allowClear
+          defaultValue={qp.division}
+          placeholder="Bo`lim"
+          style={{ width: 180 }}
+          onChange={(e) => setParams({ division: e.target.value || undefined, page: undefined })}
         />
         <DatePicker
           value={syncDate}

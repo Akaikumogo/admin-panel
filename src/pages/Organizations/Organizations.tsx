@@ -26,6 +26,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch } from '@/hooks/useFetch';
+import { useNavigate } from 'react-router-dom';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
@@ -72,6 +73,7 @@ const QP_DEFAULTS = { search: undefined } as const;
 
 const Organizations = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { params: qp, setParam } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -200,7 +202,7 @@ const Organizations = () => {
           className={`grid grid-cols-1 lg:grid-cols-2 gap-4 items-start transition-opacity duration-150 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <AnimatePresence mode="popLayout">
-            {organizations.map((org) => (
+            {organizations.map((org, index) => (
               <motion.div
                 key={org.id}
                 layoutId={org.id}
@@ -216,7 +218,11 @@ const Organizations = () => {
                         <Building2 size={20} className="text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">
+                        <h3
+                          className="font-semibold text-slate-900 dark:text-white cursor-pointer hover:underline"
+                          onClick={() => navigate(`/dashboard/organizations/${org.id}`)}
+                        >
+                          <span className="mr-2 text-slate-400">#{index + 1}</span>
                           <HighlightText
                             text={org.name}
                             highlight={qp.search}

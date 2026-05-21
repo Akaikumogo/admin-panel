@@ -24,6 +24,9 @@ const PermissionsPage = lazy(() => import('./pages/Permissions/Permissions'));
 const OrganizationsPage = lazy(
   () => import('./pages/Organizations/Organizations')
 );
+const OrganizationDetailPage = lazy(
+  () => import('./pages/Organizations/OrganizationDetail')
+);
 const UsersPage = lazy(() => import('./pages/Users/Users'));
 const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
@@ -99,6 +102,10 @@ export const routes: RouteObject[] = [
           {
             path: 'organizations',
             element: withSuspense(OrganizationsPage)
+          },
+          {
+            path: 'organizations/:id',
+            element: withSuspense(OrganizationDetailPage)
           },
           {
             path: 'employees',
