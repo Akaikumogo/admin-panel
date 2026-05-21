@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button, Card, DatePicker, Input, Modal, Select, Table, Tag, message } from 'antd';
+import { Trash2, Filter, RefreshCw, Search } from 'lucide-react';
 import dayjs from 'dayjs';
-import { Filter, RefreshCw, Search } from 'lucide-react';
 import NoData from '@/components/NoData';
 import { useNesSyncSocket, type SyncDoneEvent } from '@/hooks/useNesSyncSocket';
 import { usePaginatedFetch } from '@/hooks/useFetch';
@@ -28,7 +28,15 @@ export default function NesSync() {
 
   const [syncDate, setSyncDate] = useState(dayjs());
   const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+  // { current: nechtasi qayta ishlandi, total: hammasi, created: nechtasi bazaga qo'shildi }
+  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number; created: number }>({
+    current: 0,
+    total: 0,
+    created: 0,
+  });
+
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [positionsLoading, setPositionsLoading] = useState(false);
@@ -39,7 +47,6 @@ export default function NesSync() {
     divisions: [],
   });
 
-  // Filter options bir marta yuklanadi (sync tugagach yangilanadi)
   useState(() => {
     apiService.getNesEmployeesFilterOptions()
       .then(setFilterOptions)
@@ -64,23 +71,23 @@ export default function NesSync() {
       }),
   );
 
-  // WebSocket — polling o'rniga real-time progress
+  // WebSocket — real-time progress
   useNesSyncSocket({
-    onProgress: ({ current, total }) => {
-      setSyncProgress({ current, total });
+    onProgress: ({ current, total, created }) => {
+      setSyncProgress({ current, total, created });
     },
     onDone: (res: SyncDoneEvent) => {
       setSyncing(false);
-      setSyncProgress({ current: 0, total: 0 });
+      setSyncProgress({ current: 0, total: 0, created: 0 });
       message.success(
-        `1C sync: ${res.total} ta, yangi ${res.created}, yangilangan ${res.updated}, o'zgarmagan ${res.unchanged}`,
+        `Sync tugadi: ${res.total} ta topildi, ${res.created} ta yangi, ${res.updated} ta yangilandi`,
       );
       apiService.getNesEmployeesFilterOptions().then(setFilterOptions).catch(() => {});
       refetch?.();
     },
     onError: (msg) => {
       setSyncing(false);
-      setSyncProgress({ current: 0, total: 0 });
+      setSyncProgress({ current: 0, total: 0, created: 0 });
       message.error(`Sync xatosi: ${msg}`);
     },
   });
@@ -94,13 +101,28 @@ export default function NesSync() {
 
   const handleSync = async () => {
     setSyncing(true);
-    setSyncProgress({ current: 0, total: 0 });
+    setSyncProgress({ current: 0, total: 0, created: 0 });
     try {
       await apiService.syncNesEmployees(syncDate.format('YYYY-MM-DD'));
       // onDone WebSocket orqali keladi
     } catch {
       setSyncing(false);
-      setSyncProgress({ current: 0, total: 0 });
+      setSyncProgress({ current: 0, total: 0, created: 0 });
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    setDeleting(true);
+    setDeleteConfirmOpen(false);
+    try {
+      const res = await apiService.deleteAllNesEmployees();
+      message.success(`${res.deleted} ta xodim o'chirildi`);
+      refetch?.();
+      setFilterOptions({ organizations: [], divisions: [] });
+    } catch {
+      // xato notification api.ts tomonidan ko'rsatiladi
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -115,10 +137,10 @@ export default function NesSync() {
     }
   };
 
-  // Button label
+  // Sync button label: bazaga qo'shildi / topildi
   const syncLabel = (() => {
     if (!syncing) return '1C bilan sinxronlash';
-    if (syncProgress.total > 0) return `${syncProgress.current} / ${syncProgress.total}`;
+    if (syncProgress.total > 0) return `${syncProgress.created} / ${syncProgress.total}`;
     return 'Yuklanmoqda...';
   })();
 
@@ -225,13 +247,40 @@ export default function NesSync() {
           type="primary"
           icon={<RefreshCw size={16} />}
           loading={syncing}
+          disabled={deleting}
           onClick={handleSync}
         >
           {syncLabel}
         </Button>
 
+        <Button
+          danger
+          icon={<Trash2 size={16} />}
+          loading={deleting}
+          disabled={syncing}
+          onClick={() => setDeleteConfirmOpen(true)}
+        >
+          Hammasini o'chirish
+        </Button>
+
         <Tag className="text-sm ml-auto">Jami: {total}</Tag>
       </div>
+
+      {/* Sync paytida progress ko'rsatuvchi satır */}
+      {syncing && syncProgress.total > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2 flex items-center gap-4 text-sm">
+          <span className="text-blue-600 dark:text-blue-400 font-medium">Sync jarayonida...</span>
+          <span className="text-slate-600 dark:text-slate-300">
+            Topildi: <strong>{syncProgress.total}</strong>
+          </span>
+          <span className="text-slate-600 dark:text-slate-300">
+            Qayta ishlandi: <strong>{syncProgress.current}</strong>
+          </span>
+          <span className="text-green-600 dark:text-green-400 font-semibold">
+            Bazaga qo'shildi: <strong>{syncProgress.created}</strong>
+          </span>
+        </div>
+      )}
 
       {employees.length === 0 && !initialLoading && !loading ? (
         <NoData text="1C xodimlari hali sinxron qilinmagan" />
@@ -291,6 +340,22 @@ export default function NesSync() {
             { title: 'Lavozim', dataIndex: 'post' },
           ]}
         />
+      </Modal>
+
+      {/* Bulk delete tasdiqlash modali */}
+      <Modal
+        title="Barcha xodimlarni o'chirish"
+        open={deleteConfirmOpen}
+        onCancel={() => setDeleteConfirmOpen(false)}
+        onOk={handleDeleteAll}
+        okText="Ha, o'chirib tashlash"
+        cancelText="Bekor qilish"
+        okButtonProps={{ danger: true }}
+      >
+        <p className="text-slate-700 dark:text-slate-300">
+          Barcha <strong>{total}</strong> ta NES xodimi va ularning user akkauntlari butunlay o'chiriladi.
+          Bu amalni qaytarib bo'lmaydi. Davom etasizmi?
+        </p>
       </Modal>
     </div>
   );

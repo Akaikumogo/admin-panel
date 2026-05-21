@@ -1625,6 +1625,13 @@ class ApiService {
     return response.data;
   }
 
+  async deleteAllNesEmployees(): Promise<{ success: boolean; deleted: number }> {
+    const response = await this.api.delete<{ success: boolean; deleted: number }>(
+      '/admin/nes-employees',
+    );
+    return response.data;
+  }
+
   async syncNesEmployees(date: string): Promise<NesEmployeeSyncResponse> {
     const response = await this.api.post<NesEmployeeSyncResponse>(
       '/admin/nes-employees/sync',

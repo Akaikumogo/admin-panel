@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { BACKEND_ORIGIN } from '@/services/api';
 
-export type SyncProgressEvent = { current: number; total: number };
+export type SyncProgressEvent = { current: number; total: number; created: number };
 export type SyncDoneEvent = {
   total: number;
   created: number;
