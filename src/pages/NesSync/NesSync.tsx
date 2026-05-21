@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Button, Card, DatePicker, Input, Modal, Table, Tag, message } from 'antd';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Card, DatePicker, Input, Modal, Select, Table, Tag, message } from 'antd';
 import dayjs from 'dayjs';
 import { Filter, RefreshCw, Search } from 'lucide-react';
 import NoData from '@/components/NoData';
@@ -12,6 +12,8 @@ import apiService, {
 
 const QP_DEFAULTS = {
   search: undefined,
+  organizationName: undefined,
+  division: undefined,
   page: undefined,
 } as const;
 
@@ -20,11 +22,23 @@ export default function NesSync() {
     useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [syncDate, setSyncDate] = useState(dayjs('2026-01-01'));
+  const [syncDate, setSyncDate] = useState(dayjs());
   const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [positionsLoading, setPositionsLoading] = useState(false);
   const [positions, setPositions] = useState<NesEmployeePositionHistory[]>([]);
+  const [filterOptions, setFilterOptions] = useState<{ organizations: string[]; divisions: string[] }>({
+    organizations: [],
+    divisions: [],
+  });
+
+  useEffect(() => {
+    apiService.getNesEmployeesFilterOptions()
+      .then(setFilterOptions)
+      .catch(() => {});
+  }, []);
 
   const {
     data: employees,
@@ -33,10 +47,12 @@ export default function NesSync() {
     initialLoading,
     refetch,
   } = usePaginatedFetch<NesEmployee>(
-    ['nes-employees', qp.search, currentPage],
+    ['nes-employees', qp.search, qp.organizationName, qp.division, currentPage],
     () =>
       apiService.getNesEmployees({
         search: qp.search || undefined,
+        organizationName: qp.organizationName || undefined,
+        division: qp.division || undefined,
         page: currentPage,
         limit: 20,
       }),
@@ -49,18 +65,43 @@ export default function NesSync() {
     }, 400);
   };
 
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const startPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const status = await apiService.getNesEmployeesSyncStatus();
+        setSyncProgress({ current: status.current, total: status.total });
+        if (!status.running) {
+          clearInterval(pollRef.current);
+        }
+      } catch {
+        // polling xatosi e'tiborga olinmaydi
+      }
+    }, 1500);
+  };
+
   const handleSync = async () => {
     setSyncing(true);
+    setSyncProgress({ current: 0, total: 0 });
+    startPolling();
     try {
-      const res = await apiService.syncNesEmployees(
-        syncDate.format('YYYY-MM-DD'),
-      );
+      const res = await apiService.syncNesEmployees(syncDate.format('YYYY-MM-DD'));
       message.success(
         `1C sync: ${res.total} ta, yangi ${res.created}, yangilangan ${res.updated}`,
       );
+      const opts = await apiService.getNesEmployeesFilterOptions();
+      setFilterOptions(opts);
       refetch?.();
     } finally {
       setSyncing(false);
+      setSyncProgress({ current: 0, total: 0 });
+      if (pollRef.current) clearInterval(pollRef.current);
     }
   };
 
@@ -137,26 +178,55 @@ export default function NesSync() {
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
       <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
+
         <Input
           allowClear
           defaultValue={qp.search}
           prefix={<Search size={14} className="text-slate-400" />}
-          placeholder="Xodim, login yoki personnel number"
-          style={{ width: 260 }}
+          placeholder="Xodim, login yoki tabelnomer"
+          style={{ width: 220 }}
           onChange={(e) => handleSearchChange(e.target.value)}
         />
+
+        <Select
+          allowClear
+          showSearch
+          placeholder="Tashkilot"
+          style={{ width: 200 }}
+          value={qp.organizationName ?? undefined}
+          options={filterOptions.organizations.map((o) => ({ label: o, value: o }))}
+          onChange={(val) => setParams({ organizationName: val ?? undefined, page: undefined })}
+        />
+
+        <Select
+          allowClear
+          showSearch
+          placeholder="Bo'lim"
+          style={{ width: 200 }}
+          value={qp.division ?? undefined}
+          options={filterOptions.divisions.map((d) => ({ label: d, value: d }))}
+          onChange={(val) => setParams({ division: val ?? undefined, page: undefined })}
+        />
+
         <DatePicker
           value={syncDate}
+          format="YYYY-MM-DD"
           onChange={(value) => value && setSyncDate(value)}
         />
+
         <Button
           type="primary"
           icon={<RefreshCw size={16} />}
           loading={syncing}
           onClick={handleSync}
         >
-          1C bilan sinxronlash
+          {syncing && syncProgress.total > 0
+            ? `${syncProgress.current} / ${syncProgress.total}`
+            : syncing
+              ? 'Yuklanmoqda...'
+              : '1C bilan sinxronlash'}
         </Button>
+
         <Tag className="text-sm ml-auto">Jami: {total}</Tag>
       </div>
 

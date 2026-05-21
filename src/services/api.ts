@@ -604,6 +604,13 @@ export type NesEmployeeSyncResponse = {
   unchanged: number;
 };
 
+export type NesEmployeesSyncStatus = {
+  running: boolean;
+  current: number;
+  total: number;
+  startedAt: string | null;
+};
+
 export type NesEmployeePositionHistory = {
   id: string;
   personnelNumber: string;
@@ -1597,6 +1604,8 @@ class ApiService {
   // ===== NES / 1C Sync =====
   async getNesEmployees(filters?: {
     search?: string;
+    organizationName?: string;
+    division?: string;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<NesEmployee>> {
@@ -1607,10 +1616,24 @@ class ApiService {
     return response.data;
   }
 
+  async getNesEmployeesFilterOptions(): Promise<{ organizations: string[]; divisions: string[] }> {
+    const response = await this.api.get<{ organizations: string[]; divisions: string[] }>(
+      '/admin/nes-employees/filter-options',
+    );
+    return response.data;
+  }
+
   async syncNesEmployees(date: string): Promise<NesEmployeeSyncResponse> {
     const response = await this.api.post<NesEmployeeSyncResponse>(
       '/admin/nes-employees/sync',
       { date },
+    );
+    return response.data;
+  }
+
+  async getNesEmployeesSyncStatus(): Promise<NesEmployeesSyncStatus> {
+    const response = await this.api.get<NesEmployeesSyncStatus>(
+      '/admin/nes-employees/sync-status',
     );
     return response.data;
   }
