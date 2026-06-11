@@ -1,7 +1,26 @@
 import { useMemo, useState } from 'react';
-import { Button, Collapse, Form, Input, InputNumber, Modal, Switch, Table, Tag, Typography, message } from 'antd';
+import {
+  Button,
+  Collapse,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Switch,
+  Table,
+  Tag,
+  Typography,
+  message
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { Plus, Trash2, Pencil, RefreshCcw, BookOpen, Music2 } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  RefreshCcw,
+  BookOpen,
+  Music2
+} from 'lucide-react';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -88,7 +107,7 @@ export default function AudioLibraryPage() {
     data: books,
     loading,
     initialLoading,
-    refetch,
+    refetch
   } = usePaginatedFetch(['admin-audio-books'], async () => {
     // usePaginatedFetch expects {data,total,...} from apiService, but for this page we just need a simple list.
     // We'll wrap it into a compatible shape.
@@ -101,7 +120,9 @@ export default function AudioLibraryPage() {
   const [detail, setDetail] = useState<AdminAudioBookDetail | null>(null);
 
   const [bookModalOpen, setBookModalOpen] = useState(false);
-  const [bookModalMode, setBookModalMode] = useState<'create' | 'edit'>('create');
+  const [bookModalMode, setBookModalMode] = useState<'create' | 'edit'>(
+    'create'
+  );
   const [bookForm] = Form.useForm();
 
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
@@ -110,7 +131,9 @@ export default function AudioLibraryPage() {
 
   const [paragraphModalOpen, setParagraphModalOpen] = useState(false);
   const [paragraphForm] = Form.useForm();
-  const [paragraphChapterId, setParagraphChapterId] = useState<string | null>(null);
+  const [paragraphChapterId, setParagraphChapterId] = useState<string | null>(
+    null
+  );
 
   const openCreateBook = () => {
     setBookModalMode('create');
@@ -126,7 +149,7 @@ export default function AudioLibraryPage() {
       title: row.title,
       description: row.description,
       coverUrl: row.coverUrl,
-      isActive: row.isActive,
+      isActive: row.isActive
     });
     setBookModalOpen(true);
   };
@@ -158,25 +181,33 @@ export default function AudioLibraryPage() {
               {r.title}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              {r.description || t({ uz: 'Tavsif yo‘q', en: 'No description', ru: 'Без описания' })}
+              {r.description ||
+                t({
+                  uz: 'Tavsif yo‘q',
+                  en: 'No description',
+                  ru: 'Без описания'
+                })}
             </div>
           </button>
-        ),
+        )
       },
       {
         title: t({ uz: 'Holat', en: 'Status', ru: 'Статус' }),
         key: 'status',
         width: 110,
-        render: (_v, r) => (
-          r.isActive ? <Tag color="green">ACTIVE</Tag> : <Tag color="default">HIDDEN</Tag>
-        ),
+        render: (_v, r) =>
+          r.isActive ? (
+            <Tag color="green">ACTIVE</Tag>
+          ) : (
+            <Tag color="default">HIDDEN</Tag>
+          )
       },
       {
         title: t({ uz: 'Bob', en: 'Chapters', ru: 'Главы' }),
         key: 'chaptersCount',
         width: 90,
         align: 'center',
-        render: (_v, r) => r.chaptersCount,
+        render: (_v, r) => r.chaptersCount
       },
       {
         title: t({ uz: 'Amallar', en: 'Actions', ru: 'Действия' }),
@@ -199,11 +230,15 @@ export default function AudioLibraryPage() {
               disabled={!can('audioLibrary', 'delete')}
               onClick={() => {
                 Modal.confirm({
-                  title: t({ uz: ‘Kitobni o\’chirish’, en: ‘Delete book’, ru: ‘Удалить книгу’ }),
+                  title: t({
+                    uz: "Kitobni o'chirish",
+                    en: 'Delete book',
+                    ru: 'Удалить книгу'
+                  }),
                   content: t({
-                    uz: ‘Kitob, uning barcha boblari va paragraflari o\’chiriladi. Davom etamizmi?’,
-                    en: ‘Book and all its chapters and paragraphs will be deleted. Continue?’,
-                    ru: ‘Книга и все главы и параграфы будут удалены. Продолжить?’,
+                    uz: "Kitob, uning barcha boblari va paragraflari o'chiriladi. Davom etamizmi?",
+                    en: 'Book and all its chapters and paragraphs will be deleted. Continue?',
+                    ru: 'Книга и все главы и параграфы будут удалены. Продолжить?'
                   }),
                   okButtonProps: { danger: true },
                   onOk: async () => {
@@ -213,16 +248,18 @@ export default function AudioLibraryPage() {
                       setDetail(null);
                     }
                     await refetch();
-                    message.success(t({ uz: ‘O\’chirildi’, en: ‘Deleted’, ru: ‘Удалено’ }));
-                  },
+                    message.success(
+                      t({ uz: "O'chirildi", en: 'Deleted', ru: 'Удалено' })
+                    );
+                  }
                 });
               }}
             />
           </div>
-        ),
-      },
+        )
+      }
     ],
-    [t, refetch, selectedId],
+    [t, refetch, selectedId]
   );
 
   const selectedTitle = detail?.title || '';
@@ -238,12 +275,15 @@ export default function AudioLibraryPage() {
             {t({
               uz: 'Audio faqat paragrafga bog‘lanadi. Kitob/bob darajasida audio yo‘q.',
               en: 'Audio is attached only to paragraphs.',
-              ru: 'Аудио прикрепляется только к параграфам.',
+              ru: 'Аудио прикрепляется только к параграфам.'
             })}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button icon={<RefreshCcw size={16} />} onClick={() => void refetch()}>
+          <Button
+            icon={<RefreshCcw size={16} />}
+            onClick={() => void refetch()}
+          >
             {t({ uz: 'Yangilash', en: 'Refresh', ru: 'Обновить' })}
           </Button>
           <Button
@@ -261,7 +301,9 @@ export default function AudioLibraryPage() {
         <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#121314]/80 dark:border-slate-700/60 overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-200/80 dark:border-slate-700/60 flex items-center gap-2">
             <BookOpen size={16} />
-            <span className="font-semibold">{t({ uz: 'Kitoblar', en: 'Books', ru: 'Книги' })}</span>
+            <span className="font-semibold">
+              {t({ uz: 'Kitoblar', en: 'Books', ru: 'Книги' })}
+            </span>
           </div>
           <Table
             rowKey="id"
@@ -273,7 +315,11 @@ export default function AudioLibraryPage() {
           />
           {!loading && (books?.length ?? 0) === 0 ? (
             <div className="p-4 text-sm text-slate-600 dark:text-slate-400">
-              {t({ uz: 'Hozircha kitob yo‘q.', en: 'No books yet.', ru: 'Книг пока нет.' })}
+              {t({
+                uz: 'Hozircha kitob yo‘q.',
+                en: 'No books yet.',
+                ru: 'Книг пока нет.'
+              })}
             </div>
           ) : null}
         </div>
@@ -283,7 +329,10 @@ export default function AudioLibraryPage() {
             <div className="flex items-center gap-2 min-w-0">
               <Music2 size={16} />
               <span className="font-semibold truncate">
-                {selectedId ? selectedTitle || t({ uz: 'Tanlangan kitob', en: 'Selected', ru: 'Выбрано' }) : t({ uz: 'Detail', en: 'Detail', ru: 'Детали' })}
+                {selectedId
+                  ? selectedTitle ||
+                    t({ uz: 'Tanlangan kitob', en: 'Selected', ru: 'Выбрано' })
+                  : t({ uz: 'Detail', en: 'Detail', ru: 'Детали' })}
               </span>
             </div>
             {selectedId ? (
@@ -306,11 +355,19 @@ export default function AudioLibraryPage() {
           <div className="p-4">
             {!selectedId ? (
               <div className="text-sm text-slate-600 dark:text-slate-400">
-                {t({ uz: 'Chapdan kitob tanlang.', en: 'Select a book from the left.', ru: 'Выберите книгу слева.' })}
+                {t({
+                  uz: 'Chapdan kitob tanlang.',
+                  en: 'Select a book from the left.',
+                  ru: 'Выберите книгу слева.'
+                })}
               </div>
             ) : detailLoading ? (
               <div className="text-sm text-slate-600 dark:text-slate-400">
-                {t({ uz: 'Yuklanyapti...', en: 'Loading...', ru: 'Загрузка...' })}
+                {t({
+                  uz: 'Yuklanyapti...',
+                  en: 'Loading...',
+                  ru: 'Загрузка...'
+                })}
               </div>
             ) : !detail ? (
               <div className="text-sm text-slate-600 dark:text-slate-400">
@@ -318,7 +375,11 @@ export default function AudioLibraryPage() {
               </div>
             ) : detail.chapters.length === 0 ? (
               <div className="text-sm text-slate-600 dark:text-slate-400">
-                {t({ uz: 'Bu kitobda boblar yo‘q. "Bob qo‘shish" bosing.', en: 'No chapters yet.', ru: 'Глав пока нет.' })}
+                {t({
+                  uz: 'Bu kitobda boblar yo‘q. "Bob qo‘shish" bosing.',
+                  en: 'No chapters yet.',
+                  ru: 'Глав пока нет.'
+                })}
               </div>
             ) : (
               <Collapse
@@ -331,9 +392,12 @@ export default function AudioLibraryPage() {
                     label: (
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="font-semibold truncate">{ch.title}</div>
+                          <div className="font-semibold truncate">
+                            {ch.title}
+                          </div>
                           <div className="text-xs text-slate-500 dark:text-slate-400">
-                            order: {ch.order} | paragraphs: {ch.paragraphs.length}
+                            order: {ch.order} | paragraphs:{' '}
+                            {ch.paragraphs.length}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -349,7 +413,11 @@ export default function AudioLibraryPage() {
                               setParagraphModalOpen(true);
                             }}
                           >
-                            {t({ uz: 'Paragraf', en: 'Paragraph', ru: 'Параграф' })}
+                            {t({
+                              uz: 'Paragraf',
+                              en: 'Paragraph',
+                              ru: 'Параграф'
+                            })}
                           </Button>
                           <Button
                             size="small"
@@ -358,35 +426,74 @@ export default function AudioLibraryPage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               Modal.confirm({
-                                title: t({ uz: 'Bobni tahrirlash', en: 'Edit chapter', ru: 'Изм. главу' }),
+                                title: t({
+                                  uz: 'Bobni tahrirlash',
+                                  en: 'Edit chapter',
+                                  ru: 'Изм. главу'
+                                }),
                                 content: (
                                   <Form
                                     layout="vertical"
-                                    initialValues={{ title: ch.title, orderIndex: ch.order }}
+                                    initialValues={{
+                                      title: ch.title,
+                                      orderIndex: ch.order
+                                    }}
                                     onFinish={async (values) => {
-                                      await apiService.adminUpdateAudioChapter(ch.id, values);
-                                      message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
-                                      const d = await apiService.adminGetAudioBook(detail.id);
+                                      await apiService.adminUpdateAudioChapter(
+                                        ch.id,
+                                        values
+                                      );
+                                      message.success(
+                                        t({
+                                          uz: 'Saqlandi',
+                                          en: 'Saved',
+                                          ru: 'Сохранено'
+                                        })
+                                      );
+                                      const d =
+                                        await apiService.adminGetAudioBook(
+                                          detail.id
+                                        );
                                       setDetail(d);
                                       await refetch();
                                     }}
                                   >
-                                    <Form.Item name="title" label={t({ uz: 'Sarlavha', en: 'Title', ru: 'Название' })} rules={[{ required: true }]}>
+                                    <Form.Item
+                                      name="title"
+                                      label={t({
+                                        uz: 'Sarlavha',
+                                        en: 'Title',
+                                        ru: 'Название'
+                                      })}
+                                      rules={[{ required: true }]}
+                                    >
                                       <Input />
                                     </Form.Item>
-                                    <Form.Item name="orderIndex" label="Order" rules={[{ required: true }]}>
+                                    <Form.Item
+                                      name="orderIndex"
+                                      label="Order"
+                                      rules={[{ required: true }]}
+                                    >
                                       <InputNumber min={0} className="w-full" />
                                     </Form.Item>
                                     <div className="flex justify-end">
                                       <Button type="primary" htmlType="submit">
-                                        {t({ uz: 'Saqlash', en: 'Save', ru: 'Сохранить' })}
+                                        {t({
+                                          uz: 'Saqlash',
+                                          en: 'Save',
+                                          ru: 'Сохранить'
+                                        })}
                                       </Button>
                                     </div>
                                   </Form>
                                 ),
                                 icon: null,
                                 okButtonProps: { style: { display: 'none' } },
-                                cancelText: t({ uz: 'Yopish', en: 'Close', ru: 'Закрыть' }),
+                                cancelText: t({
+                                  uz: 'Yopish',
+                                  en: 'Close',
+                                  ru: 'Закрыть'
+                                })
                               });
                             }}
                           />
@@ -398,15 +505,27 @@ export default function AudioLibraryPage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               Modal.confirm({
-                                title: t({ uz: 'Bobni o‘chirish', en: 'Delete chapter', ru: 'Удалить главу' }),
-                                content: t({ uz: 'Bob va ichidagi paragraf(lar) o‘chadi. Davom etamizmi?', en: 'This will delete chapter and its paragraphs. Continue?', ru: 'Удалит главу и параграфы. Продолжить?' }),
+                                title: t({
+                                  uz: 'Bobni o‘chirish',
+                                  en: 'Delete chapter',
+                                  ru: 'Удалить главу'
+                                }),
+                                content: t({
+                                  uz: 'Bob va ichidagi paragraf(lar) o‘chadi. Davom etamizmi?',
+                                  en: 'This will delete chapter and its paragraphs. Continue?',
+                                  ru: 'Удалит главу и параграфы. Продолжить?'
+                                }),
                                 okButtonProps: { danger: true },
                                 onOk: async () => {
-                                  await apiService.adminDeleteAudioChapter(ch.id);
-                                  const d = await apiService.adminGetAudioBook(detail.id);
+                                  await apiService.adminDeleteAudioChapter(
+                                    ch.id
+                                  );
+                                  const d = await apiService.adminGetAudioBook(
+                                    detail.id
+                                  );
                                   setDetail(d);
                                   await refetch();
-                                },
+                                }
                               });
                             }}
                           />
@@ -417,14 +536,21 @@ export default function AudioLibraryPage() {
                       <div className="space-y-2">
                         {ch.paragraphs.length === 0 ? (
                           <div className="text-sm text-slate-600 dark:text-slate-400">
-                            {t({ uz: 'Paragraf yo‘q', en: 'No paragraphs', ru: 'Нет параграфов' })}
+                            {t({
+                              uz: 'Paragraf yo‘q',
+                              en: 'No paragraphs',
+                              ru: 'Нет параграфов'
+                            })}
                           </div>
                         ) : (
                           ch.paragraphs
                             .slice()
                             .sort((a, b) => a.order - b.order)
                             .map((p) => (
-                              <div key={p.id} className="rounded-xl border border-slate-200/80 dark:border-slate-700/60 p-3">
+                              <div
+                                key={p.id}
+                                className="rounded-xl border border-slate-200/80 dark:border-slate-700/60 p-3"
+                              >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0">
                                     <div className="font-semibold text-slate-900 dark:text-white">
@@ -441,38 +567,90 @@ export default function AudioLibraryPage() {
                                       disabled={!can('audioLibrary', 'update')}
                                       onClick={() => {
                                         Modal.confirm({
-                                          title: t({ uz: 'Paragrafni tahrirlash', en: 'Edit paragraph', ru: 'Изм. параграф' }),
+                                          title: t({
+                                            uz: 'Paragrafni tahrirlash',
+                                            en: 'Edit paragraph',
+                                            ru: 'Изм. параграф'
+                                          }),
                                           content: (
                                             <Form
                                               layout="vertical"
-                                              initialValues={{ text: p.text, orderIndex: p.order, audioUrl: p.audioUrl }}
+                                              initialValues={{
+                                                text: p.text,
+                                                orderIndex: p.order,
+                                                audioUrl: p.audioUrl
+                                              }}
                                               onFinish={async (values) => {
-                                                await apiService.adminUpdateAudioParagraph(p.id, values);
-                                                message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
-                                                const d = await apiService.adminGetAudioBook(detail.id);
+                                                await apiService.adminUpdateAudioParagraph(
+                                                  p.id,
+                                                  values
+                                                );
+                                                message.success(
+                                                  t({
+                                                    uz: 'Saqlandi',
+                                                    en: 'Saved',
+                                                    ru: 'Сохранено'
+                                                  })
+                                                );
+                                                const d =
+                                                  await apiService.adminGetAudioBook(
+                                                    detail.id
+                                                  );
                                                 setDetail(d);
                                                 await refetch();
                                               }}
                                             >
-                                              <Form.Item name="text" label="Text" rules={[{ required: true }]}>
+                                              <Form.Item
+                                                name="text"
+                                                label="Text"
+                                                rules={[{ required: true }]}
+                                              >
                                                 <Input.TextArea rows={3} />
                                               </Form.Item>
-                                              <Form.Item name="orderIndex" label="Order" rules={[{ required: true }]}>
-                                                <InputNumber min={0} className="w-full" />
+                                              <Form.Item
+                                                name="orderIndex"
+                                                label="Order"
+                                                rules={[{ required: true }]}
+                                              >
+                                                <InputNumber
+                                                  min={0}
+                                                  className="w-full"
+                                                />
                                               </Form.Item>
-                                              <Form.Item name="audioUrl" label={t({ uz: 'Audio fayl', en: 'Audio file', ru: 'Аудиофайл' })} rules={[{ required: true }]}>
+                                              <Form.Item
+                                                name="audioUrl"
+                                                label={t({
+                                                  uz: 'Audio fayl',
+                                                  en: 'Audio file',
+                                                  ru: 'Аудиофайл'
+                                                })}
+                                                rules={[{ required: true }]}
+                                              >
                                                 <AudioField />
                                               </Form.Item>
                                               <div className="flex justify-end">
-                                                <Button type="primary" htmlType="submit">
-                                                  {t({ uz: 'Saqlash', en: 'Save', ru: 'Сохранить' })}
+                                                <Button
+                                                  type="primary"
+                                                  htmlType="submit"
+                                                >
+                                                  {t({
+                                                    uz: 'Saqlash',
+                                                    en: 'Save',
+                                                    ru: 'Сохранить'
+                                                  })}
                                                 </Button>
                                               </div>
                                             </Form>
                                           ),
                                           icon: null,
-                                          okButtonProps: { style: { display: 'none' } },
-                                          cancelText: t({ uz: 'Yopish', en: 'Close', ru: 'Закрыть' }),
+                                          okButtonProps: {
+                                            style: { display: 'none' }
+                                          },
+                                          cancelText: t({
+                                            uz: 'Yopish',
+                                            en: 'Close',
+                                            ru: 'Закрыть'
+                                          })
                                         });
                                       }}
                                     />
@@ -483,15 +661,28 @@ export default function AudioLibraryPage() {
                                       disabled={!can('audioLibrary', 'delete')}
                                       onClick={() => {
                                         Modal.confirm({
-                                          title: t({ uz: 'Paragrafni o‘chirish', en: 'Delete paragraph', ru: 'Удалить параграф' }),
-                                          content: t({ uz: 'Davom etamizmi?', en: 'Continue?', ru: 'Продолжить?' }),
+                                          title: t({
+                                            uz: 'Paragrafni o‘chirish',
+                                            en: 'Delete paragraph',
+                                            ru: 'Удалить параграф'
+                                          }),
+                                          content: t({
+                                            uz: 'Davom etamizmi?',
+                                            en: 'Continue?',
+                                            ru: 'Продолжить?'
+                                          }),
                                           okButtonProps: { danger: true },
                                           onOk: async () => {
-                                            await apiService.adminDeleteAudioParagraph(p.id);
-                                            const d = await apiService.adminGetAudioBook(detail.id);
+                                            await apiService.adminDeleteAudioParagraph(
+                                              p.id
+                                            );
+                                            const d =
+                                              await apiService.adminGetAudioBook(
+                                                detail.id
+                                              );
                                             setDetail(d);
                                             await refetch();
-                                          },
+                                          }
                                         });
                                       }}
                                     />
@@ -501,7 +692,7 @@ export default function AudioLibraryPage() {
                             ))
                         )}
                       </div>
-                    ),
+                    )
                   }))}
               />
             )}
@@ -510,11 +701,20 @@ export default function AudioLibraryPage() {
       </div>
 
       <Modal
-        title={bookModalMode === 'create' ? t({ uz: 'Kitob qo‘shish', en: 'Add book', ru: 'Добавить' }) : t({ uz: 'Kitobni tahrirlash', en: 'Edit book', ru: 'Изм.' })}
+        title={
+          bookModalMode === 'create'
+            ? t({ uz: 'Kitob qo‘shish', en: 'Add book', ru: 'Добавить' })
+            : t({ uz: 'Kitobni tahrirlash', en: 'Edit book', ru: 'Изм.' })
+        }
         open={bookModalOpen}
         onCancel={() => setBookModalOpen(false)}
         onOk={() => bookForm.submit()}
-        okButtonProps={{ disabled: bookModalMode === 'create' ? !can('audioLibrary', 'create') : !can('audioLibrary', 'update') }}
+        okButtonProps={{
+          disabled:
+            bookModalMode === 'create'
+              ? !can('audioLibrary', 'create')
+              : !can('audioLibrary', 'update')
+        }}
       >
         <Form
           form={bookForm}
@@ -522,35 +722,57 @@ export default function AudioLibraryPage() {
           onFinish={async (values) => {
             if (bookModalMode === 'create') {
               const created = await apiService.adminCreateAudioBook(values);
-              message.success(t({ uz: 'Yaratildi', en: 'Created', ru: 'Создано' }));
+              message.success(
+                t({ uz: 'Yaratildi', en: 'Created', ru: 'Создано' })
+              );
               setBookModalOpen(false);
               void refetch();
               void loadDetail(created.id);
               return;
             }
             if (!selectedId) return;
-            const updated = await apiService.adminUpdateAudioBook(selectedId, values);
-            message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
+            const updated = await apiService.adminUpdateAudioBook(
+              selectedId,
+              values
+            );
+            message.success(
+              t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' })
+            );
             setBookModalOpen(false);
             void refetch();
             setDetail(updated);
           }}
         >
-          <Form.Item name="title" label={t({ uz: 'Sarlavha', en: 'Title', ru: 'Название' })} rules={[{ required: true }]}>
+          <Form.Item
+            name="title"
+            label={t({ uz: 'Sarlavha', en: 'Title', ru: 'Название' })}
+            rules={[{ required: true }]}
+          >
             <Input maxLength={200} />
           </Form.Item>
-          <Form.Item name="description" label={t({ uz: 'Tavsif', en: 'Description', ru: 'Описание' })}>
+          <Form.Item
+            name="description"
+            label={t({ uz: 'Tavsif', en: 'Description', ru: 'Описание' })}
+          >
             <Input.TextArea rows={3} maxLength={4000} />
           </Form.Item>
-          <Form.Item name="coverUrl" label={t({ uz: 'Muqova rasm', en: 'Cover image', ru: 'Обложка' })}>
+          <Form.Item
+            name="coverUrl"
+            label={t({ uz: 'Muqova rasm', en: 'Cover image', ru: 'Обложка' })}
+          >
             <CoverImageField />
           </Form.Item>
-          <Form.Item name="isActive" label={t({ uz: 'Active', en: 'Active', ru: 'Активно' })} valuePropName="checked">
+          <Form.Item
+            name="isActive"
+            label={t({ uz: 'Active', en: 'Active', ru: 'Активно' })}
+            valuePropName="checked"
+          >
             <Switch />
           </Form.Item>
         </Form>
         <div className="text-xs text-slate-500 dark:text-slate-400">
-          API: {BACKEND_ORIGIN}/api/audio-books (mobile), {BACKEND_ORIGIN}/api/admin/audio-books (admin)
+          API: {BACKEND_ORIGIN}/api/audio-books (mobile), {BACKEND_ORIGIN}
+          /api/admin/audio-books (admin)
         </div>
       </Modal>
 
@@ -567,24 +789,38 @@ export default function AudioLibraryPage() {
           onFinish={async (values) => {
             if (!chapterBookId) return;
             await apiService.adminCreateAudioChapter(chapterBookId, values);
-            message.success(t({ uz: "Qo’shildi", en: 'Added', ru: 'Добавлено' }));
+            message.success(
+              t({ uz: 'Qo’shildi', en: 'Added', ru: 'Добавлено' })
+            );
             setChapterModalOpen(false);
             const d = await apiService.adminGetAudioBook(chapterBookId);
             setDetail(d);
             void refetch();
           }}
         >
-          <Form.Item name="title" label={t({ uz: 'Sarlavha', en: 'Title', ru: 'Название' })} rules={[{ required: true }]}>
+          <Form.Item
+            name="title"
+            label={t({ uz: 'Sarlavha', en: 'Title', ru: 'Название' })}
+            rules={[{ required: true }]}
+          >
             <Input maxLength={200} />
           </Form.Item>
-          <Form.Item name="orderIndex" label="Order" rules={[{ required: true }]}>
+          <Form.Item
+            name="orderIndex"
+            label="Order"
+            rules={[{ required: true }]}
+          >
             <InputNumber min={0} className="w-full" />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title={t({ uz: 'Paragraf qo‘shish', en: 'Add paragraph', ru: 'Параграф +' })}
+        title={t({
+          uz: 'Paragraf qo‘shish',
+          en: 'Add paragraph',
+          ru: 'Параграф +'
+        })}
         open={paragraphModalOpen}
         onCancel={() => setParagraphModalOpen(false)}
         onOk={() => paragraphForm.submit()}
@@ -595,8 +831,13 @@ export default function AudioLibraryPage() {
           layout="vertical"
           onFinish={async (values) => {
             if (!paragraphChapterId || !detail) return;
-            await apiService.adminCreateAudioParagraph(paragraphChapterId, values);
-            message.success(t({ uz: 'Qo’shildi', en: 'Added', ru: 'Добавлено' }));
+            await apiService.adminCreateAudioParagraph(
+              paragraphChapterId,
+              values
+            );
+            message.success(
+              t({ uz: 'Qo’shildi', en: 'Added', ru: 'Добавлено' })
+            );
             setParagraphModalOpen(false);
             const d = await apiService.adminGetAudioBook(detail.id);
             setDetail(d);
@@ -606,7 +847,11 @@ export default function AudioLibraryPage() {
           <Form.Item name="text" label="Text" rules={[{ required: true }]}>
             <Input.TextArea rows={3} maxLength={4000} />
           </Form.Item>
-          <Form.Item name="orderIndex" label="Order" rules={[{ required: true }]}>
+          <Form.Item
+            name="orderIndex"
+            label="Order"
+            rules={[{ required: true }]}
+          >
             <InputNumber min={0} className="w-full" />
           </Form.Item>
           <Form.Item
@@ -620,7 +865,7 @@ export default function AudioLibraryPage() {
             {t({
               uz: 'Faylni yuklang (mp3/m4a/ogg/wav) yoki tashqi URL yopishtiring.',
               en: 'Upload a file (mp3/m4a/ogg/wav) or paste an external URL.',
-              ru: 'Загрузите файл (mp3/m4a/ogg/wav) или вставьте внешний URL.',
+              ru: 'Загрузите файл (mp3/m4a/ogg/wav) или вставьте внешний URL.'
             })}
           </div>
         </Form>
@@ -628,4 +873,3 @@ export default function AudioLibraryPage() {
     </div>
   );
 }
-
