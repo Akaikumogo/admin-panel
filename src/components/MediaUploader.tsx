@@ -83,7 +83,7 @@ export default function MediaUploader({ kind, value, onChange }: MediaUploaderPr
           ref={inputRef}
           type="file"
           accept={ACCEPT[kind]}
-          className="hidden"
+          style={{ display: 'none' }}
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) void handleFile(f);

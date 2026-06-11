@@ -21,7 +21,7 @@ import {
   BookOpen,
   Music2
 } from 'lucide-react';
-import apiService, { BACKEND_ORIGIN } from '@/services/api';
+import apiService from '@/services/api';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { can } from '@/utils/can';
@@ -770,10 +770,6 @@ export default function AudioLibraryPage() {
             <Switch />
           </Form.Item>
         </Form>
-        <div className="text-xs text-slate-500 dark:text-slate-400">
-          API: {BACKEND_ORIGIN}/api/audio-books (mobile), {BACKEND_ORIGIN}
-          /api/admin/audio-books (admin)
-        </div>
       </Modal>
 
       <Modal
