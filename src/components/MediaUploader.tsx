@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Button, message, Progress, Tag } from 'antd';
 import { UploadCloud, X } from 'lucide-react';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
+import WaveformBars from './WaveformBars';
 
 type MediaKind = 'audio' | 'video' | 'image';
 
@@ -26,8 +27,10 @@ interface MediaUploaderProps {
 
 export default function MediaUploader({ kind, value, onChange }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const fullUrl = (url?: string | null) => {
     if (!url) return '';
@@ -109,7 +112,29 @@ export default function MediaUploader({ kind, value, onChange }: MediaUploaderPr
             </span>
           </div>
           {kind === 'audio' ? (
-            <audio controls preload="metadata" src={preview} className="w-full" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <WaveformBars
+                  isPlaying={isAudioPlaying}
+                  color={isAudioPlaying ? '#d97706' : '#94a3b8'}
+                />
+                {isAudioPlaying && (
+                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    Ijro etilmoqda...
+                  </span>
+                )}
+              </div>
+              <audio
+                ref={audioRef}
+                controls
+                preload="metadata"
+                src={preview}
+                className="w-full"
+                onPlay={() => setIsAudioPlaying(true)}
+                onPause={() => setIsAudioPlaying(false)}
+                onEnded={() => setIsAudioPlaying(false)}
+              />
+            </div>
           ) : kind === 'video' ? (
             <video
               controls

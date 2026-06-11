@@ -297,6 +297,7 @@ export type AdminAudioBookRow = {
   id: string;
   title: string;
   coverUrl: string | null;
+  audioUrl: string | null;
   description: string | null;
   isActive: boolean;
   chaptersCount: number;
@@ -324,6 +325,7 @@ export type AdminAudioBookDetail = {
   id: string;
   title: string;
   coverUrl: string | null;
+  audioUrl: string | null;
   description: string | null;
   isActive: boolean;
   chapters: AdminAudioChapter[];
@@ -1657,6 +1659,7 @@ class ApiService {
     title: string;
     description?: string | null;
     coverUrl?: string | null;
+    audioUrl?: string | null;
     isActive?: boolean;
   }): Promise<AdminAudioBookDetail> {
     const response = await this.api.post<AdminAudioBookDetail>(
@@ -1672,6 +1675,7 @@ class ApiService {
       title?: string;
       description?: string | null;
       coverUrl?: string | null;
+      audioUrl?: string | null;
       isActive?: boolean;
     }
   ): Promise<AdminAudioBookDetail> {
