@@ -199,11 +199,11 @@ export default function AudioLibraryPage() {
               disabled={!can('audioLibrary', 'delete')}
               onClick={() => {
                 Modal.confirm({
-                  title: t({ uz: 'O‘chirish', en: 'Delete', ru: 'Удалить' }),
+                  title: t({ uz: ‘Kitobni o\’chirish’, en: ‘Delete book’, ru: ‘Удалить книгу’ }),
                   content: t({
-                    uz: 'Kitob yashiriladi (mobile’da chiqmaydi). Davom etamizmi?',
-                    en: 'Book will be hidden from mobile. Continue?',
-                    ru: 'Книга будет скрыта. Продолжить?',
+                    uz: ‘Kitob, uning barcha boblari va paragraflari o\’chiriladi. Davom etamizmi?’,
+                    en: ‘Book and all its chapters and paragraphs will be deleted. Continue?’,
+                    ru: ‘Книга и все главы и параграфы будут удалены. Продолжить?’,
                   }),
                   okButtonProps: { danger: true },
                   onOk: async () => {
@@ -212,8 +212,8 @@ export default function AudioLibraryPage() {
                       setSelectedId(null);
                       setDetail(null);
                     }
-                    void refetch();
-                    message.success(t({ uz: 'O‘chirildi', en: 'Deleted', ru: 'Удалено' }));
+                    await refetch();
+                    message.success(t({ uz: ‘O\’chirildi’, en: ‘Deleted’, ru: ‘Удалено’ }));
                   },
                 });
               }}
@@ -368,6 +368,7 @@ export default function AudioLibraryPage() {
                                       message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
                                       const d = await apiService.adminGetAudioBook(detail.id);
                                       setDetail(d);
+                                      await refetch();
                                     }}
                                   >
                                     <Form.Item name="title" label={t({ uz: 'Sarlavha', en: 'Title', ru: 'Название' })} rules={[{ required: true }]}>
@@ -404,6 +405,7 @@ export default function AudioLibraryPage() {
                                   await apiService.adminDeleteAudioChapter(ch.id);
                                   const d = await apiService.adminGetAudioBook(detail.id);
                                   setDetail(d);
+                                  await refetch();
                                 },
                               });
                             }}
@@ -449,6 +451,7 @@ export default function AudioLibraryPage() {
                                                 message.success(t({ uz: 'Saqlandi', en: 'Saved', ru: 'Сохранено' }));
                                                 const d = await apiService.adminGetAudioBook(detail.id);
                                                 setDetail(d);
+                                                await refetch();
                                               }}
                                             >
                                               <Form.Item name="text" label="Text" rules={[{ required: true }]}>
@@ -487,6 +490,7 @@ export default function AudioLibraryPage() {
                                             await apiService.adminDeleteAudioParagraph(p.id);
                                             const d = await apiService.adminGetAudioBook(detail.id);
                                             setDetail(d);
+                                            await refetch();
                                           },
                                         });
                                       }}

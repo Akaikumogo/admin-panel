@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Button,
-  Card,
   Form,
   Input,
   Modal,
@@ -11,10 +10,20 @@ import {
   Tag,
   Popconfirm,
   message,
+  Radio,
 } from 'antd';
-import { Plus, Pencil, Trash2, Filter, ArrowLeftRight, Search } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Filter,
+  ArrowLeftRight,
+  Search,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch } from '@/hooks/useFetch';
@@ -34,7 +43,7 @@ const T = {
   level: { uz: 'Modul', en: 'Module', ru: 'Модуль' },
   theory: { uz: 'Nazariya', en: 'Theory', ru: 'Теория' },
   createdBy: { uz: 'Yaratgan', en: 'Created by', ru: 'Создатель' },
-  options: { uz: 'Javob variantlari', en: 'Options', ru: 'Варианты' },
+  options: { uz: 'Javob variantlari', en: 'Answer options', ru: 'Варианты ответа' },
   optionText: { uz: 'Javob matni', en: 'Option text', ru: 'Текст варианта' },
   matchText: { uz: 'Mos javob', en: 'Match', ru: 'Соответствие' },
   correct: { uz: 'To`g`ri', en: 'Correct', ru: 'Верный' },
@@ -46,10 +55,8 @@ const T = {
   noData: { uz: 'Ma`lumot yo`q', en: 'No data', ru: 'Нет данных' },
   allLevels: { uz: 'Barcha modullar', en: 'All modules', ru: 'Все модули' },
   allTheories: { uz: 'Barcha nazariyalar', en: 'All theories', ru: 'Все теории' },
-  filter: { uz: 'Filter', en: 'Filter', ru: 'Фильтр' },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
   questionType: { uz: 'Savol turi', en: 'Question type', ru: 'Тип вопроса' },
-  loadMore: { uz: 'Ko`proq yuklash', en: 'Load more', ru: 'Загрузить ещё' },
 } as const;
 
 const QUESTION_TYPE_LABELS: Record<QuestionType, { uz: string; en: string; ru: string }> = {
@@ -65,18 +72,16 @@ const QUESTION_TYPE_COLORS: Record<QuestionType, string> = {
 };
 
 const PAGE_SIZE = 15;
-
 const QP_DEFAULTS = { search: undefined, levelId: undefined, theoryId: undefined } as const;
 
 const Questions = () => {
   const { t } = useTranslation();
-// eslint-disable-line @typescript-eslint/no-unused-vars
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
 
   const { data: levels } = useFetch(['levels'], () => apiService.getLevels(), [] as Level[]);
   const { data: theories } = useFetch(
     ['theories-by-level', qp.levelId],
-    () => qp.levelId ? apiService.getTheoriesByLevel(qp.levelId) : Promise.resolve([]),
+    () => (qp.levelId ? apiService.getTheoriesByLevel(qp.levelId) : Promise.resolve([])),
     [] as Theory[],
   );
 
@@ -84,19 +89,22 @@ const Questions = () => {
   const formLevelId = Form.useWatch('levelId', form);
   const { data: modalTheories, loading: loadingModalTheories } = useFetch(
     ['theories-by-level', 'modal', formLevelId],
-    () => formLevelId ? apiService.getTheoriesByLevel(formLevelId) : Promise.resolve([]),
+    () => (formLevelId ? apiService.getTheoriesByLevel(formLevelId) : Promise.resolve([])),
     [] as Theory[],
   );
-  
-  const {
-    data: questions, total, loading, initialLoading, loadingMore, hasMore, loadMore, refetch,
-  } = useInfiniteList(
-    ['questions', qp.levelId, qp.theoryId, qp.search],
-    (pg) => apiService.getQuestions({
-      levelId: qp.levelId, theoryId: qp.theoryId,
-      search: qp.search || undefined, page: pg, limit: PAGE_SIZE,
-    }),
-  );
+
+  const { data: questions, total, loading, initialLoading, loadingMore, hasMore, loadMore, refetch } =
+    useInfiniteList(
+      ['questions', qp.levelId, qp.theoryId, qp.search],
+      (pg) =>
+        apiService.getQuestions({
+          levelId: qp.levelId,
+          theoryId: qp.theoryId,
+          search: qp.search || undefined,
+          page: pg,
+          limit: PAGE_SIZE,
+        }),
+    );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
@@ -107,17 +115,13 @@ const Questions = () => {
 
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setParam('search', value || undefined);
-    }, 400);
+    searchTimerRef.current = setTimeout(() => setParam('search', value || undefined), 400);
   };
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || loadingMore || !hasMore) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-      loadMore();
-    }
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) loadMore();
   }, [loadingMore, hasMore, loadMore]);
 
   useEffect(() => {
@@ -141,7 +145,7 @@ const Questions = () => {
         prompt: question.prompt,
         type: qType,
         isActive: question.isActive,
-        options: question.options.map(o => ({
+        options: question.options.map((o) => ({
           id: o.id,
           optionText: o.optionText,
           isCorrect: o.isCorrect,
@@ -153,7 +157,9 @@ const Questions = () => {
       form.resetFields();
       form.setFieldsValue({
         type: 'SINGLE_CHOICE',
+        isActive: true,
         options: [
+          { optionText: '', isCorrect: false, matchText: '' },
           { optionText: '', isCorrect: false, matchText: '' },
           { optionText: '', isCorrect: false, matchText: '' },
         ],
@@ -180,6 +186,17 @@ const Questions = () => {
           ],
         });
       }
+    } else {
+      const currentOpts: { optionText: string; isCorrect: boolean; matchText: string }[] =
+        form.getFieldValue('options') || [];
+      if (currentOpts.length < 2) {
+        form.setFieldsValue({
+          options: [
+            { optionText: '', isCorrect: false, matchText: '' },
+            { optionText: '', isCorrect: false, matchText: '' },
+          ],
+        });
+      }
     }
   };
 
@@ -190,22 +207,27 @@ const Questions = () => {
       const values = await form.validateFields();
       setSaving(true);
       if (editing) {
-        await apiService.updateQuestion(editing.id, latinizeQuestionPayload({
-          prompt: values.prompt,
-          type: values.type,
-          isActive: values.isActive,
-          options: values.options,
-        }));
+        await apiService.updateQuestion(
+          editing.id,
+          latinizeQuestionPayload({
+            prompt: values.prompt,
+            type: values.type,
+            isActive: values.isActive,
+            options: values.options,
+          }),
+        );
         message.success('Savol yangilandi');
       } else {
-        await apiService.createQuestion(latinizeQuestionPayload({
-          levelId: values.levelId,
-          theoryId: values.theoryId,
-          prompt: values.prompt,
-          type: values.type,
-          isActive: values.isActive ?? true,
-          options: values.options,
-        }));
+        await apiService.createQuestion(
+          latinizeQuestionPayload({
+            levelId: values.levelId,
+            theoryId: values.theoryId,
+            prompt: values.prompt,
+            type: values.type,
+            isActive: values.isActive ?? true,
+            options: values.options,
+          }),
+        );
         message.success('Savol yaratildi');
       }
       setModalOpen(false);
@@ -223,25 +245,11 @@ const Questions = () => {
     refetch();
   };
 
-  const renderOptionTag = (q: Question) => {
-    if (q.type === 'MATCHING') {
-      return q.options.map((opt) => (
-        <Tag key={opt.id} color="purple" className="!flex !items-center !gap-1 !w-fit">
-          {opt.optionText} <ArrowLeftRight size={12} className="mx-1 opacity-60" /> {opt.matchText}
-        </Tag>
-      ));
-    }
-    return q.options.map((opt) => (
-      <Tag key={opt.id} color={opt.isCorrect ? 'green' : 'default'}>
-        {opt.optionText}
-      </Tag>
-    ));
-  };
-
   return (
-    <div ref={scrollRef} className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
-        <Filter size={16} className="text-slate-400" />
+    <div ref={scrollRef} className="p-6 space-y-4 overflow-y-auto h-[calc(100vh-100px)]">
+      {/* Filter toolbar */}
+      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-3">
+        <Filter size={16} className="text-slate-400 flex-shrink-0" />
         <Input
           allowClear
           defaultValue={qp.search}
@@ -256,7 +264,7 @@ const Questions = () => {
           style={{ width: 200 }}
           value={qp.levelId}
           onChange={(v) => setParams({ levelId: v, theoryId: undefined })}
-          options={levels.map(l => ({ value: l.id, label: l.title }))}
+          options={levels.map((l) => ({ value: l.id, label: l.title }))}
         />
         <Select
           allowClear
@@ -265,9 +273,9 @@ const Questions = () => {
           value={qp.theoryId}
           onChange={(v) => setParam('theoryId', v)}
           disabled={!qp.levelId}
-          options={theories.map(th => ({ value: th.id, label: th.title }))}
+          options={theories.map((th) => ({ value: th.id, label: th.title }))}
         />
-        <Tag className="text-xs">{total} ta</Tag>
+        <Tag className="text-xs font-medium">{total} ta</Tag>
         <div className="ml-auto">
           <Button
             type="primary"
@@ -280,55 +288,45 @@ const Questions = () => {
         </div>
       </div>
 
+      {/* Question list */}
       {initialLoading ? (
-        <div className="flex items-center justify-center h-32"><Spin /></div>
+        <div className="flex items-center justify-center h-40"><Spin size="large" /></div>
       ) : questions.length === 0 && !loading ? (
         <NoData text={t(T.noData)} />
       ) : (
-        <div className={`space-y-3 transition-opacity duration-150 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className={`space-y-2 transition-opacity duration-150 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
           <AnimatePresence mode="popLayout">
             {questions.map((q, idx) => (
               <motion.div
                 key={q.id}
                 layoutId={q.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.18 }}
               >
-                <Card className="!border-slate-200 dark:!border-slate-700/60" bodyStyle={{ padding: '16px 20px' }}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <button
-                        type="button"
-                        className="font-medium text-slate-900 dark:text-white text-base hover:underline text-left"
-                        onClick={() => openModal(q)}
-                      >
-                        {idx + 1}. <HighlightText text={q.prompt} highlight={qp.search} />
-                      </button>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        <Tag>{q.level?.title || t(T.level)}</Tag>
-                        <Tag>{q.theory?.title || t(T.theory)}</Tag>
-                        <Tag color={QUESTION_TYPE_COLORS[q.type || 'SINGLE_CHOICE']}>
-                          {t(QUESTION_TYPE_LABELS[q.type || 'SINGLE_CHOICE'])}
-                        </Tag>
-                        {q.createdBy && (
-                          <span>{t(T.createdBy)}: {q.createdBy.firstName} {q.createdBy.lastName}</span>
-                        )}
-                        <Tag color={q.isActive ? 'green' : 'default'}>
-                          {q.isActive ? t(T.active) : 'Inactive'}
-                        </Tag>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {renderOptionTag(q)}
-                      </div>
+                <div className="group rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#141414] px-4 py-3 hover:border-blue-300 dark:hover:border-blue-600/60 transition-colors">
+                  {/* Top row: number + type + actions */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      {/* Question number */}
+                      <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-slate-400 w-6 text-right">
+                        {idx + 1}.
+                      </span>
+                      {/* Question text — wraps naturally */}
+                      <p className="text-sm font-medium text-slate-900 dark:text-white leading-snug">
+                        <HighlightText text={q.prompt} highlight={qp.search} />
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2 ml-4">
+
+                    {/* Actions — always visible, never pushed off */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <Button
                         size="small"
-                        icon={<Pencil size={14} />}
+                        icon={<Pencil size={13} />}
                         onClick={() => openModal(q)}
                         disabled={!can('contentQuestions', 'update')}
+                        title={t(T.editQuestion)}
                       />
                       <Popconfirm
                         title={t(T.deleteConfirm)}
@@ -338,19 +336,69 @@ const Questions = () => {
                         <Button
                           size="small"
                           danger
-                          icon={<Trash2 size={14} />}
+                          icon={<Trash2 size={13} />}
                           disabled={!can('contentQuestions', 'delete')}
                         />
                       </Popconfirm>
                     </div>
                   </div>
-                </Card>
+
+                  {/* Meta: module, theory, type, author */}
+                  <div className="mt-2 ml-8 flex flex-wrap items-center gap-1.5">
+                    {q.level && <Tag className="!text-xs !m-0">{q.level.title}</Tag>}
+                    {q.theory && <Tag className="!text-xs !m-0">{q.theory.title}</Tag>}
+                    <Tag color={QUESTION_TYPE_COLORS[q.type || 'SINGLE_CHOICE']} className="!text-xs !m-0">
+                      {t(QUESTION_TYPE_LABELS[q.type || 'SINGLE_CHOICE'])}
+                    </Tag>
+                    <Tag color={q.isActive ? 'green' : 'default'} className="!text-xs !m-0">
+                      {q.isActive ? t(T.active) : 'Nofaol'}
+                    </Tag>
+                    {q.createdBy && (
+                      <span className="text-xs text-slate-400">
+                        {q.createdBy.firstName} {q.createdBy.lastName}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Options display */}
+                  {q.options.length > 0 && (
+                    <div className="mt-2.5 ml-8 flex flex-wrap gap-1.5">
+                      {q.type === 'MATCHING'
+                        ? q.options.map((opt) => (
+                            <div
+                              key={opt.id}
+                              className="inline-flex items-center gap-1.5 rounded-md border border-purple-200 dark:border-purple-700/50 bg-purple-50 dark:bg-purple-500/10 px-2.5 py-1 text-xs text-purple-800 dark:text-purple-200"
+                            >
+                              <span className="font-medium">{opt.optionText}</span>
+                              <ArrowLeftRight size={11} className="opacity-50" />
+                              <span>{opt.matchText}</span>
+                            </div>
+                          ))
+                        : q.options.map((opt) => (
+                            <div
+                              key={opt.id}
+                              className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                                opt.isCorrect
+                                  ? 'border-green-200 dark:border-green-700/50 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-300'
+                                  : 'border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400'
+                              }`}
+                            >
+                              {opt.isCorrect ? (
+                                <CheckCircle2 size={11} className="text-green-500 flex-shrink-0" />
+                              ) : (
+                                <XCircle size={11} className="text-slate-300 dark:text-slate-600 flex-shrink-0" />
+                              )}
+                              {opt.optionText}
+                            </div>
+                          ))}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>
-          {loadingMore && (
-            <div className="flex justify-center py-4"><Spin /></div>
-          )}
+
+          {loadingMore && <div className="flex justify-center py-4"><Spin /></div>}
           {!hasMore && questions.length > 0 && (
             <p className="text-center text-xs text-slate-400 py-2">
               {total} ta savoldan {questions.length} tasi ko'rsatildi
@@ -359,111 +407,240 @@ const Questions = () => {
         </div>
       )}
 
+      {/* Add / Edit Modal */}
       <Modal
-        title={editing ? t(T.editQuestion) : t(T.addQuestion)}
+        title={
+          <span className="font-semibold text-base">
+            {editing ? t(T.editQuestion) : t(T.addQuestion)}
+          </span>
+        }
         open={modalOpen}
         onCancel={() => { setModalOpen(false); setEditing(null); }}
         onOk={handleSave}
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
-        width={640}
+        width={720}
+        styles={{ body: { maxHeight: '75vh', overflowY: 'auto', paddingTop: 8 } }}
         okButtonProps={{
-          disabled: editing
-            ? !can('contentQuestions', 'update')
-            : !can('contentQuestions', 'create'),
+          disabled: editing ? !can('contentQuestions', 'update') : !can('contentQuestions', 'create'),
         }}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" size="middle">
+          {/* Module + Theory — only when creating */}
           {!editing && (
-            <>
-              <Form.Item name="levelId" label={t(T.level)} rules={[{ required: true }]}>
+            <div className="grid grid-cols-2 gap-4">
+              <Form.Item name="levelId" label={t(T.level)} rules={[{ required: true, message: 'Modulni tanlang' }]}>
                 <Select
-                  placeholder={t(T.level)}
-                  options={levels.map(l => ({ value: l.id, label: l.title }))}
+                  placeholder={t(T.allLevels)}
+                  options={levels.map((l) => ({ value: l.id, label: l.title }))}
                   onChange={() => form.setFieldValue('theoryId', undefined)}
                 />
               </Form.Item>
-              <Form.Item name="theoryId" label={t(T.theory)} rules={[{ required: true }]}>
+              <Form.Item name="theoryId" label={t(T.theory)} rules={[{ required: true, message: 'Nazariyani tanlang' }]}>
                 <Select
-                  placeholder={t(T.theory)}
+                  placeholder={t(T.allTheories)}
                   disabled={!formLevelId}
                   loading={!!formLevelId && loadingModalTheories}
-                  options={modalTheories.map(th => ({ value: th.id, label: th.title }))}
+                  options={modalTheories.map((th) => ({ value: th.id, label: th.title }))}
                 />
               </Form.Item>
-            </>
+            </div>
           )}
 
+          {/* Question type */}
           <Form.Item name="type" label={t(T.questionType)} rules={[{ required: true }]}>
-            <Select onChange={handleTypeChange} options={[
-              { value: 'SINGLE_CHOICE', label: t(QUESTION_TYPE_LABELS.SINGLE_CHOICE) },
-              { value: 'YES_NO', label: t(QUESTION_TYPE_LABELS.YES_NO) },
-              { value: 'MATCHING', label: t(QUESTION_TYPE_LABELS.MATCHING) },
-            ]} />
+            <Radio.Group onChange={(e) => handleTypeChange(e.target.value as QuestionType)} buttonStyle="solid">
+              <Radio.Button value="SINGLE_CHOICE">
+                <span className="flex items-center gap-1.5">
+                  <HelpCircle size={13} />
+                  {t(QUESTION_TYPE_LABELS.SINGLE_CHOICE)}
+                </span>
+              </Radio.Button>
+              <Radio.Button value="YES_NO">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 size={13} />
+                  {t(QUESTION_TYPE_LABELS.YES_NO)}
+                </span>
+              </Radio.Button>
+              <Radio.Button value="MATCHING">
+                <span className="flex items-center gap-1.5">
+                  <ArrowLeftRight size={13} />
+                  {t(QUESTION_TYPE_LABELS.MATCHING)}
+                </span>
+              </Radio.Button>
+            </Radio.Group>
           </Form.Item>
 
-          <Form.Item name="prompt" label={t(T.prompt)} rules={[{ required: true }]}>
-            <Input.TextArea rows={3} />
+          {/* Question text */}
+          <Form.Item
+            name="prompt"
+            label={t(T.prompt)}
+            rules={[{ required: true, message: 'Savol matni kiritilishi shart' }]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Savol matnini kiriting..."
+              style={{ resize: 'vertical' }}
+            />
           </Form.Item>
+
+          {/* Active toggle */}
           <Form.Item name="isActive" label={t(T.active)} valuePropName="checked" initialValue={true}>
             <Switch />
           </Form.Item>
 
-          <Form.List name="options">
-            {(fields, { add, remove }) => (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t(T.options)}</label>
-                {fields.map(({ key, name, ...restField }) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <Form.Item {...restField} name={[name, 'optionText']} className="flex-1 !mb-0" rules={[{ required: true }]}>
-                      <Input placeholder={t(T.optionText)} disabled={selectedType === 'YES_NO'} />
-                    </Form.Item>
-                    {selectedType === 'MATCHING' && (
-                      <Form.Item {...restField} name={[name, 'matchText']} className="flex-1 !mb-0" rules={[{ required: true }]}>
-                        <Input placeholder={t(T.matchText)} />
-                      </Form.Item>
-                    )}
-                    {selectedType === 'YES_NO' ? (
-                      <Form.Item {...restField} name={[name, 'isCorrect']} valuePropName="checked" className="!mb-0">
-                        <Switch
-                          checkedChildren={t(T.correct)}
-                          onChange={(checked) => {
-                            if (checked) {
-                              const opts = form.getFieldValue('options');
-                              form.setFieldsValue({
-                                options: opts.map((o: Record<string, unknown>, i: number) => ({
-                                  ...o,
-                                  isCorrect: i === name,
-                                })),
-                              });
-                            }
-                          }}
-                        />
-                      </Form.Item>
-                    ) : (
-                      <Form.Item {...restField} name={[name, 'isCorrect']} valuePropName="checked" className="!mb-0">
-                        <Switch checkedChildren={t(T.correct)} />
-                      </Form.Item>
-                    )}
-                    {selectedType !== 'YES_NO' && fields.length > 2 && (
-                      <Button size="small" danger icon={<Trash2 size={12} />} onClick={() => remove(name)} />
-                    )}
-                  </div>
-                ))}
-                {selectedType !== 'YES_NO' && (
-                  <Button
-                    type="dashed"
-                    onClick={() => add({ optionText: '', isCorrect: selectedType === 'MATCHING', matchText: '' })}
-                    icon={<Plus size={14} />}
-                    block
-                  >
-                    {t(T.addOption)}
-                  </Button>
-                )}
+          {/* Options */}
+          <div>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+              {t(T.options)}
+            </p>
+
+            {selectedType === 'MATCHING' && (
+              <div className="mb-3 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-100 dark:border-purple-500/20 px-3 py-2 text-xs text-purple-700 dark:text-purple-300">
+                Chap tomonda variant matni, o'ng tomonda mos javobni yozing.
               </div>
             )}
-          </Form.List>
+
+            <Form.List name="options">
+              {(fields, { add, remove }) => (
+                <div className="space-y-2">
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div
+                      key={key}
+                      className={`rounded-xl border px-3 py-3 transition-colors ${
+                        selectedType === 'MATCHING'
+                          ? 'border-purple-200 dark:border-purple-700/40 bg-purple-50/50 dark:bg-purple-500/5'
+                          : 'border-slate-200 dark:border-slate-700/40 bg-slate-50/50 dark:bg-slate-800/20'
+                      }`}
+                    >
+                      {selectedType === 'MATCHING' ? (
+                        /* Matching: A → B layout */
+                        <div className="flex items-center gap-2">
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'optionText']}
+                            className="flex-1 !mb-0"
+                            rules={[{ required: true, message: '' }]}
+                          >
+                            <Input placeholder="Variant (chap)" />
+                          </Form.Item>
+                          <ArrowLeftRight size={16} className="flex-shrink-0 text-slate-400" />
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'matchText']}
+                            className="flex-1 !mb-0"
+                            rules={[{ required: true, message: '' }]}
+                          >
+                            <Input placeholder="Mos javob (o'ng)" />
+                          </Form.Item>
+                          {fields.length > 2 && (
+                            <Button
+                              size="small"
+                              danger
+                              type="text"
+                              icon={<Trash2 size={14} />}
+                              onClick={() => remove(name)}
+                              className="flex-shrink-0"
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        /* Single choice / Yes-No layout */
+                        <div className="flex items-center gap-3">
+                          {/* Correct indicator / toggle */}
+                          <div className="flex-shrink-0">
+                            {selectedType === 'YES_NO' ? (
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'isCorrect']}
+                                valuePropName="checked"
+                                className="!mb-0"
+                              >
+                                <Switch
+                                  size="small"
+                                  checkedChildren="✓"
+                                  unCheckedChildren="✗"
+                                  onChange={(checked) => {
+                                    if (checked) {
+                                      const opts = form.getFieldValue('options');
+                                      form.setFieldsValue({
+                                        options: opts.map(
+                                          (o: Record<string, unknown>, i: number) => ({
+                                            ...o,
+                                            isCorrect: i === name,
+                                          }),
+                                        ),
+                                      });
+                                    }
+                                  }}
+                                />
+                              </Form.Item>
+                            ) : (
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'isCorrect']}
+                                valuePropName="checked"
+                                className="!mb-0"
+                              >
+                                <Switch
+                                  size="small"
+                                  checkedChildren={<CheckCircle2 size={11} />}
+                                  unCheckedChildren={<XCircle size={11} />}
+                                />
+                              </Form.Item>
+                            )}
+                          </div>
+
+                          {/* Option text */}
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'optionText']}
+                            className="flex-1 !mb-0"
+                            rules={[{ required: true, message: '' }]}
+                          >
+                            <Input
+                              placeholder={`${name + 1}-variant matni`}
+                              disabled={selectedType === 'YES_NO'}
+                            />
+                          </Form.Item>
+
+                          {/* Remove button */}
+                          {selectedType !== 'YES_NO' && fields.length > 2 && (
+                            <Button
+                              size="small"
+                              danger
+                              type="text"
+                              icon={<Trash2 size={14} />}
+                              onClick={() => remove(name)}
+                              className="flex-shrink-0"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {selectedType !== 'YES_NO' && (
+                    <Button
+                      type="dashed"
+                      onClick={() =>
+                        add({
+                          optionText: '',
+                          isCorrect: selectedType === 'MATCHING',
+                          matchText: '',
+                        })
+                      }
+                      icon={<Plus size={14} />}
+                      block
+                    >
+                      {t(T.addOption)}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </Form.List>
+          </div>
         </Form>
       </Modal>
     </div>

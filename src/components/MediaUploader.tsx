@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { Button, Input, message, Progress, Tag } from 'antd';
-import { UploadCloud, Link2, X } from 'lucide-react';
+import { Button, message, Progress, Tag } from 'antd';
+import { UploadCloud, X } from 'lucide-react';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 
 type MediaKind = 'audio' | 'video' | 'image';
@@ -8,13 +8,13 @@ type MediaKind = 'audio' | 'video' | 'image';
 const ACCEPT: Record<MediaKind, string> = {
   audio: 'audio/*,.mp3,.m4a,.aac,.ogg,.oga,.wav,.webm,.opus,.flac',
   video: 'video/*,.mp4,.m4v,.mov,.webm,.mkv,.3gp',
-  image: 'image/*'
+  image: 'image/*',
 };
 
 const LABEL: Record<MediaKind, string> = {
   audio: 'Audio',
   video: 'Video',
-  image: 'Image'
+  image: 'Rasm',
 };
 
 interface MediaUploaderProps {
@@ -24,20 +24,7 @@ interface MediaUploaderProps {
   placeholder?: string;
 }
 
-/**
- * Universal media uploader.
- *
- * - File picker: yuborilgan kind ga mos fayllarni serverga (/admin/upload/...) yuklaydi
- *   va `/uploads/...` ko'rinishidagi URL ni qaytaradi.
- * - URL field: tashqi link (https://...) ham qo'lda kiritilishi mumkin.
- * - Preview: audio uchun `<audio controls>`, video uchun `<video>`, image uchun `<img>`.
- */
-export default function MediaUploader({
-  kind,
-  value,
-  onChange,
-  placeholder
-}: MediaUploaderProps) {
+export default function MediaUploader({ kind, value, onChange }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -63,7 +50,7 @@ export default function MediaUploader({
       }
       onChange(res.url);
       message.success(`${LABEL[kind]} yuklandi`);
-    } catch (e) {
+    } catch {
       message.error(`${LABEL[kind]} yuklashda xato`);
     } finally {
       setUploading(false);
@@ -74,14 +61,24 @@ export default function MediaUploader({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-stretch gap-2">
+      <div className="flex items-center gap-2">
         <Button
           icon={<UploadCloud size={16} />}
           loading={uploading}
           onClick={() => inputRef.current?.click()}
         >
-          {LABEL[kind]} fayl yuklash
+          {LABEL[kind]} fayl tanlash
         </Button>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors"
+            title="Tozalash"
+          >
+            <X size={14} /> Tozalash
+          </button>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -93,50 +90,26 @@ export default function MediaUploader({
             e.target.value = '';
           }}
         />
-        <Input
-          prefix={<Link2 size={14} />}
-          placeholder={placeholder ?? 'yoki tashqi URL yopishtiring (https://...)'}
-          value={value ?? ''}
-          onChange={(e) => onChange(e.target.value)}
-          allowClear
-          suffix={
-            value ? (
-              <button
-                type="button"
-                onClick={() => onChange('')}
-                className="text-slate-400 hover:text-slate-600"
-                title="Tozalash"
-              >
-                <X size={14} />
-              </button>
-            ) : null
-          }
-        />
       </div>
 
-      {uploading ? (
+      {uploading && (
         <Progress
           percent={progress}
           size="small"
           status={progress === 100 ? 'success' : 'active'}
         />
-      ) : null}
+      )}
 
-      {preview ? (
+      {!uploading && value && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
           <div className="mb-2 flex items-center gap-2">
-            <Tag color="blue">{LABEL[kind].toUpperCase()}</Tag>
-            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            <Tag color="green">{LABEL[kind].toUpperCase()} ✓</Tag>
+            <span className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[260px]">
               {value}
             </span>
           </div>
           {kind === 'audio' ? (
-            <audio
-              controls
-              preload="metadata"
-              src={preview}
-              className="w-full"
-            />
+            <audio controls preload="metadata" src={preview} className="w-full" />
           ) : kind === 'video' ? (
             <video
               controls
@@ -152,7 +125,15 @@ export default function MediaUploader({
             />
           )}
         </div>
-      ) : null}
+      )}
+
+      {!value && !uploading && (
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          {kind === 'audio' && 'MP3, M4A, OGG, WAV formatlari qabul qilinadi (max 100MB)'}
+          {kind === 'video' && 'MP4, MOV, WEBM formatlari qabul qilinadi (max 500MB)'}
+          {kind === 'image' && 'JPG, PNG, WEBP formatlari qabul qilinadi (max 10MB)'}
+        </p>
+      )}
     </div>
   );
 }
