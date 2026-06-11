@@ -751,6 +751,91 @@ class ApiService {
     return response.data;
   }
 
+  // ─── Generic media uploads (audio/video/image) ─────────────────────────
+  async adminUploadAudio(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<{
+    success: boolean;
+    url: string;
+    size: number;
+    mimeType: string;
+    originalName: string;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.api.post<{
+      success: boolean;
+      url: string;
+      size: number;
+      mimeType: string;
+      originalName: string;
+    }>('/admin/upload/audio', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (!onProgress || !e.total) return;
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+    return response.data;
+  }
+
+  async adminUploadVideo(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<{
+    success: boolean;
+    url: string;
+    size: number;
+    mimeType: string;
+    originalName: string;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.api.post<{
+      success: boolean;
+      url: string;
+      size: number;
+      mimeType: string;
+      originalName: string;
+    }>('/admin/upload/video', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (!onProgress || !e.total) return;
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+    return response.data;
+  }
+
+  async adminUploadImage(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<{
+    success: boolean;
+    url: string;
+    size: number;
+    mimeType: string;
+    originalName: string;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.api.post<{
+      success: boolean;
+      url: string;
+      size: number;
+      mimeType: string;
+      originalName: string;
+    }>('/admin/upload/image', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (!onProgress || !e.total) return;
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+    return response.data;
+  }
+
   async updateProfile(data: {
     firstName?: string;
     lastName?: string;

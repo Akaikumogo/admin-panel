@@ -230,6 +230,10 @@ const Organizations = () => {
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {org.users?.length || 0} {t(T.members).toLowerCase()}
+                          {(() => {
+                            const modCount = org.users?.filter(u => u.user.role !== 'USER').length ?? 0;
+                            return modCount > 0 ? ` · ${modCount} moderator` : '';
+                          })()}
                         </p>
                       </div>
                     </div>
@@ -264,9 +268,9 @@ const Organizations = () => {
                     </div>
                   </div>
 
-                  {org.users && org.users.length > 0 && (
+                  {org.users && org.users.some(u => u.user.role !== 'USER') && (
                     <div className="space-y-2">
-                      {org.users.map((uo) => (
+                      {org.users.filter(u => u.user.role !== 'USER').map((uo) => (
                         <div
                           key={uo.id}
                           className="flex items-center justify-between bg-slate-50 dark:bg-black/20 rounded-lg px-3 py-2"

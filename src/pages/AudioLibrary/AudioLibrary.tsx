@@ -6,6 +6,45 @@ import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { can } from '@/utils/can';
+import MediaUploader from '@/components/MediaUploader';
+
+/**
+ * AntD `Form.Item` `value`/`onChange` API ga mos shim
+ * (MediaUploader value: string ham, null/undefined ham qabul qila oladi).
+ */
+function AudioField({
+  value,
+  onChange
+}: {
+  value?: string | null;
+  onChange?: (v: string) => void;
+}) {
+  return (
+    <MediaUploader
+      kind="audio"
+      value={value ?? ''}
+      onChange={(v) => onChange?.(v)}
+      placeholder="yoki tashqi audio URL (https://...)"
+    />
+  );
+}
+
+function CoverImageField({
+  value,
+  onChange
+}: {
+  value?: string | null;
+  onChange?: (v: string) => void;
+}) {
+  return (
+    <MediaUploader
+      kind="image"
+      value={value ?? ''}
+      onChange={(v) => onChange?.(v)}
+      placeholder="yoki tashqi rasm URL (https://...)"
+    />
+  );
+}
 
 type AdminAudioBookRow = {
   id: string;
@@ -418,8 +457,8 @@ export default function AudioLibraryPage() {
                                               <Form.Item name="orderIndex" label="Order" rules={[{ required: true }]}>
                                                 <InputNumber min={0} className="w-full" />
                                               </Form.Item>
-                                              <Form.Item name="audioUrl" label="audioUrl" rules={[{ required: true }]}>
-                                                <Input />
+                                              <Form.Item name="audioUrl" label={t({ uz: 'Audio fayl', en: 'Audio file', ru: 'Аудиофайл' })} rules={[{ required: true }]}>
+                                                <AudioField />
                                               </Form.Item>
                                               <div className="flex justify-end">
                                                 <Button type="primary" htmlType="submit">
@@ -499,8 +538,8 @@ export default function AudioLibraryPage() {
           <Form.Item name="description" label={t({ uz: 'Tavsif', en: 'Description', ru: 'Описание' })}>
             <Input.TextArea rows={3} maxLength={4000} />
           </Form.Item>
-          <Form.Item name="coverUrl" label="coverUrl (optional)">
-            <Input placeholder="https://..." />
+          <Form.Item name="coverUrl" label={t({ uz: 'Muqova rasm', en: 'Cover image', ru: 'Обложка' })}>
+            <CoverImageField />
           </Form.Item>
           <Form.Item name="isActive" label={t({ uz: 'Active', en: 'Active', ru: 'Активно' })} valuePropName="checked">
             <Switch />
@@ -568,13 +607,17 @@ export default function AudioLibraryPage() {
           </Form.Item>
           <Form.Item
             name="audioUrl"
-            label="audioUrl"
-            rules={[{ required: true, message: 'audioUrl majburiy' }]}
+            label={t({ uz: 'Audio fayl', en: 'Audio file', ru: 'Аудиофайл' })}
+            rules={[{ required: true, message: 'Audio majburiy' }]}
           >
-            <Input placeholder={`${BACKEND_ORIGIN}/uploads/audio/... yoki https://...`} />
+            <AudioField />
           </Form.Item>
           <div className="text-xs text-slate-500 dark:text-slate-400">
-            V1.0: hozircha audioUrl ni link qilib beramiz. Upload (fayl) ni keyingi iteratsiyada qo‘shamiz.
+            {t({
+              uz: 'Faylni yuklang (mp3/m4a/ogg/wav) yoki tashqi URL yopishtiring.',
+              en: 'Upload a file (mp3/m4a/ogg/wav) or paste an external URL.',
+              ru: 'Загрузите файл (mp3/m4a/ogg/wav) или вставьте внешний URL.',
+            })}
           </div>
         </Form>
       </Modal>
