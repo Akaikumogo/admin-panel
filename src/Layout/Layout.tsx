@@ -19,6 +19,7 @@ import {
   Minimize2,
   HeartPulse,
   Trophy,
+  Activity,
   // QrCode,
   // ClipboardList,
   // CalendarClock,
@@ -40,6 +41,7 @@ import { Sidebar } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 import { cacheModeratorPermissions } from '@/utils/permissions';
 import { can } from '@/utils/can';
+import { userActivitySocket } from '@/services/userActivitySocket';
 
 const navItems = [
   {
@@ -111,6 +113,16 @@ const navItems = [
     path: '/dashboard/nes-sync',
     label: { uz: '1C bilan sinxronlash', en: '1C sync', ru: 'Синхронизация 1C' },
     icon: RefreshCw
+  },
+  {
+    path: '/dashboard/user-activity',
+    label: { uz: 'Aktivlik', en: 'Activity', ru: 'Активность' },
+    icon: Activity
+  },
+  {
+    path: '/dashboard/branch-analytics',
+    label: { uz: 'Filial analitikasi', en: 'Branch analytics', ru: 'Аналитика филиала' },
+    icon: Building2
   },
   {
     path: '/dashboard/hearts-analytics',
@@ -239,6 +251,17 @@ const Layout = () => {
       .catch(() => setMe(null))
       .finally(() => setMeLoading(false));
   }, []);
+
+  // Activity tracking — WebSocket ulanishi (login bo'lgan har bir userda)
+  useEffect(() => {
+    if (!me) return;
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    userActivitySocket.connect(token);
+    return () => {
+      userActivitySocket.disconnect();
+    };
+  }, [me?.id]);
 
   useEffect(() => {
     if (!me) return;

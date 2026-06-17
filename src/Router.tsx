@@ -36,6 +36,8 @@ const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAna
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
+const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
+const BranchAnalyticsPage = lazy(() => import('./pages/BranchAnalytics/BranchAnalytics'));
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -154,6 +156,14 @@ export const routes: RouteObject[] = [
           {
             path: 'nes-sync',
             element: withSuspense(NesSyncPage)
+          },
+          {
+            path: 'user-activity',
+            element: withSuspense(UserActivityPage)
+          },
+          {
+            path: 'branch-analytics',
+            element: withSuspense(BranchAnalyticsPage)
           }
         ]
       }

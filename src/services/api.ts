@@ -85,6 +85,61 @@ export type AnalyticsSummary = {
   orgId: string;
 };
 
+export type BranchAnalyticsSummary = {
+  orgId: string;
+  range: { from: string; to: string };
+  totalEmployees: number;
+  firstLoginCount: number;
+  quizTakersCount: number;
+  activeTodayCount: number;
+  offlineEmployeesCount: number;
+  dailyPlanTarget: number;
+};
+
+export type BranchActivityDay = {
+  date: string;
+  status: 'active' | 'offline' | 'never';
+  attemptCount: number;
+};
+
+export type BranchActivityEmployee = {
+  userId: string;
+  fullName: string;
+  email: string;
+  hasEverLoggedIn: boolean;
+  days: BranchActivityDay[];
+};
+
+export type BranchActivityMatrix = {
+  orgId: string;
+  days: string[];
+  employees: BranchActivityEmployee[];
+};
+
+export type BranchDailyPlanResult = {
+  orgId: string;
+  planDate: string;
+  questionCount: number;
+  targetQuestions: number;
+  completedEmployees: number;
+  totalEmployees: number;
+  questions: Array<{
+    id: string;
+    orderIndex: number;
+    prompt: string;
+    levelTitle: string;
+    theoryTitle: string;
+  }>;
+  userResults: Array<{
+    userId: string;
+    fullName: string;
+    answeredCount: number;
+    correctCount: number;
+    completed: boolean;
+    completionPercent: number;
+  }>;
+};
+
 export type Level = {
   id: string;
   title: string;
@@ -628,7 +683,7 @@ export type NesEmployeePositionHistory = {
 };
 
 class ApiService {
-  private api: ReturnType<typeof axios.create>;
+  public api: ReturnType<typeof axios.create>;
   private isRefreshing = false;
   private refreshPromise: Promise<string> | null = null;
 
@@ -890,6 +945,70 @@ class ApiService {
       { params }
     );
     return response.data;
+  }
+
+  async getBranchAnalyticsSummary(params: {
+    orgId: string;
+    from?: string;
+    to?: string;
+  }): Promise<BranchAnalyticsSummary> {
+    const response = await this.api.get<BranchAnalyticsSummary>(
+      '/admin/branch-analytics/summary',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getBranchActivityMatrix(params: {
+    orgId: string;
+    from?: string;
+    to?: string;
+  }): Promise<BranchActivityMatrix> {
+    const response = await this.api.get<BranchActivityMatrix>(
+      '/admin/branch-analytics/activity-matrix',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getBranchDailyPlanResult(params: {
+    orgId: string;
+    date?: string;
+  }): Promise<BranchDailyPlanResult> {
+    const response = await this.api.get<BranchDailyPlanResult>(
+      '/admin/branch-analytics/daily-plan-result',
+      { params },
+    );
+    return response.data;
+  }
+
+  private async downloadFile(path: string, filename: string) {
+    const response = await this.api.get(path, { responseType: 'blob' });
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async exportOrganizationCredentials(orgId: string) {
+    await this.downloadFile(
+      `/admin/organizations/${orgId}/export-credentials`,
+      `filial-login-parollar.xlsx`,
+    );
+  }
+
+  async exportModeratorsCredentials() {
+    await this.downloadFile(
+      '/admin/branch-analytics/export/moderators-credentials',
+      'moderatorlar-login-parollar.xlsx',
+    );
   }
 
   async getMyModeratorPermissions(): Promise<{
@@ -1857,5 +1976,142 @@ class ApiService {
   }
 }
 
+// ============== USER ACTIVITY ==============
+
+export type ActivityRange = 'day' | 'week' | 'month' | 'year';
+export type ActivityGroup = 'employees' | 'moderators';
+
+export type OnlineUserRow = {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: Role;
+  organizationId: string | null;
+  organizationName: string | null;
+  loginAt: string;
+  lastSeenAt: string;
+  durationSeconds: number;
+};
+
+export type ActivityUserRow = {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: Role;
+  organizationId: string | null;
+  organizationName: string | null;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+  loginAt: string | null;
+  todayOnlineSeconds: number;
+  rangeOnlineSeconds: number;
+  lastEventType: string | null;
+  lastEventAt: string | null;
+};
+
+export type ActivityStats = {
+  onlineNow: number;
+  loginsToday: number;
+  avgOnlineMinutes: number;
+  topBranch: { id: string; name: string; loginCount: number } | null;
+  topUser: { userId: string; name: string; onlineSeconds: number } | null;
+  leastActiveUser: {
+    userId: string;
+    name: string;
+    onlineSeconds: number;
+  } | null;
+};
+
+export type QuestionStatsRow = {
+  questionId: string;
+  questionText: string;
+  attempts: number;
+  wrong: number;
+  correct: number;
+  wrongRate: number;
+  lastAttemptAt: string | null;
+};
+
+export type ActivityTimelineEvent = {
+  id: string;
+  userId: string;
+  organizationId: string | null;
+  eventType: string;
+  entityType: string | null;
+  entityId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+export type ActivitySession = {
+  id: string;
+  userId: string;
+  organizationId: string | null;
+  loginAt: string;
+  logoutAt: string | null;
+  lastSeenAt: string;
+  isOnline: boolean;
+  ipAddress: string | null;
+  userAgent: string | null;
+  durationSeconds: number;
+};
+
 export const apiService = new ApiService();
 export default apiService;
+
+export const userActivityApi = {
+  async listOnline(params: { group?: ActivityGroup; organizationId?: string }) {
+    const { data } = await apiService.api.get<OnlineUserRow[]>(
+      '/user-activity/online',
+      { params },
+    );
+    return data;
+  },
+  async listUsers(params: {
+    group?: ActivityGroup;
+    organizationId?: string;
+    range?: ActivityRange;
+  }) {
+    const { data } = await apiService.api.get<ActivityUserRow[]>(
+      '/user-activity/users',
+      { params },
+    );
+    return data;
+  },
+  async stats(params: {
+    group?: ActivityGroup;
+    organizationId?: string;
+    range?: ActivityRange;
+  }) {
+    const { data } = await apiService.api.get<ActivityStats>(
+      '/user-activity/stats',
+      { params },
+    );
+    return data;
+  },
+  async timeline(userId: string) {
+    const { data } = await apiService.api.get<ActivityTimelineEvent[]>(
+      `/user-activity/timeline/${userId}`,
+    );
+    return data;
+  },
+  async sessions(userId: string, range?: ActivityRange) {
+    const { data } = await apiService.api.get<ActivitySession[]>(
+      `/user-activity/sessions/${userId}`,
+      { params: { range } },
+    );
+    return data;
+  },
+  async questionStats(params: { userId?: string; organizationId?: string }) {
+    const { data } = await apiService.api.get<QuestionStatsRow[]>(
+      '/user-activity/question-stats',
+      { params },
+    );
+    return data;
+  },
+  async heartbeat() {
+    await apiService.api.post('/user-activity/heartbeat');
+  },
+};

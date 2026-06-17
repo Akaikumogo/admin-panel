@@ -15,7 +15,7 @@ import {
   Divider,
   Switch
 } from 'antd';
-import { Plus, Trash2, Mail, Shield, Filter, Search, Settings, Table2 } from 'lucide-react';
+import { Plus, Trash2, Mail, Shield, Filter, Search, Settings, Table2, Download } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -165,6 +165,15 @@ const Moderators = () => {
     refetch();
   };
 
+  const handleExport = async () => {
+    try {
+      await apiService.exportModeratorsCredentials();
+      message.success('Excel yuklab olindi');
+    } catch {
+      message.error('Export xatosi');
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
       <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
@@ -181,6 +190,9 @@ const Moderators = () => {
           {t(T.total)}: {total}
         </Tag>
         <div className="ml-auto flex items-center gap-2">
+          <Button icon={<Download size={16} />} onClick={handleExport}>
+            Excel export
+          </Button>
           <Button
             icon={<Table2 size={16} />}
             onClick={() => navigate('/dashboard/permissions')}
