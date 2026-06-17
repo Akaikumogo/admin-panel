@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import { Bot, LoaderCircle, SendHorizonal, Sparkles, User } from 'lucide-react';
 import clsx from 'clsx';
 import { BACKEND_ORIGIN } from '@/services/api';
+import apiService from '@/services/api';
 
 type ChatMessage = {
   id: string;
@@ -34,6 +35,15 @@ export default function AiAssistantPage() {
         'Admin AI tayyor. Men sizga xato savollar, jon yo‘qotishlar va umumiy tahlil bo‘yicha yordam bera olaman.',
     },
   ]);
+
+  const [aiReady, setAiReady] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    apiService
+      .getAiChatStatus()
+      .then((s) => setAiReady(s.ready))
+      .catch(() => setAiReady(false));
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -154,18 +164,20 @@ export default function AiAssistantPage() {
               <span
                 className={clsx(
                   'mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
-                  status === 'ready'
+                  status === 'ready' && aiReady
                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                    : status === 'error'
+                    : status === 'error' || aiReady === false
                       ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200',
                 )}
               >
-                {status === 'ready'
+                {status === 'ready' && aiReady
                   ? 'Ulandi'
-                  : status === 'error'
-                    ? 'Ulanmadi'
-                    : 'Ulanmoqda'}
+                  : aiReady === false
+                    ? 'AI provider sozlanmagan'
+                    : status === 'error'
+                      ? 'Ulanmadi'
+                      : 'Ulanmoqda'}
               </span>
             </div>
           </div>

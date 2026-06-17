@@ -1011,6 +1011,19 @@ class ApiService {
     );
   }
 
+  async getAiChatStatus(): Promise<{
+    provider: string;
+    openRouterConfigured: boolean;
+    ollamaConfigured: boolean;
+    openRouterModel: string;
+    ollamaModel: string;
+    ollamaBaseUrl: string;
+    ready: boolean;
+  }> {
+    const response = await this.api.get('/ai-chat/status');
+    return response.data;
+  }
+
   async getMyModeratorPermissions(): Promise<{
     permissions: ModeratorPermissions | null;
   }> {
