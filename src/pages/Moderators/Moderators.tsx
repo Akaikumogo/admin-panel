@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
-  Card,
   Form,
   Input,
   Modal,
@@ -13,41 +12,46 @@ import {
   message,
   Avatar,
   Divider,
-  Switch
+  Switch,
+  Table,
 } from 'antd';
 import { Plus, Trash2, Mail, Shield, Filter, Search, Settings, Table2, Download } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
-import type { ModeratorPermissions, Organization } from '@/services/api';
+import type { ModeratorPermissions, Organization, UserProfile } from '@/services/api';
 
 const T = {
   title: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
   addModerator: {
     uz: 'Moderator qo`shish',
     en: 'Add Moderator',
-    ru: 'Добавить модератора'
+    ru: 'Добавить модератора',
   },
   email: { uz: 'Email', en: 'Email', ru: 'Email' },
   password: { uz: 'Parol', en: 'Password', ru: 'Пароль' },
   firstName: { uz: 'Ism', en: 'First name', ru: 'Имя' },
   lastName: { uz: 'Familiya', en: 'Last name', ru: 'Фамилия' },
   organization: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
+  allOrganizations: {
+    uz: 'Barcha tashkilotlar',
+    en: 'All organizations',
+    ru: 'Все организации',
+  },
   save: { uz: 'Saqlash', en: 'Save', ru: 'Сохранить' },
   cancel: { uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' },
   deleteConfirm: {
     uz: 'Rostdan o`chirmoqchimisiz?',
     en: 'Are you sure?',
-    ru: 'Вы уверены?'
+    ru: 'Вы уверены?',
   },
   noData: {
     uz: 'Moderatorlar yo`q',
     en: 'No moderators',
-    ru: 'Нет модераторов'
+    ru: 'Нет модераторов',
   },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
   optional: { uz: 'Ixtiyoriy', en: 'Optional', ru: 'Необязательно' },
@@ -57,30 +61,44 @@ const T = {
     en: 'Permissions (table)',
     ru: 'Права (таблица)',
   },
+  actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
+  name: { uz: 'F.I.O', en: 'Full name', ru: 'Ф.И.О' },
+  role: { uz: 'Rol', en: 'Role', ru: 'Роль' },
 } as const;
 
-const QP_DEFAULTS = { search: undefined } as const;
+const PAGE_SIZE = 20;
+
+const QP_DEFAULTS = { search: undefined, orgId: undefined, page: undefined } as const;
 
 const Moderators = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { params: qp, setParam } =
+  const { params: qp, setParam, setParams } =
     useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
 
   const { data: organizations } = useFetch(
     ['organizations'],
     () => apiService.getOrganizations(),
-    [] as Organization[]
+    [] as Organization[],
   );
+
   const {
     data: moderators,
     total,
     loading,
     initialLoading,
-    refetch
-  } = usePaginatedFetch(['moderators', qp.search], () =>
-    apiService.getModerators({ search: qp.search || undefined })
+    refetch,
+  } = usePaginatedFetch(
+    ['moderators', qp.search, qp.orgId, currentPage],
+    () =>
+      apiService.getModerators({
+        search: qp.search || undefined,
+        organizationId: qp.orgId || undefined,
+        page: currentPage,
+        limit: PAGE_SIZE,
+      }),
   );
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -139,8 +157,12 @@ const Moderators = () => {
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setParam('search', value || undefined);
+      setParams({ search: value || undefined, page: undefined });
     }, 400);
+  };
+
+  const handleOrgChange = (value: string | undefined) => {
+    setParams({ orgId: value || undefined, page: undefined });
   };
 
   const handleCreate = async () => {
@@ -178,6 +200,101 @@ const Moderators = () => {
     }
   };
 
+  const columns = [
+    {
+      title: '№',
+      key: 'rowNumber',
+      width: 64,
+      render: (_: unknown, __: UserProfile, index: number) => (
+        <span className="text-sm font-medium text-slate-500">
+          {(currentPage - 1) * PAGE_SIZE + index + 1}
+        </span>
+      ),
+    },
+    {
+      title: t(T.name),
+      key: 'name',
+      render: (_: unknown, mod: UserProfile) => (
+        <div className="flex items-center gap-3 min-w-[180px]">
+          <Avatar
+            size={36}
+            src={
+              mod.avatarUrl ? `${BACKEND_ORIGIN}${mod.avatarUrl}` : undefined
+            }
+            className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
+          >
+            {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
+          </Avatar>
+          <span className="font-medium text-slate-900 dark:text-white">
+            <HighlightText
+              text={`${mod.lastName} ${mod.firstName}`}
+              highlight={qp.search}
+            />
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: t(T.email),
+      key: 'email',
+      render: (_: unknown, mod: UserProfile) => (
+        <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+          <Mail size={12} />
+          <HighlightText text={mod.email} highlight={qp.search} />
+        </span>
+      ),
+    },
+    {
+      title: t(T.organization),
+      key: 'organization',
+      ellipsis: true,
+      render: (_: unknown, mod: UserProfile) =>
+        mod.organizations?.length ? (
+          <span className="text-sm text-slate-600 dark:text-slate-300" title={mod.organizations.map((o) => o.name).join(', ')}>
+            {mod.organizations.map((o) => o.name).join(', ')}
+          </span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+    {
+      title: t(T.role),
+      key: 'role',
+      width: 130,
+      render: () => (
+        <Tag color="blue">
+          <span className="inline-flex items-center gap-1">
+            <Shield size={13} />
+            MODERATOR
+          </span>
+        </Tag>
+      ),
+    },
+    {
+      title: t(T.actions),
+      key: 'actions',
+      width: 110,
+      align: 'right' as const,
+      render: (_: unknown, mod: UserProfile) => (
+        <div className="flex justify-end gap-1">
+          <Button
+            size="small"
+            icon={<Settings size={14} />}
+            onClick={() =>
+              void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
+            }
+          />
+          <Popconfirm
+            title={t(T.deleteConfirm)}
+            onConfirm={() => handleDelete(mod.id)}
+          >
+            <Button size="small" danger icon={<Trash2 size={14} />} />
+          </Popconfirm>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
       <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
@@ -189,6 +306,19 @@ const Moderators = () => {
           placeholder={t(T.search)}
           style={{ width: 220 }}
           onChange={(e) => handleSearchChange(e.target.value)}
+        />
+        <Select
+          allowClear
+          showSearch
+          placeholder={t(T.organization)}
+          value={qp.orgId}
+          onChange={handleOrgChange}
+          optionFilterProp="label"
+          style={{ minWidth: 260, maxWidth: 360 }}
+          options={organizations.map((o) => ({
+            value: o.id,
+            label: o.name,
+          }))}
         />
         <Tag className="text-xs">
           {t(T.total)}: {total}
@@ -223,77 +353,21 @@ const Moderators = () => {
       ) : moderators.length === 0 && !loading ? (
         <NoData text={t(T.noData)} />
       ) : (
-        <div
-          className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity duration-150 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
-        >
-          <AnimatePresence mode="popLayout">
-            {moderators.map((mod) => (
-              <motion.div
-                key={mod.id}
-                layoutId={mod.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card
-                  className="!border-slate-200 dark:!border-slate-700/60 h-full"
-                  bodyStyle={{ padding: '16px 20px' }}
-                >
-                  <div className="flex items-start gap-4">
-                    <Avatar
-                      size={48}
-                      src={
-                        mod.avatarUrl
-                          ? `${BACKEND_ORIGIN}${mod.avatarUrl}`
-                          : undefined
-                      }
-                      className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
-                    >
-                      {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-slate-900 dark:text-white truncate">
-                        <HighlightText
-                          text={`${mod.firstName} ${mod.lastName}`}
-                          highlight={qp.search}
-                        />
-                      </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                        <Mail size={12} />{' '}
-                        <HighlightText text={mod.email} highlight={qp.search} />
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <Tag color="blue">
-                          <div className="flex items-center px-2 gap-1">
-                            <Shield size={15} />
-                            <span>MODERATOR</span>
-                          </div>
-                        </Tag>
-                      </div>
-                    </div>
-                    <Popconfirm
-                      title={t(T.deleteConfirm)}
-                      onConfirm={() => handleDelete(mod.id)}
-                    >
-                      <Button size="small" danger icon={<Trash2 size={14} />} />
-                    </Popconfirm>
-                    <Button
-                      size="small"
-                      icon={<Settings size={14} />}
-                      onClick={() =>
-                        void openPermissions(
-                          mod.id,
-                          `${mod.firstName} ${mod.lastName}`,
-                        )
-                      }
-                    />
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={moderators}
+          loading={loading}
+          pagination={{
+            current: currentPage,
+            pageSize: PAGE_SIZE,
+            total,
+            showSizeChanger: false,
+            onChange: (page) => setParam('page', page === 1 ? undefined : String(page)),
+          }}
+          scroll={{ x: 900 }}
+          className="bg-white dark:bg-[#141414] rounded-lg border border-slate-200 dark:border-slate-700/60"
+        />
       )}
 
       <Modal
@@ -351,10 +425,12 @@ const Moderators = () => {
           >
             <Select
               allowClear
+              showSearch
+              optionFilterProp="label"
               placeholder={t(T.organization)}
               options={organizations.map((o) => ({
                 value: o.id,
-                label: o.name
+                label: o.name,
               }))}
             />
           </Form.Item>
@@ -395,9 +471,6 @@ const Moderators = () => {
                 ['logs', 'Tizim loglari (Logs)'],
                 ['nesSync', '1C sinxronizatsiya (NES sync)'],
                 ['aiAssistant', 'AI yordamchi (AI Assistant)'],
-                ['showRoom', 'Showroom'],
-                ['qrScan', 'QR skaner'],
-                ['salesIndicators', 'Sotuv ko‘rsatkichlari'],
               ] as const
             ).map(([key, label], idx) => (
               <div key={key}>

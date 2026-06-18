@@ -410,9 +410,6 @@ export type ModeratorPermissions = {
   logs: CrudPermissions;
   nesSync: CrudPermissions;
   aiAssistant: CrudPermissions;
-  showRoom: CrudPermissions;
-  qrScan: CrudPermissions;
-  salesIndicators: CrudPermissions;
 };
 
 export type ModeratorPermissionRecord = {
@@ -1621,12 +1618,20 @@ class ApiService {
 
   async getModerators(filters?: {
     search?: string;
+    organizationId?: string;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<UserProfile>> {
     const response = await this.api.get<PaginatedResponse<UserProfile>>(
       '/admin/users/moderators',
-      { params: filters }
+      {
+        params: {
+          search: filters?.search,
+          orgId: filters?.organizationId,
+          page: filters?.page,
+          limit: filters?.limit,
+        },
+      }
     );
     return response.data;
   }

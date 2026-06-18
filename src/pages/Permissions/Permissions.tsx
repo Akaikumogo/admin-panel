@@ -71,9 +71,6 @@ const MODULES: {
   { key: 'logs', label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' } },
   { key: 'nesSync', label: { uz: '1C sync', en: '1C sync', ru: '1C синх.' } },
   { key: 'aiAssistant', label: { uz: 'AI yordamchi', en: 'AI', ru: 'ИИ' } },
-  { key: 'showRoom', label: { uz: 'Showroom', en: 'Showroom', ru: 'Шоурум' } },
-  { key: 'qrScan', label: { uz: 'QR skaner', en: 'QR scan', ru: 'QR' } },
-  { key: 'salesIndicators', label: { uz: 'Sotuv ko‘rs.', en: 'Sales KPI', ru: 'Прод.' } },
 ];
 
 const CRUD_ORDER: (keyof CrudPermissions)[] = ['view', 'create', 'update', 'delete'];
