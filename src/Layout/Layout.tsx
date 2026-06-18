@@ -291,14 +291,15 @@ const Layout = () => {
         can('audioLibrary', 'create') ||
         can('audioLibrary', 'update') ||
         can('audioLibrary', 'delete');
+      const hasNesSyncPerm = can('nesSync', 'view');
       return navItems.filter(
         (item) =>
           item.path !== '/dashboard/moderators' &&
           item.path !== '/dashboard/users' &&
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
-          item.path !== '/dashboard/nes-sync' &&
           item.path !== '/dashboard/exam-analysis' &&
+          (hasNesSyncPerm || item.path !== '/dashboard/nes-sync') &&
           (hasAudioPerm || item.path !== '/dashboard/audio-library')
       );
     }
@@ -310,7 +311,7 @@ const Layout = () => {
     (location.pathname === '/dashboard/moderators' ||
       location.pathname === '/dashboard/users' ||
       location.pathname === '/dashboard/permissions' ||
-      location.pathname === '/dashboard/nes-sync' ||
+      (location.pathname === '/dashboard/nes-sync' && !can('nesSync', 'view')) ||
       location.pathname === '/dashboard/exam-analysis' ||
       (location.pathname === '/dashboard/audio-library' &&
         !(
