@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Avatar,
   Button,
@@ -120,6 +120,23 @@ const PermissionsPage = () => {
   const [permLoading, setPermLoading] = useState(false);
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(() => new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const [tableScrollY, setTableScrollY] = useState(480);
+
+  useLayoutEffect(() => {
+    const el = tableWrapRef.current;
+    if (!el) return;
+
+    const updateHeight = () => {
+      const next = el.clientHeight - 108;
+      setTableScrollY(Math.max(280, next));
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [initialLoading, moderators.length]);
 
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -301,6 +318,7 @@ const PermissionsPage = () => {
     const moduleGroups = MODULES.map((mod) => ({
       title: t(mod.label),
       align: 'center' as const,
+      width: CRUD_ORDER.length * CRUD_COL_WIDTH,
       children: CRUD_ORDER.map((crud) => ({
         title: actionTitle(crud),
         key: `${String(mod.key)}-${crud}`,
@@ -391,9 +409,19 @@ const PermissionsPage = () => {
         <Button size="small" onClick={() => refetch()}>
           {t({ uz: 'Yangilash', en: 'Refresh', ru: 'Обновить' })}
         </Button>
+        <span className="ml-auto text-xs text-slate-400">
+          {t({
+            uz: "Switchlar uchun jadvalni o'ngga suring →",
+            en: 'Scroll right to see permission switches →',
+            ru: 'Прокрутите вправо для переключателей →',
+          })}
+        </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-[#141414]">
+      <div
+        ref={tableWrapRef}
+        className="min-h-0 flex-1 rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-[#141414]"
+      >
         {initialLoading ? (
           <div className="flex h-48 items-center justify-center">
             <Spin />
@@ -403,26 +431,23 @@ const PermissionsPage = () => {
             <NoData text={t(T.noData)} />
           </div>
         ) : (
-          <div className="h-full w-full overflow-auto">
-            <Table<UserProfile>
-              size="small"
-              rowKey="id"
-              loading={loading}
-              dataSource={moderators}
-              columns={columns}
-              scroll={{ x: scrollX }}
-              sticky
-              pagination={{
-                current: currentPage,
-                pageSize: PAGE_SIZE,
-                total,
-                showSizeChanger: false,
-                onChange: (page) =>
-                  setParam('page', page === 1 ? undefined : String(page)),
-              }}
-              className="permissions-table [&_.ant-table]:min-w-max"
-            />
-          </div>
+          <Table<UserProfile>
+            size="small"
+            rowKey="id"
+            loading={loading}
+            dataSource={moderators}
+            columns={columns}
+            scroll={{ x: scrollX, y: tableScrollY }}
+            pagination={{
+              current: currentPage,
+              pageSize: PAGE_SIZE,
+              total,
+              showSizeChanger: false,
+              onChange: (page) =>
+                setParam('page', page === 1 ? undefined : String(page)),
+            }}
+            className="permissions-table"
+          />
         )}
       </div>
     </div>
