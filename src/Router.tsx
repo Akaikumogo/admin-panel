@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { type RouteObject } from 'react-router-dom';
+import { Navigate, type RouteObject } from 'react-router-dom';
 import Navigator from './Providers/Navigator';
 import NotFoundPage from './pages/NotFounds/NotFoundPage';
 
@@ -37,7 +37,6 @@ const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
 const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
-const BranchAnalyticsPage = lazy(() => import('./pages/BranchAnalytics/BranchAnalytics'));
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -163,7 +162,7 @@ export const routes: RouteObject[] = [
           },
           {
             path: 'branch-analytics',
-            element: withSuspense(BranchAnalyticsPage)
+            element: <Navigate to="/dashboard/user-activity" replace />
           }
         ]
       }

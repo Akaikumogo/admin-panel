@@ -10,7 +10,8 @@ import {
   Popconfirm,
   message,
   Avatar,
-  Select
+  Select,
+  Switch
 } from 'antd';
 import {
   Plus,
@@ -20,7 +21,8 @@ import {
   UserPlus,
   UserMinus,
   Filter,
-  Search
+  Search,
+  Star
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -66,7 +68,18 @@ const T = {
     uz: 'Foydalanuvchini tanlang',
     en: 'Select user',
     ru: 'Выберите пользователя'
-  }
+  },
+  mainOrg: {
+    uz: 'Asosiy tashkilot',
+    en: 'Main organization',
+    ru: 'Главная организация'
+  },
+  mainOrgHint: {
+    uz: 'Faqat bitta tashkilot asosiy bo`la oladi. Yoqilsa, oldingi asosiy tashkilot avtomat o`chiriladi.',
+    en: 'Only one organization can be main. Enabling will unset the previous main org.',
+    ru: 'Только одна организация может быть главной. Включение снимет флаг с предыдущей.'
+  },
+  mainTag: { uz: 'Asosiy', en: 'Main', ru: 'Главная' }
 } as const;
 
 const QP_DEFAULTS = { search: undefined } as const;
@@ -103,9 +116,13 @@ const Organizations = () => {
     setEditing(org ?? null);
     setModalOpen(true);
     if (org) {
-      form.setFieldsValue({ name: org.name });
+      form.setFieldsValue({
+        name: org.name,
+        isDefault: org.isDefault ?? false,
+      });
     } else {
       form.resetFields();
+      form.setFieldsValue({ isDefault: false });
     }
   };
 
@@ -219,14 +236,20 @@ const Organizations = () => {
                       </div>
                       <div>
                         <h3
-                          className="font-semibold text-slate-900 dark:text-white cursor-pointer hover:underline"
+                          className="font-semibold text-slate-900 dark:text-white cursor-pointer hover:underline flex items-center gap-2 flex-wrap"
                           onClick={() => navigate(`/dashboard/organizations/${org.id}`)}
                         >
-                          <span className="mr-2 text-slate-400">#{index + 1}</span>
+                          <span className="text-slate-400">#{index + 1}</span>
                           <HighlightText
                             text={org.name}
                             highlight={qp.search}
                           />
+                          {org.isDefault && (
+                            <Tag color="gold" className="!m-0 flex items-center gap-1">
+                              <Star size={12} />
+                              <span>{t(T.mainTag)}</span>
+                            </Tag>
+                          )}
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {org.users?.length || 0} {t(T.members).toLowerCase()}
@@ -333,13 +356,26 @@ const Organizations = () => {
             : !can('organizations', 'create'),
         }}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={{ isDefault: false }}>
           <Form.Item
             name="name"
             label={t(T.orgName)}
             rules={[{ required: true }]}
           >
             <Input />
+          </Form.Item>
+          <Form.Item
+            name="isDefault"
+            label={
+              <span className="flex items-center gap-2">
+                <Star size={14} className="text-amber-500" />
+                {t(T.mainOrg)}
+              </span>
+            }
+            valuePropName="checked"
+            extra={t(T.mainOrgHint)}
+          >
+            <Switch />
           </Form.Item>
         </Form>
       </Modal>

@@ -43,9 +43,12 @@ const T = {
     en: 'Permissions saved',
     ru: 'Права сохранены',
   },
+  view: { uz: 'Ko‘rish', en: 'View', ru: 'Просм.' },
   create: { uz: 'Yaratish', en: 'Create', ru: 'Созд.' },
   update: { uz: 'Yangilash', en: 'Update', ru: 'Изм.' },
   delete: { uz: 'O‘chirish', en: 'Delete', ru: 'Удал.' },
+  selectAll: { uz: 'Hammasi', en: 'All', ru: 'Все' },
+  clearAll: { uz: 'Tozalash', en: 'Clear', ru: 'Очистить' },
 } as const;
 
 const MODULES: {
@@ -61,10 +64,19 @@ const MODULES: {
   { key: 'moderators', label: { uz: 'Moderatorlar', en: 'Mods', ru: 'Мод.' } },
   { key: 'profile', label: { uz: 'Profil', en: 'Profile', ru: 'Профиль' } },
   { key: 'exams', label: { uz: 'Imtihonlar', en: 'Exams', ru: 'Экзамены' } },
-  { key: 'audioLibrary', label: { uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' } },
+  { key: 'audioLibrary', label: { uz: 'Audio kutub.', en: 'Audio', ru: 'Аудио' } },
+  { key: 'analytics', label: { uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' } },
+  { key: 'permissions', label: { uz: 'Ruxsatlar', en: 'Permissions', ru: 'Права' } },
+  { key: 'violations', label: { uz: 'Qoidabuz.', en: 'Violations', ru: 'Наруш.' } },
+  { key: 'logs', label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' } },
+  { key: 'nesSync', label: { uz: '1C sync', en: '1C sync', ru: '1C синх.' } },
+  { key: 'aiAssistant', label: { uz: 'AI yordamchi', en: 'AI', ru: 'ИИ' } },
+  { key: 'showRoom', label: { uz: 'Showroom', en: 'Showroom', ru: 'Шоурум' } },
+  { key: 'qrScan', label: { uz: 'QR skaner', en: 'QR scan', ru: 'QR' } },
+  { key: 'salesIndicators', label: { uz: 'Sotuv ko‘rs.', en: 'Sales KPI', ru: 'Прод.' } },
 ];
 
-const CRUD_ORDER: (keyof CrudPermissions)[] = ['create', 'update', 'delete'];
+const CRUD_ORDER: (keyof CrudPermissions)[] = ['view', 'create', 'update', 'delete'];
 
 const QP_DEFAULTS = { search: undefined } as const;
 
@@ -159,6 +171,19 @@ const PermissionsPage = () => {
     [],
   );
 
+  const setAllForUser = useCallback((userId: string, value: boolean) => {
+    setPermMap((prev) => {
+      const cur = prev[userId];
+      if (!cur) return prev;
+      const next = { ...cur } as ModeratorPermissions;
+      for (const m of MODULES) {
+        next[m.key] = { view: value, create: value, update: value, delete: value };
+      }
+      return { ...prev, [userId]: next };
+    });
+    setDirtyIds((prev) => new Set(prev).add(userId));
+  }, []);
+
   const saveRow = useCallback(
     async (userId: string) => {
       const perms = permMap[userId];
@@ -181,6 +206,7 @@ const PermissionsPage = () => {
 
   const columns: ColumnsType<UserProfile> = useMemo(() => {
     const actionTitle = (k: keyof CrudPermissions) => {
+      if (k === 'view') return t(T.view);
       if (k === 'create') return t(T.create);
       if (k === 'update') return t(T.update);
       return t(T.delete);
@@ -190,7 +216,7 @@ const PermissionsPage = () => {
       title: t({ uz: 'Foydalanuvchi', en: 'User', ru: 'Пользователь' }),
       key: 'user',
       fixed: 'left',
-      width: 240,
+      width: 260,
       render: (_, mod) => (
         <div className="flex items-center gap-3 min-w-0">
           <Avatar
@@ -202,7 +228,7 @@ const PermissionsPage = () => {
           >
             {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
           </Avatar>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="font-medium text-slate-900 dark:text-white truncate">
               <HighlightText
                 text={`${mod.firstName} ${mod.lastName}`}
@@ -213,9 +239,27 @@ const PermissionsPage = () => {
               <Mail size={10} className="flex-shrink-0" />
               <HighlightText text={mod.email} highlight={qp.search} />
             </div>
-            <Tag color="blue" className="mt-1 text-[10px]">
-              MODERATOR
-            </Tag>
+            <div className="flex items-center gap-1 mt-1">
+              <Tag color="blue" className="text-[10px] !m-0">
+                MODERATOR
+              </Tag>
+              <Button
+                size="small"
+                type="link"
+                className="!px-1 !text-[10px]"
+                onClick={() => setAllForUser(mod.id, true)}
+              >
+                {t(T.selectAll)}
+              </Button>
+              <Button
+                size="small"
+                type="link"
+                className="!px-1 !text-[10px]"
+                onClick={() => setAllForUser(mod.id, false)}
+              >
+                {t(T.clearAll)}
+              </Button>
+            </div>
           </div>
         </div>
       ),
@@ -227,7 +271,7 @@ const PermissionsPage = () => {
       children: CRUD_ORDER.map((crud) => ({
         title: actionTitle(crud),
         key: `${String(mod.key)}-${crud}`,
-        width: 72,
+        width: 60,
         align: 'center' as const,
         render: (_: unknown, record: UserProfile) => {
           const perms = permMap[record.id];
@@ -271,11 +315,12 @@ const PermissionsPage = () => {
     dirtyIds,
     savingId,
     setCrud,
+    setAllForUser,
     saveRow,
     permMap,
   ]);
 
-  const scrollX = 240 + MODULES.length * CRUD_ORDER.length * 72 + 100;
+  const scrollX = 260 + MODULES.length * CRUD_ORDER.length * 60 + 100;
 
   return (
     <div className="p-6 space-y-4 overflow-hidden h-[calc(100vh-100px)] flex flex-col">

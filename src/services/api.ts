@@ -387,6 +387,7 @@ export type AdminAudioBookDetail = {
 };
 
 export type CrudPermissions = {
+  view: boolean;
   create: boolean;
   update: boolean;
   delete: boolean;
@@ -403,6 +404,15 @@ export type ModeratorPermissions = {
   profile: CrudPermissions;
   exams: CrudPermissions;
   audioLibrary: CrudPermissions;
+  analytics: CrudPermissions;
+  permissions: CrudPermissions;
+  violations: CrudPermissions;
+  logs: CrudPermissions;
+  nesSync: CrudPermissions;
+  aiAssistant: CrudPermissions;
+  showRoom: CrudPermissions;
+  qrScan: CrudPermissions;
+  salesIndicators: CrudPermissions;
 };
 
 export type ModeratorPermissionRecord = {
@@ -1556,7 +1566,11 @@ class ApiService {
     return response.data;
   }
 
-  async createOrganization(data: { name: string }): Promise<Organization> {
+  async createOrganization(data: {
+    name: string;
+    parentOrganizationId?: string | null;
+    isDefault?: boolean;
+  }): Promise<Organization> {
     const response = await this.api.post<Organization>(
       '/admin/organizations',
       data
@@ -1566,7 +1580,11 @@ class ApiService {
 
   async updateOrganization(
     id: string,
-    data: { name?: string }
+    data: {
+      name?: string;
+      parentOrganizationId?: string | null;
+      isDefault?: boolean;
+    }
   ): Promise<Organization> {
     const response = await this.api.put<Organization>(
       `/admin/organizations/${id}`,
@@ -1620,7 +1638,7 @@ class ApiService {
 
   async createModerator(data: {
     email: string;
-    password: string;
+    password?: string;
     firstName: string;
     lastName: string;
     organizationId?: string;

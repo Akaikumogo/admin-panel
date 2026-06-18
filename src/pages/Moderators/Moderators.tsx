@@ -147,8 +147,12 @@ const Moderators = () => {
     try {
       const values = await form.validateFields();
       setSaving(true);
-      await apiService.createModerator(values);
-      message.success('Moderator yaratildi');
+      const payload = { ...values };
+      if (!payload.password || !String(payload.password).trim()) {
+        delete payload.password;
+      }
+      await apiService.createModerator(payload);
+      message.success('Moderator yaratildi (parol Excel exportda)');
       setModalOpen(false);
       form.resetFields();
       refetch();
@@ -325,10 +329,21 @@ const Moderators = () => {
           </Form.Item>
           <Form.Item
             name="password"
-            label={t(T.password)}
-            rules={[{ required: true, min: 6 }]}
+            label={`${t(T.password)} (${t(T.optional)})`}
+            extra="Bo'sh qoldirilsa, server avtomat parol generatsiya qiladi (Excel exportda chiqadi)"
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  if (value.length < 6) {
+                    return Promise.reject(new Error('Kamida 6 belgi'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
           >
-            <Input.Password />
+            <Input.Password placeholder="Avtomat generatsiya" />
           </Form.Item>
           <Form.Item
             name="organizationId"
@@ -373,13 +388,30 @@ const Moderators = () => {
                 ['moderators', 'Moderatorlar (Moderators)'],
                 ['profile', 'Profil (Profile)'],
                 ['exams', 'Imtihonlar (Exams)'],
+                ['audioLibrary', 'Audio kutubxona (Audio library)'],
+                ['analytics', 'Analitika (Analytics)'],
+                ['permissions', 'Ruxsatlar sahifasi (Permissions)'],
+                ['violations', 'Qoidabuzarliklar (Violations)'],
+                ['logs', 'Tizim loglari (Logs)'],
+                ['nesSync', '1C sinxronizatsiya (NES sync)'],
+                ['aiAssistant', 'AI yordamchi (AI Assistant)'],
+                ['showRoom', 'Showroom'],
+                ['qrScan', 'QR skaner'],
+                ['salesIndicators', 'Sotuv ko‘rsatkichlari'],
               ] as const
             ).map(([key, label], idx) => (
               <div key={key}>
                 {idx > 0 ? <Divider /> : null}
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="font-semibold">{label}</div>
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">View</span>
+                      <Switch
+                        checked={permissions[key].view}
+                        onChange={(v) => setCrud(key, 'view', v)}
+                      />
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-slate-500">Create</span>
                       <Switch

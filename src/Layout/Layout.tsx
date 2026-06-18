@@ -116,13 +116,8 @@ const navItems = [
   },
   {
     path: '/dashboard/user-activity',
-    label: { uz: 'Aktivlik', en: 'Activity', ru: 'Активность' },
+    label: { uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' },
     icon: Activity
-  },
-  {
-    path: '/dashboard/branch-analytics',
-    label: { uz: 'Filial analitikasi', en: 'Branch analytics', ru: 'Аналитика филиала' },
-    icon: Building2
   },
   {
     path: '/dashboard/hearts-analytics',

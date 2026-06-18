@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Segmented, Select, Tabs, Spin } from 'antd';
+import { Card, Segmented, Select, Tabs, Spin, Table, Tag, DatePicker, Row, Col, Progress } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import {
   Activity,
   Clock,
   TrendingUp,
   Users as UsersIcon,
   Building2,
-  Star,
-  AlertTriangle,
+  LogIn,
+  ClipboardCheck,
+  UserX,
+  BarChart3,
+  CalendarDays,
 } from 'lucide-react';
 import {
   userActivityApi,
@@ -18,6 +22,9 @@ import {
   type ActivityUserRow,
   type QuestionStatsRow,
   type Organization,
+  type BranchActivityMatrix,
+  type BranchAnalyticsSummary,
+  type BranchDailyPlanResult,
 } from '@/services/api';
 import { userActivitySocket } from '@/services/userActivitySocket';
 import { useFetch } from '@/hooks/useFetch';
@@ -128,6 +135,129 @@ const UserActivity = () => {
     [] as QuestionStatsRow[],
   );
 
+  // Branch analytics — filial KPI, matritsa, kunlik plan
+  const [planDate, setPlanDate] = useState<Dayjs>(dayjs());
+  const [branchRange, setBranchRange] = useState<[Dayjs, Dayjs]>([
+    dayjs().subtract(27, 'day'),
+    dayjs(),
+  ]);
+  const branchFrom = branchRange[0].format('YYYY-MM-DD');
+  const branchTo = branchRange[1].format('YYYY-MM-DD');
+  const planDateStr = planDate.format('YYYY-MM-DD');
+
+  const effectiveBranchOrgId =
+    orgFilter === 'all' ? organizations[0]?.id ?? '' : orgFilter;
+
+  const { data: branchSummary } = useFetch<BranchAnalyticsSummary | null>(
+    ['branch-summary', effectiveBranchOrgId, branchFrom, branchTo],
+    () =>
+      effectiveBranchOrgId
+        ? apiService.getBranchAnalyticsSummary({
+            orgId: effectiveBranchOrgId,
+            from: branchFrom,
+            to: branchTo,
+          })
+        : Promise.resolve(null),
+    null,
+  );
+
+  const { data: branchMatrix } = useFetch<BranchActivityMatrix | null>(
+    ['branch-matrix', effectiveBranchOrgId, branchFrom, branchTo],
+    () =>
+      effectiveBranchOrgId
+        ? apiService.getBranchActivityMatrix({
+            orgId: effectiveBranchOrgId,
+            from: branchFrom,
+            to: branchTo,
+          })
+        : Promise.resolve(null),
+    null,
+  );
+
+  const { data: dailyPlan } = useFetch<BranchDailyPlanResult | null>(
+    ['branch-daily-plan', effectiveBranchOrgId, planDateStr],
+    () =>
+      effectiveBranchOrgId
+        ? apiService.getBranchDailyPlanResult({
+            orgId: effectiveBranchOrgId,
+            date: planDateStr,
+          })
+        : Promise.resolve(null),
+    null,
+  );
+
+  const branchKpiItems: Array<{
+    key: keyof BranchAnalyticsSummary;
+    label: string;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
+    color: string;
+  }> = [
+    { key: 'totalEmployees', label: 'Jami xodimlar', icon: UsersIcon, color: 'bg-blue-500' },
+    { key: 'firstLoginCount', label: 'Birinchi login', icon: LogIn, color: 'bg-emerald-500' },
+    { key: 'quizTakersCount', label: 'Test yechganlar', icon: ClipboardCheck, color: 'bg-violet-500' },
+    { key: 'activeTodayCount', label: 'Bugun aktiv', icon: Activity, color: 'bg-cyan-500' },
+    { key: 'offlineEmployeesCount', label: 'Offline (interval)', icon: UserX, color: 'bg-rose-500' },
+  ];
+
+  const statusBg = (s: 'active' | 'offline' | 'never') =>
+    s === 'active' ? '#dcfce7' : s === 'offline' ? '#fecaca' : '#f1f5f9';
+
+  const matrixDays = branchMatrix?.days ?? [];
+  const matrixColumns = useMemo(
+    () => [
+      {
+        title: 'Xodim',
+        dataIndex: 'fullName',
+        fixed: 'left' as const,
+        width: 180,
+      },
+      ...matrixDays.map((day) => ({
+        title: day.slice(5),
+        dataIndex: day,
+        width: 52,
+        align: 'center' as const,
+        render: (_: unknown, row: Record<string, unknown>) => {
+          const cell = row[day] as
+            | { status: 'active' | 'offline' | 'never'; attemptCount: number }
+            | undefined;
+          if (!cell) return null;
+          return (
+            <div
+              title={`${cell.status}${cell.attemptCount ? ` (${cell.attemptCount})` : ''}`}
+              style={{
+                background: statusBg(cell.status),
+                borderRadius: 4,
+                minHeight: 24,
+                lineHeight: '24px',
+                fontSize: 11,
+                fontWeight: cell.status === 'offline' ? 600 : 400,
+                color: cell.status === 'offline' ? '#991b1b' : '#334155',
+              }}
+            >
+              {cell.attemptCount > 0 ? cell.attemptCount : '·'}
+            </div>
+          );
+        },
+      })),
+    ],
+    [matrixDays],
+  );
+
+  const matrixDataSource = useMemo(
+    () =>
+      (branchMatrix?.employees ?? []).map((emp) => {
+        const row: Record<string, unknown> = {
+          key: emp.userId,
+          fullName: emp.fullName,
+        };
+        for (const d of emp.days) {
+          row[d.date] = { status: d.status, attemptCount: d.attemptCount };
+        }
+        return row;
+      }),
+    [branchMatrix?.employees],
+  );
+
   // Real-time: WS dan kelgan online/offline statusni state ga yozamiz
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -210,7 +340,7 @@ const UserActivity = () => {
       </div>
 
       {/* STAT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Activity}
           label="Hozir online"
@@ -239,28 +369,6 @@ const UserActivity = () => {
               : undefined
           }
           color="bg-amber-500"
-        />
-        <StatCard
-          icon={Star}
-          label="Eng aktiv xodim"
-          value={stats?.topUser?.name ?? '—'}
-          hint={
-            stats?.topUser
-              ? formatDuration(stats.topUser.onlineSeconds)
-              : undefined
-          }
-          color="bg-rose-500"
-        />
-        <StatCard
-          icon={AlertTriangle}
-          label="Eng kam aktiv xodim"
-          value={stats?.leastActiveUser?.name ?? '—'}
-          hint={
-            stats?.leastActiveUser
-              ? formatDuration(stats.leastActiveUser.onlineSeconds)
-              : undefined
-          }
-          color="bg-slate-500"
         />
       </div>
 
@@ -301,6 +409,161 @@ const UserActivity = () => {
                   formatDuration={formatDuration}
                 />
               </Spin>
+            ),
+          },
+          {
+            key: 'branchKpi',
+            label: (
+              <span className="flex items-center gap-2">
+                <BarChart3 size={16} /> Filial KPI
+              </span>
+            ),
+            children: (
+              <div className="space-y-6">
+                <div className="flex items-center justify-end gap-2 flex-wrap">
+                  <DatePicker.RangePicker
+                    value={branchRange}
+                    onChange={(v) => v && setBranchRange(v as [Dayjs, Dayjs])}
+                    allowClear={false}
+                  />
+                </div>
+                <Row gutter={[16, 16]}>
+                  {branchKpiItems.map(({ key, label, icon: Icon, color }) => (
+                    <Col xs={24} sm={12} lg={8} xl={6} key={String(key)}>
+                      <Card className="!rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-11 h-11 rounded-xl flex items-center justify-center text-white ${color}`}
+                          >
+                            <Icon size={20} />
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">{label}</div>
+                            <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                              {String(branchSummary?.[key] ?? '—')}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+
+                <Card
+                  className="!rounded-2xl"
+                  title={
+                    <span className="flex items-center gap-2">
+                      <CalendarDays size={16} /> Kunlik plan va natija
+                    </span>
+                  }
+                  extra={
+                    <DatePicker
+                      value={planDate}
+                      onChange={(d) => d && setPlanDate(d)}
+                      allowClear={false}
+                    />
+                  }
+                >
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <Tag color="blue">
+                      Savollar: {dailyPlan?.questionCount ?? 0} /{' '}
+                      {dailyPlan?.targetQuestions ?? 10}
+                    </Tag>
+                    <Tag color="green">
+                      Bajargan xodimlar: {dailyPlan?.completedEmployees ?? 0} /{' '}
+                      {dailyPlan?.totalEmployees ?? 0}
+                    </Tag>
+                  </div>
+                  <Table
+                    size="small"
+                    rowKey="id"
+                    pagination={false}
+                    dataSource={dailyPlan?.questions ?? []}
+                    scroll={{ x: true }}
+                    columns={[
+                      { title: '№', dataIndex: 'orderIndex', width: 48 },
+                      { title: 'Savol', dataIndex: 'prompt' },
+                      { title: 'Modul', dataIndex: 'levelTitle', width: 140 },
+                      { title: 'Nazariya', dataIndex: 'theoryTitle', width: 140 },
+                    ]}
+                  />
+                  <div className="font-semibold mt-6 mb-3">Xodimlar natijasi</div>
+                  <Table
+                    size="small"
+                    rowKey="userId"
+                    dataSource={dailyPlan?.userResults ?? []}
+                    pagination={{ pageSize: 10 }}
+                    columns={[
+                      { title: 'Xodim', dataIndex: 'fullName' },
+                      { title: 'Javoblar', dataIndex: 'answeredCount', width: 90 },
+                      { title: 'To`g`ri', dataIndex: 'correctCount', width: 80 },
+                      {
+                        title: 'Progress',
+                        dataIndex: 'completionPercent',
+                        width: 160,
+                        render: (v: number, row) => (
+                          <Progress
+                            percent={v}
+                            size="small"
+                            status={row.completed ? 'success' : 'active'}
+                          />
+                        ),
+                      },
+                      {
+                        title: 'Holat',
+                        dataIndex: 'completed',
+                        width: 100,
+                        render: (v: boolean) =>
+                          v ? (
+                            <Tag color="success">Bajarildi</Tag>
+                          ) : (
+                            <Tag>Jarayonda</Tag>
+                          ),
+                      },
+                    ]}
+                  />
+                </Card>
+
+                <Card
+                  className="!rounded-2xl"
+                  title="Kunlik aktivlik matritsasi"
+                  extra={
+                    <div className="flex gap-2 text-xs">
+                      <span className="inline-flex items-center gap-1">
+                        <span
+                          className="h-3 w-3 rounded"
+                          style={{ background: '#dcfce7' }}
+                        />
+                        Aktiv
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span
+                          className="h-3 w-3 rounded"
+                          style={{ background: '#fecaca' }}
+                        />
+                        Offline
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span
+                          className="h-3 w-3 rounded"
+                          style={{ background: '#f1f5f9' }}
+                        />
+                        Kirmagan
+                      </span>
+                    </div>
+                  }
+                >
+                  <Table
+                    size="small"
+                    columns={matrixColumns}
+                    dataSource={matrixDataSource}
+                    scroll={{
+                      x: Math.max(800, matrixDays.length * 52 + 200),
+                    }}
+                    pagination={{ pageSize: 15 }}
+                  />
+                </Card>
+              </div>
             ),
           },
         ]}
