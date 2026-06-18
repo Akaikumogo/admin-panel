@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Button, Card, DatePicker, Input, Modal, Select, Table, Tag, message } from 'antd';
-import { Trash2, Filter, RefreshCw, Search } from 'lucide-react';
+import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
 import dayjs from 'dayjs';
 import NoData from '@/components/NoData';
 import { useNesSyncSocket, type SyncDoneEvent } from '@/hooks/useNesSyncSocket';
@@ -141,7 +141,7 @@ export default function NesSync() {
 
   // Sync button label: bazaga qo'shildi / topildi
   const syncLabel = (() => {
-    if (!syncing) return '1C bilan sinxronlash';
+    if (!syncing) return 'ENERGO ID sinxronlash';
     if (syncProgress.total > 0) return `${syncProgress.created} / ${syncProgress.total}`;
     return 'Yuklanmoqda...';
   })();
@@ -207,6 +207,77 @@ export default function NesSync() {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+      {/* ENERGO ID — qora gradient hero header */}
+      <div
+        className="relative overflow-hidden rounded-2xl border border-black/30 shadow-2xl"
+        style={{
+          background:
+            'linear-gradient(135deg, #000000 0%, #0a0a0a 35%, #1a1a2e 70%, #16213e 100%)',
+        }}
+      >
+        {/* Glow effect */}
+        <div
+          className="absolute -top-24 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute -bottom-20 -left-16 w-72 h-72 rounded-full opacity-10 blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }}
+        />
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+          }}
+        />
+
+        <div className="relative flex items-center justify-between gap-4 px-6 py-6 flex-wrap">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center border border-white/20 shadow-lg"
+              style={{
+                background:
+                  'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <IdCard size={26} className="text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1
+                  className="text-2xl font-bold tracking-tight text-white"
+                  style={{
+                    background:
+                      'linear-gradient(90deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  ENERGO ID
+                </h1>
+                <Sparkles size={16} className="text-blue-300/70" />
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Xodimlar ma'lumotlar bazasi — markazlashgan sinxronizatsiya
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              {syncing ? 'Sinxronlanmoqda...' : 'Tayyor'}
+            </div>
+            <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
+              Jami: <strong className="text-white">{total}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
 
@@ -295,7 +366,7 @@ export default function NesSync() {
       )}
 
       {employees.length === 0 && !initialLoading && !loading ? (
-        <NoData text="1C xodimlari hali sinxron qilinmagan" />
+        <NoData text="ENERGO ID xodimlari hali sinxron qilinmagan" />
       ) : (
         <Card
           className={`!border-slate-200 dark:!border-slate-700/60 transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
@@ -365,7 +436,7 @@ export default function NesSync() {
         okButtonProps={{ danger: true }}
       >
         <p className="text-slate-700 dark:text-slate-300">
-          Barcha <strong>{total}</strong> ta NES xodimi va ularning user akkauntlari butunlay o'chiriladi.
+          Barcha <strong>{total}</strong> ta ENERGO ID xodimi va ularning user akkauntlari butunlay o'chiriladi.
           Bu amalni qaytarib bo'lmaydi. Davom etasizmi?
         </p>
       </Modal>

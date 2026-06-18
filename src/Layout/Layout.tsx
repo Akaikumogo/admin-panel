@@ -31,7 +31,8 @@ import {
   Library,
   LibraryBig,
   Bot,
-  RefreshCw
+  RefreshCw,
+  IdCard
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -111,8 +112,8 @@ const navItems = [
   },
   {
     path: '/dashboard/nes-sync',
-    label: { uz: '1C bilan sinxronlash', en: '1C sync', ru: 'Синхронизация 1C' },
-    icon: RefreshCw
+    label: { uz: 'ENERGO ID', en: 'ENERGO ID', ru: 'ENERGO ID' },
+    icon: IdCard
   },
   {
     path: '/dashboard/user-activity',
