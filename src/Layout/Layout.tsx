@@ -31,7 +31,6 @@ import {
   Library,
   LibraryBig,
   Bot,
-  RefreshCw,
   IdCard
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
