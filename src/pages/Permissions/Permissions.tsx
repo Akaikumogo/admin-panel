@@ -4,6 +4,7 @@ import {
   Button,
   Input,
   message,
+  Select,
   Spin,
   Switch,
   Table,
@@ -13,13 +14,14 @@ import type { ColumnsType } from 'antd/es/table';
 import { Filter, Mail, Search } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
-import { usePaginatedFetch } from '@/hooks/useFetch';
+import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type {
   CrudPermissions,
   ModeratorPermissions,
+  Organization,
   UserProfile,
 } from '@/services/api';
 
@@ -31,6 +33,7 @@ const T = {
     ru: 'Create / update / delete для модераторов',
   },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
+  organization: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
   save: { uz: 'Saqlash', en: 'Save', ru: 'Сохранить' },
   noData: {
@@ -74,14 +77,25 @@ const MODULES: {
 ];
 
 const CRUD_ORDER: (keyof CrudPermissions)[] = ['view', 'create', 'update', 'delete'];
+const PAGE_SIZE = 10;
+const CRUD_COL_WIDTH = 72;
+const USER_COL_WIDTH = 280;
+const ACTIONS_COL_WIDTH = 100;
 
-const QP_DEFAULTS = { search: undefined } as const;
+const QP_DEFAULTS = { search: undefined, orgId: undefined, page: undefined } as const;
 
 const PermissionsPage = () => {
   const { t } = useTranslation();
-  const { params: qp, setParam } =
+  const { params: qp, setParam, setParams } =
     useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
+
+  const { data: organizations } = useFetch(
+    ['organizations'],
+    () => apiService.getOrganizations(),
+    [] as Organization[],
+  );
 
   const {
     data: moderators,
@@ -89,8 +103,15 @@ const PermissionsPage = () => {
     loading,
     initialLoading,
     refetch,
-  } = usePaginatedFetch(['moderators', qp.search], () =>
-    apiService.getModerators({ search: qp.search || undefined }),
+  } = usePaginatedFetch(
+    ['permissions-moderators', qp.search, qp.orgId, currentPage],
+    () =>
+      apiService.getModerators({
+        search: qp.search || undefined,
+        organizationId: qp.orgId || undefined,
+        page: currentPage,
+        limit: PAGE_SIZE,
+      }),
   );
 
   const [permMap, setPermMap] = useState<
@@ -103,8 +124,12 @@ const PermissionsPage = () => {
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setParam('search', value || undefined);
+      setParams({ search: value || undefined, page: undefined });
     }, 400);
+  };
+
+  const handleOrgChange = (value: string | undefined) => {
+    setParams({ orgId: value || undefined, page: undefined });
   };
 
   useEffect(() => {
@@ -201,6 +226,11 @@ const PermissionsPage = () => {
     [permMap, t],
   );
 
+  const scrollX =
+    USER_COL_WIDTH +
+    MODULES.length * CRUD_ORDER.length * CRUD_COL_WIDTH +
+    ACTIONS_COL_WIDTH;
+
   const columns: ColumnsType<UserProfile> = useMemo(() => {
     const actionTitle = (k: keyof CrudPermissions) => {
       if (k === 'view') return t(T.view);
@@ -213,7 +243,7 @@ const PermissionsPage = () => {
       title: t({ uz: 'Foydalanuvchi', en: 'User', ru: 'Пользователь' }),
       key: 'user',
       fixed: 'left',
-      width: 260,
+      width: USER_COL_WIDTH,
       render: (_, mod) => (
         <div className="flex items-center gap-3 min-w-0">
           <Avatar
@@ -236,7 +266,13 @@ const PermissionsPage = () => {
               <Mail size={10} className="flex-shrink-0" />
               <HighlightText text={mod.email} highlight={qp.search} />
             </div>
-            <div className="flex items-center gap-1 mt-1">
+            <div
+              className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5"
+              title={mod.organizations?.map((o) => o.name).join(', ') || '—'}
+            >
+              {mod.organizations?.map((o) => o.name).join(', ') || '—'}
+            </div>
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
               <Tag color="blue" className="text-[10px] !m-0">
                 MODERATOR
               </Tag>
@@ -268,7 +304,7 @@ const PermissionsPage = () => {
       children: CRUD_ORDER.map((crud) => ({
         title: actionTitle(crud),
         key: `${String(mod.key)}-${crud}`,
-        width: 60,
+        width: CRUD_COL_WIDTH,
         align: 'center' as const,
         render: (_: unknown, record: UserProfile) => {
           const perms = permMap[record.id];
@@ -290,7 +326,7 @@ const PermissionsPage = () => {
       title: t({ uz: 'Amallar', en: 'Actions', ru: 'Действия' }),
       key: 'actions',
       fixed: 'right',
-      width: 100,
+      width: ACTIONS_COL_WIDTH,
       render: (_, record) => (
         <Button
           type="primary"
@@ -317,26 +353,37 @@ const PermissionsPage = () => {
     permMap,
   ]);
 
-  const scrollX = 260 + MODULES.length * CRUD_ORDER.length * 60 + 100;
-
   return (
-    <div className="p-6 space-y-4 overflow-hidden h-[calc(100vh-100px)] flex flex-col">
-      <div>
+    <div className="flex h-full min-h-0 flex-col gap-4 p-6">
+      <div className="flex-shrink-0">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           {t(T.title)}
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">{t(T.subtitle)}</p>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3 flex-shrink-0">
+      <div className="flex flex-shrink-0 flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/60 dark:bg-[#141414]">
         <Filter size={16} className="text-slate-400" />
         <Input
           allowClear
           defaultValue={qp.search}
           prefix={<Search size={14} className="text-slate-400" />}
           placeholder={t(T.search)}
-          style={{ width: 240 }}
+          style={{ width: 220 }}
           onChange={(e) => handleSearchChange(e.target.value)}
+        />
+        <Select
+          allowClear
+          showSearch
+          placeholder={t(T.organization)}
+          value={qp.orgId}
+          onChange={handleOrgChange}
+          optionFilterProp="label"
+          style={{ minWidth: 260, maxWidth: 360 }}
+          options={organizations.map((o) => ({
+            value: o.id,
+            label: o.name,
+          }))}
         />
         <Tag className="text-xs">
           {t(T.total)}: {total}
@@ -346,9 +393,9 @@ const PermissionsPage = () => {
         </Button>
       </div>
 
-      <div className="flex-1 min-h-0 bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-[#141414]">
         {initialLoading ? (
-          <div className="flex items-center justify-center h-48">
+          <div className="flex h-48 items-center justify-center">
             <Spin />
           </div>
         ) : moderators.length === 0 && !loading ? (
@@ -356,16 +403,26 @@ const PermissionsPage = () => {
             <NoData text={t(T.noData)} />
           </div>
         ) : (
-          <Table<UserProfile>
-            size="small"
-            rowKey="id"
-            loading={loading}
-            pagination={false}
-            dataSource={moderators}
-            columns={columns}
-            scroll={{ x: scrollX, y: 'calc(100vh - 320px)' }}
-            className="permissions-table"
-          />
+          <div className="h-full w-full overflow-auto">
+            <Table<UserProfile>
+              size="small"
+              rowKey="id"
+              loading={loading}
+              dataSource={moderators}
+              columns={columns}
+              scroll={{ x: scrollX }}
+              sticky
+              pagination={{
+                current: currentPage,
+                pageSize: PAGE_SIZE,
+                total,
+                showSizeChanger: false,
+                onChange: (page) =>
+                  setParam('page', page === 1 ? undefined : String(page)),
+              }}
+              className="permissions-table [&_.ant-table]:min-w-max"
+            />
+          </div>
         )}
       </div>
     </div>
