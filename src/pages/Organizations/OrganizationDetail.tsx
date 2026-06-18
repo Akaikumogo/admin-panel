@@ -3,6 +3,7 @@ import { ArrowLeft, Download, BarChart3 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import apiService, { type NesEmployee, type Organization, type StudentSummary } from '@/services/api';
+import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -47,9 +48,11 @@ export default function OrganizationDetail() {
         <Button icon={<ArrowLeft size={16} />} onClick={() => navigate('/dashboard/organizations')}>
           Orqaga
         </Button>
-        <Button type="primary" icon={<Download size={16} />} onClick={handleExport}>
-          Login-parollar (Excel)
-        </Button>
+        {isSuperAdmin() && (
+          <Button type="primary" icon={<Download size={16} />} onClick={handleExport}>
+            Login-parollar (Excel)
+          </Button>
+        )}
       </div>
 
       <Card title={org?.name || 'Tashkilot'}>

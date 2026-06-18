@@ -23,6 +23,7 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { ModeratorPermissions, Organization, UserProfile } from '@/services/api';
+import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
 const T = {
   title: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
@@ -324,9 +325,11 @@ const Moderators = () => {
           {t(T.total)}: {total}
         </Tag>
         <div className="ml-auto flex items-center gap-2">
-          <Button icon={<Download size={16} />} onClick={handleExport}>
-            Excel export
-          </Button>
+          {isSuperAdmin() && (
+            <Button icon={<Download size={16} />} onClick={handleExport}>
+              Excel export
+            </Button>
+          )}
           <Button
             icon={<Table2 size={16} />}
             onClick={() => navigate('/dashboard/permissions')}

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Button, Card, DatePicker, Input, Modal, Select, Table, Tag, message } from 'antd';
 import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -10,6 +10,7 @@ import apiService, {
   type NesEmployee,
   type NesEmployeePositionHistory,
 } from '@/services/api';
+import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
 const QP_DEFAULTS = {
   search: undefined,
@@ -146,64 +147,78 @@ export default function NesSync() {
     return 'Yuklanmoqda...';
   })();
 
-  const columns = [
-    {
-      title: 'Xodim',
-      key: 'name',
-      render: (_: unknown, record: NesEmployee) => (
-        <div>
-          <p className="font-semibold text-slate-900 dark:text-white">
-            {record.fullName || '—'}
-          </p>
-          <p className="text-xs text-slate-500">#{record.personnelNumber}</p>
-        </div>
-      ),
-    },
-    {
-      title: 'Filial',
-      dataIndex: 'organizationName',
-      key: 'organizationName',
-      render: (value: string) => <span className="text-sm">{value}</span>,
-    },
-    {
-      title: 'Lavozim',
-      key: 'post',
-      render: (_: unknown, record: NesEmployee) => (
-        <div>
-          <p className="text-sm">{record.post || '—'}</p>
-          <p className="text-xs text-slate-500">{record.division || '—'}</p>
-        </div>
-      ),
-    },
-    {
-      title: 'Login',
-      dataIndex: 'login',
-      key: 'login',
-      render: (value: string) => <Tag color="blue">{value}</Tag>,
-    },
-    {
-      title: 'Parol',
-      dataIndex: 'initialPassword',
-      key: 'initialPassword',
-      render: (value: string | null) => <Tag>{value || 'avval berilgan'}</Tag>,
-    },
-    {
-      title: 'Sync',
-      dataIndex: 'lastSyncedAt',
-      key: 'lastSyncedAt',
-      render: (value: string) => new Date(value).toLocaleString(),
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 160,
-      render: (_: unknown, record: NesEmployee) => (
-        <Button size="small" onClick={() => openPositions(record)}>
-          Xronologiya
-        </Button>
-      ),
-    },
-  ];
+  const columns = useMemo(() => {
+    const base = [
+      {
+        title: 'Xodim',
+        key: 'name',
+        render: (_: unknown, record: NesEmployee) => (
+          <div>
+            <p className="font-semibold text-slate-900 dark:text-white">
+              {record.fullName || '—'}
+            </p>
+            <p className="text-xs text-slate-500">#{record.personnelNumber}</p>
+          </div>
+        ),
+      },
+      {
+        title: 'Filial',
+        dataIndex: 'organizationName',
+        key: 'organizationName',
+        render: (value: string) => <span className="text-sm">{value}</span>,
+      },
+      {
+        title: 'Lavozim',
+        key: 'post',
+        render: (_: unknown, record: NesEmployee) => (
+          <div>
+            <p className="text-sm">{record.post || '—'}</p>
+            <p className="text-xs text-slate-500">{record.division || '—'}</p>
+          </div>
+        ),
+      },
+    ];
+
+    if (isSuperAdmin()) {
+      base.push(
+        {
+          title: 'Login',
+          dataIndex: 'login',
+          key: 'login',
+          render: (value: string) => <Tag color="blue">{value}</Tag>,
+        },
+        {
+          title: 'Parol',
+          dataIndex: 'initialPassword',
+          key: 'initialPassword',
+          render: (value: string | null) => (
+            <Tag>{value || 'Excel export orqali'}</Tag>
+          ),
+        },
+      );
+    }
+
+    base.push(
+      {
+        title: 'Sync',
+        dataIndex: 'lastSyncedAt',
+        key: 'lastSyncedAt',
+        render: (value: string) => new Date(value).toLocaleString(),
+      },
+      {
+        title: '',
+        key: 'actions',
+        width: 160,
+        render: (_: unknown, record: NesEmployee) => (
+          <Button size="small" onClick={() => openPositions(record)}>
+            Xronologiya
+          </Button>
+        ),
+      },
+    );
+
+    return base;
+  }, []);
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
