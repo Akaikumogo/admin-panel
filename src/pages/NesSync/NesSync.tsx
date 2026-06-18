@@ -355,6 +355,8 @@ export default function NesSync() {
           danger
           icon={<Trash2 size={16} />}
           loading={deleting}
+          disabled={syncing || !isSuperAdmin()}
+          hidden={!isSuperAdmin()}
           disabled={syncing}
           onClick={() => setDeleteConfirmOpen(true)}
         >
