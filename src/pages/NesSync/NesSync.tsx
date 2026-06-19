@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Button, Card, DatePicker, Input, Modal, Select, Table, Tag, message } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
 import dayjs from 'dayjs';
 import NoData from '@/components/NoData';
@@ -147,8 +148,8 @@ export default function NesSync() {
     return 'Yuklanmoqda...';
   })();
 
-  const columns = useMemo(() => {
-    const base = [
+  const columns = useMemo<ColumnsType<NesEmployee>>(() => {
+    const base: ColumnsType<NesEmployee> = [
       {
         title: 'Xodim',
         key: 'name',
@@ -203,7 +204,11 @@ export default function NesSync() {
         title: 'Sync',
         dataIndex: 'lastSyncedAt',
         key: 'lastSyncedAt',
-        render: (value: string) => new Date(value).toLocaleString(),
+        render: (value: string) => (
+          <span className="text-sm">
+            {value ? new Date(value).toLocaleString() : '—'}
+          </span>
+        ),
       },
       {
         title: '',
@@ -357,7 +362,6 @@ export default function NesSync() {
           loading={deleting}
           disabled={syncing || !isSuperAdmin()}
           hidden={!isSuperAdmin()}
-          disabled={syncing}
           onClick={() => setDeleteConfirmOpen(true)}
         >
           Hammasini o'chirish
