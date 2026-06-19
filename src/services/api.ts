@@ -750,7 +750,7 @@ class ApiService {
 
   // ===== Auth (ElektroLearn backend) =====
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.api.post<LoginResponse>('/auth/login', {
+    const response = await this.api.post<LoginResponse>('/auth/admin/login', {
       email,
       password
     });
