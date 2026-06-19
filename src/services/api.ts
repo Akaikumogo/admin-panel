@@ -1619,6 +1619,7 @@ class ApiService {
   async getModerators(filters?: {
     search?: string;
     organizationId?: string;
+    organizationMode?: 'include' | 'exclude';
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<UserProfile>> {
@@ -1628,11 +1629,22 @@ class ApiService {
         params: {
           search: filters?.search,
           orgId: filters?.organizationId,
+          orgMode: filters?.organizationMode,
           page: filters?.page,
           limit: filters?.limit,
         },
       }
     );
+    return response.data;
+  }
+
+  async bulkGenerateModeratorPasswords(
+    userIds: string[]
+  ): Promise<{ updated: number; users: Array<{ id: string; password: string }> }> {
+    const response = await this.api.post<{
+      updated: number;
+      users: Array<{ id: string; password: string }>;
+    }>('/admin/users/moderators/bulk-generate-passwords', { userIds });
     return response.data;
   }
 

@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { Key } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -15,7 +16,20 @@ import {
   Switch,
   Table,
 } from 'antd';
-import { Plus, Trash2, Mail, Shield, Filter, Search, Settings, Table2, Download } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Mail,
+  Shield,
+  Filter,
+  Search,
+  Settings,
+  Table2,
+  Download,
+  KeyRound,
+  CheckSquare,
+} from 'lucide-react';
+import type { TableRowSelection } from 'antd/es/table/interface';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
@@ -69,7 +83,12 @@ const T = {
 
 const PAGE_SIZE = 20;
 
-const QP_DEFAULTS = { search: undefined, orgId: undefined, page: undefined } as const;
+const QP_DEFAULTS = {
+  search: undefined,
+  orgId: undefined,
+  orgMode: undefined,
+  page: undefined,
+} as const;
 
 const Moderators = () => {
   const { t } = useTranslation();
@@ -92,11 +111,12 @@ const Moderators = () => {
     initialLoading,
     refetch,
   } = usePaginatedFetch(
-    ['moderators', qp.search, qp.orgId, currentPage],
+    ['moderators', qp.search, qp.orgId, qp.orgMode, currentPage],
     () =>
       apiService.getModerators({
         search: qp.search || undefined,
         organizationId: qp.orgId || undefined,
+        organizationMode: qp.orgMode === 'exclude' ? 'exclude' : 'include',
         page: currentPage,
         limit: PAGE_SIZE,
       }),
@@ -105,6 +125,9 @@ const Moderators = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
 
   const [permOpen, setPermOpen] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
@@ -163,8 +186,20 @@ const Moderators = () => {
   };
 
   const handleOrgChange = (value: string | undefined) => {
-    setParams({ orgId: value || undefined, page: undefined });
+    setParams({
+      orgId: value || undefined,
+      orgMode: value ? qp.orgMode || undefined : undefined,
+      page: undefined,
+    });
   };
+
+  const handleOrgModeChange = (value: 'include' | 'exclude') => {
+    setParams({ orgMode: value === 'include' ? undefined : value, page: undefined });
+  };
+
+  useEffect(() => {
+    setSelectedRowKeys([]);
+  }, [qp.search, qp.orgId, qp.orgMode]);
 
   const handleCreate = async () => {
     try {
@@ -199,6 +234,60 @@ const Moderators = () => {
     } catch {
       message.error('Export xatosi');
     }
+  };
+
+  const handleSelectAllFiltered = async () => {
+    if (total === 0) return;
+    setSelectingAll(true);
+    try {
+      const res = await apiService.getModerators({
+        search: qp.search || undefined,
+        organizationId: qp.orgId || undefined,
+        organizationMode: qp.orgMode === 'exclude' ? 'exclude' : 'include',
+        page: 1,
+        limit: Math.max(total, PAGE_SIZE),
+      });
+      setSelectedRowKeys(res.data.map((mod) => mod.id));
+      message.success(`${res.data.length} ta moderator tanlandi`);
+    } finally {
+      setSelectingAll(false);
+    }
+  };
+
+  const handleBulkGeneratePasswords = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('Avval moderatorlarni tanlang');
+      return;
+    }
+
+    Modal.confirm({
+      title: 'Parollarni qayta generatsiya qilish',
+      content: `${selectedRowKeys.length} ta moderator uchun yangi parol generatsiya qilinadi. Eski parollar ishlamaydi.`,
+      okText: 'Generate password',
+      cancelText: t(T.cancel),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setBulkLoading(true);
+        try {
+          const res = await apiService.bulkGenerateModeratorPasswords(
+            selectedRowKeys.map(String),
+          );
+          message.success(
+            `${res.updated} ta moderator paroli yangilandi. Excel exportdan yuklab oling.`,
+          );
+          setSelectedRowKeys([]);
+          refetch();
+        } finally {
+          setBulkLoading(false);
+        }
+      },
+    });
+  };
+
+  const rowSelection: TableRowSelection<UserProfile> = {
+    selectedRowKeys,
+    preserveSelectedRowKeys: true,
+    onChange: (keys) => setSelectedRowKeys(keys),
   };
 
   const columns = [
@@ -321,10 +410,42 @@ const Moderators = () => {
             label: o.name,
           }))}
         />
+        <Select
+          value={qp.orgMode === 'exclude' ? 'exclude' : 'include'}
+          onChange={handleOrgModeChange}
+          disabled={!qp.orgId}
+          style={{ width: 230 }}
+          options={[
+            { value: 'include', label: 'Faqat tanlangan filial' },
+            { value: 'exclude', label: 'Tanlanganlardan tashqari' },
+          ]}
+        />
         <Tag className="text-xs">
           {t(T.total)}: {total}
         </Tag>
+        {selectedRowKeys.length > 0 ? (
+          <Tag color="processing" className="text-xs">
+            Tanlangan: {selectedRowKeys.length}
+          </Tag>
+        ) : null}
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            icon={<CheckSquare size={16} />}
+            disabled={total === 0 || loading}
+            loading={selectingAll}
+            onClick={handleSelectAllFiltered}
+          >
+            Select all
+          </Button>
+          <Button
+            danger
+            icon={<KeyRound size={16} />}
+            disabled={selectedRowKeys.length === 0}
+            loading={bulkLoading}
+            onClick={handleBulkGeneratePasswords}
+          >
+            Generate password
+          </Button>
           {isSuperAdmin() && (
             <Button icon={<Download size={16} />} onClick={handleExport}>
               Excel export
@@ -358,6 +479,7 @@ const Moderators = () => {
       ) : (
         <Table
           rowKey="id"
+          rowSelection={rowSelection}
           columns={columns}
           dataSource={moderators}
           loading={loading}
