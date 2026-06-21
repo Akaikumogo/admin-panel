@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Card, Select, Spin, Table, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Card, Empty, Select, Spin, Table, Tag } from 'antd';
 import { HeartPulse } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
@@ -14,6 +14,11 @@ const T = {
   org: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
   byUser: { uz: 'Kim qancha', en: 'By user', ru: 'По пользователям' },
   byQuestion: { uz: 'Qaysi savollar', en: 'By question', ru: 'По вопросам' },
+  empty: {
+    uz: 'Tanlangan davrda yurak yo‘qotilmagan',
+    en: 'No hearts lost in the selected range',
+    ru: 'За выбранный период сердца не теряли',
+  },
 } as const;
 
 export default function HeartsAnalyticsPage() {
@@ -21,21 +26,42 @@ export default function HeartsAnalyticsPage() {
   const [range, setRange] = useState<'today' | 'month' | 'year'>('today');
   const [orgId, setOrgId] = useState<string>('all');
 
-  const { data: me } = useFetch<UserProfile | null>(['me'], () => apiService.me(), null);
-  const { data: orgs } = useFetch(
+  // Org select uchun debounce — har tugma bosishda darhol fetch qilmaymiz.
+  const [debouncedOrgId, setDebouncedOrgId] = useState(orgId);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedOrgId(orgId), 300);
+    return () => clearTimeout(t);
+  }, [orgId]);
+
+  const { data: me, initialLoading: meLoading } = useFetch<UserProfile | null>(
+    ['me'],
+    () => apiService.me(),
+    null,
+  );
+  const { data: orgs, initialLoading: orgsLoading } = useFetch(
     ['organizations-for-analytics'],
     () => apiService.getOrganizations(),
     [] as Organization[],
   );
 
-  const effectiveOrgId =
-    me?.role === 'SUPERADMIN'
-      ? orgId
-      : me?.organizations?.[0]?.id ?? 'all';
+  const isSuperadmin = me?.role === 'SUPERADMIN';
+  // Race-condition gate: superadmin uchun orgs yuklanmaguncha so'rov ketmaydi.
+  const ready = !!me && (!isSuperadmin || !orgsLoading);
+  const effectiveOrgId = isSuperadmin
+    ? debouncedOrgId
+    : me?.organizations?.[0]?.id ?? 'all';
 
   const { data, loading, initialLoading } = useFetch<HeartsLostAnalyticsResponse>(
     ['hearts-lost', range, effectiveOrgId],
-    () => apiService.getHeartsLostAnalytics({ range, orgId: effectiveOrgId }),
+    () =>
+      ready
+        ? apiService.getHeartsLostAnalytics({ range, orgId: effectiveOrgId })
+        : Promise.resolve<HeartsLostAnalyticsResponse>({
+            orgId: effectiveOrgId,
+            range: { from: '', to: '' },
+            byUser: [],
+            byQuestion: [],
+          }),
     { orgId: effectiveOrgId, range: { from: '', to: '' }, byUser: [], byQuestion: [] },
   );
 
@@ -89,13 +115,17 @@ export default function HeartsAnalyticsPage() {
     [t],
   );
 
-  if (initialLoading || !me) {
+  if (initialLoading || meLoading || !me || (isSuperadmin && orgsLoading)) {
     return (
       <div className="flex items-center justify-center h-64">
         <Spin size="large" />
       </div>
     );
   }
+
+  const emptyLocale = {
+    emptyText: <Empty description={t(T.empty)} image={Empty.PRESENTED_IMAGE_SIMPLE} />,
+  };
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
@@ -144,6 +174,7 @@ export default function HeartsAnalyticsPage() {
           columns={byUserColumns}
           pagination={false}
           size="small"
+          locale={emptyLocale}
         />
       </Card>
 
@@ -158,6 +189,7 @@ export default function HeartsAnalyticsPage() {
           columns={byQuestionColumns}
           pagination={false}
           size="small"
+          locale={emptyLocale}
         />
       </Card>
     </div>

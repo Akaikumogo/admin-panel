@@ -697,7 +697,9 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 900000,
+      // 60s — odatdagi data so'rovlar uchun. Fayl yuklash uchun
+      // call-site da timeout override qilinishi kerak (uploadFile).
+      timeout: 60_000,
       headers: {
         'Content-Type': 'application/json'
       }
@@ -794,7 +796,8 @@ class ApiService {
       success: boolean;
       avatarUrl: string;
     }>('/users/me/avatar', form, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 5 * 60 * 1000,
     });
     return response.data;
   }
@@ -810,7 +813,8 @@ class ApiService {
       avatarUrl: string;
       userId: string;
     }>(`/users/${userId}/avatar`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 5 * 60 * 1000,
     });
     return response.data;
   }
@@ -836,6 +840,7 @@ class ApiService {
       originalName: string;
     }>('/admin/upload/audio', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 15 * 60 * 1000,
       onUploadProgress: (e) => {
         if (!onProgress || !e.total) return;
         onProgress(Math.round((e.loaded / e.total) * 100));
@@ -864,6 +869,7 @@ class ApiService {
       originalName: string;
     }>('/admin/upload/video', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 15 * 60 * 1000,
       onUploadProgress: (e) => {
         if (!onProgress || !e.total) return;
         onProgress(Math.round((e.loaded / e.total) * 100));
@@ -892,6 +898,7 @@ class ApiService {
       originalName: string;
     }>('/admin/upload/image', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 15 * 60 * 1000,
       onUploadProgress: (e) => {
         if (!onProgress || !e.total) return;
         onProgress(Math.round((e.loaded / e.total) * 100));

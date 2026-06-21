@@ -16,7 +16,7 @@ import {
   Col,
   Typography,
   Avatar,
-  Spin,
+  Skeleton,
   Table,
   Tag,
   Progress
@@ -71,56 +71,51 @@ const KPI_LABELS: Record<string, { uz: string; en: string; ru: string }> = {
   totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' }
 };
 
-interface DashboardData {
-  me: UserProfile | null;
-  adminPing: { message: string } | null;
-  summary: AnalyticsSummary | null;
-  funnel: LevelFunnelItem[];
-  errorQuestions: QuestionError[];
-}
-
-const INITIAL_DATA: DashboardData = {
-  me: null, adminPing: null, summary: null, funnel: [], errorQuestions: [],
-};
-
 export default function HomePage() {
   const { t } = useTranslation();
 
-  const { data, loading, refetch } = useFetch<DashboardData>(
-    ['dashboard'],
-    async () => {
-      const me = await apiService.me();
+  // Har bir bo'lim alohida useFetch — biri sekin bo'lsa boshqalari blok bo'lmaydi.
+  const { data: me, refetch: refetchMe, initialLoading: meLoading } =
+    useFetch<UserProfile | null>(['me'], () => apiService.me(), null);
 
-      // admin/ping faqat SUPERADMIN uchun. MODERATOR/USER uchun fetch qilmaymiz,
-      // aks holda 403 kelib global notification pop-up chiqadi.
-      const adminPing =
-        me.role === 'SUPERADMIN' ? await apiService.adminPing() : null;
+  const orgIdForAnalytics =
+    me?.role === 'SUPERADMIN' ? 'all' : me?.organizations?.[0]?.id ?? 'all';
+  const ready = !!me;
 
-      const orgIdForAnalytics =
-        me.role === 'SUPERADMIN'
-          ? 'all'
-          : me.organizations?.[0]?.id ?? 'all';
-
-      const [summary, funnel, errorQuestions] = await Promise.all([
-        apiService.getAnalyticsSummary(orgIdForAnalytics),
-        apiService.getLevelFunnel(orgIdForAnalytics),
-        apiService.getQuestionErrors(orgIdForAnalytics),
-      ]);
-
-      return { me, adminPing, summary, funnel, errorQuestions };
-    },
-    INITIAL_DATA,
+  const { data: adminPing } = useFetch<{ message: string } | null>(
+    ['admin-ping', me?.role],
+    () => (me?.role === 'SUPERADMIN' ? apiService.adminPing() : Promise.resolve(null)),
+    null,
   );
 
-  const { me, adminPing, summary, funnel, errorQuestions } = data;
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Spin size="large" />
-      </div>
+  const { data: summary, initialLoading: summaryLoading } =
+    useFetch<AnalyticsSummary | null>(
+      ['analytics-summary', orgIdForAnalytics],
+      () =>
+        ready
+          ? apiService.getAnalyticsSummary(orgIdForAnalytics)
+          : Promise.resolve(null),
+      null,
     );
-  }
+
+  const { data: funnel, initialLoading: funnelLoading } = useFetch<LevelFunnelItem[]>(
+    ['level-funnel', orgIdForAnalytics],
+    () =>
+      ready
+        ? apiService.getLevelFunnel(orgIdForAnalytics)
+        : Promise.resolve([] as LevelFunnelItem[]),
+    [] as LevelFunnelItem[],
+  );
+
+  const { data: errorQuestions, initialLoading: errorsLoading } =
+    useFetch<QuestionError[]>(
+      ['question-errors', orgIdForAnalytics],
+      () =>
+        ready
+          ? apiService.getQuestionErrors(orgIdForAnalytics)
+          : Promise.resolve([] as QuestionError[]),
+      [] as QuestionError[],
+    );
 
   const errorColumns = [
     {
@@ -175,13 +170,17 @@ export default function HomePage() {
               >
                 <Icon size={18} className="text-white" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {t(KPI_LABELS[key])}
                 </p>
-                <p className="text-xl font-bold text-slate-900 dark:text-white">
-                  {summary?.[key as keyof AnalyticsSummary] ?? 0}
-                </p>
+                {summaryLoading ? (
+                  <Skeleton.Input active size="small" style={{ width: 60 }} />
+                ) : (
+                  <p className="text-xl font-bold text-slate-900 dark:text-white">
+                    {summary?.[key as keyof AnalyticsSummary] ?? 0}
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -196,16 +195,22 @@ export default function HomePage() {
             bodyStyle={{ padding: '20px' }}
           >
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1 min-w-0">
                 <Text className="text-slate-500 dark:text-slate-400 text-sm">
                   {t({ uz: 'Profil', ru: 'Профиль', en: 'Profile' })}
                 </Text>
-                <Title level={4} className="!mb-0 !mt-1">
-                  {me?.firstName} {me?.lastName}
-                </Title>
-                <Text className="text-slate-500">
-                  {me?.email} • {me?.role}
-                </Text>
+                {meLoading ? (
+                  <Skeleton active title={false} paragraph={{ rows: 2 }} />
+                ) : (
+                  <>
+                    <Title level={4} className="!mb-0 !mt-1">
+                      {me?.firstName} {me?.lastName}
+                    </Title>
+                    <Text className="text-slate-500">
+                      {me?.email} • {me?.role}
+                    </Text>
+                  </>
+                )}
               </div>
               <Avatar
                 size={48}
@@ -244,7 +249,7 @@ export default function HomePage() {
                 </div>
               </div>
               {me?.role === 'SUPERADMIN' ? (
-                <Button type="primary" onClick={refetch}>
+                <Button type="primary" onClick={() => refetchMe()}>
                   {t({ uz: 'Yangilash', ru: 'Обновить', en: 'Refresh' })}
                 </Button>
               ) : null}
@@ -254,7 +259,7 @@ export default function HomePage() {
       </Row>
 
       {/* Level Funnel */}
-      {funnel.length > 0 && (
+      {(funnelLoading || funnel.length > 0) && (
         <Card
           title={
             <span className="flex items-center gap-2">
@@ -268,6 +273,9 @@ export default function HomePage() {
           }
           className="!border-slate-200 dark:!border-slate-700/60"
         >
+          {funnelLoading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : (
           <div className="space-y-3">
             {funnel.map((item) => {
               const pct =
@@ -292,11 +300,12 @@ export default function HomePage() {
               );
             })}
           </div>
+          )}
         </Card>
       )}
 
       {/* Error Questions */}
-      {errorQuestions.length > 0 && (
+      {(errorsLoading || errorQuestions.length > 0) && (
         <Card
           title={
             <span className="flex items-center gap-2 text-red-600 dark:text-red-400">
@@ -310,13 +319,17 @@ export default function HomePage() {
           }
           className="!border-slate-200 dark:!border-slate-700/60"
         >
-          <Table
-            dataSource={errorQuestions}
-            columns={errorColumns}
-            rowKey="questionId"
-            pagination={false}
-            size="small"
-          />
+          {errorsLoading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : (
+            <Table
+              dataSource={errorQuestions}
+              columns={errorColumns}
+              rowKey="questionId"
+              pagination={false}
+              size="small"
+            />
+          )}
         </Card>
       )}
     </div>
