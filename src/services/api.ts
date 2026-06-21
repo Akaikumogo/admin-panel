@@ -671,6 +671,7 @@ export type NesEmployeeSyncResponse = {
 
 export type NesEmployeesSyncStatus = {
   running: boolean;
+  phase?: 'UPSERT' | 'FINALIZING';
   status: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAILED';
   processed: number;
   current: number;
@@ -687,19 +688,6 @@ export type NesEmployeesSyncStatus = {
 export type NesEmployeesSyncHealth = {
   runningSync: NesEmployeesSyncStatus | null;
   latestSync: NesEmployeesSyncStatus | null;
-};
-
-export type NesEmployeePositionHistory = {
-  id: string;
-  personnelNumber: string;
-  organizationName: string;
-  division: string;
-  post: string;
-  effectiveAt: string | null;
-  sourceCreatedAt: string | null;
-  sourceUpdatedAt: string | null;
-  createdAt: string;
-  isCurrent?: boolean;
 };
 
 class ApiService {
@@ -2095,15 +2083,6 @@ class ApiService {
   async getNesEmployeesSyncHealth(): Promise<NesEmployeesSyncHealth> {
     const response = await this.api.get<NesEmployeesSyncHealth>(
       '/admin/nes-employees/sync-health',
-    );
-    return response.data;
-  }
-
-  async getNesEmployeePositions(
-    employeeId: string,
-  ): Promise<NesEmployeePositionHistory[]> {
-    const response = await this.api.get<NesEmployeePositionHistory[]>(
-      `/admin/nes-employees/${employeeId}/positions`,
     );
     return response.data;
   }

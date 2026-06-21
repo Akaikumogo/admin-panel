@@ -11,7 +11,6 @@ import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import apiService, {
   type NesEmployee,
-  type NesEmployeePositionHistory,
   type NesEmployeesSyncStatus,
 } from '@/services/api';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
@@ -25,14 +24,13 @@ const QP_DEFAULTS = {
 
 const POLL_MS = 2000;
 
-type PositionWithCurrent = NesEmployeePositionHistory & { isCurrent?: boolean };
-
 type SyncProgress = {
   current: number;
   total: number;
   upserted: number;
   hidden: number;
   progressPercent: number;
+  phase?: NesEmployeesSyncStatus['phase'];
   status: NesEmployeesSyncStatus['status'];
 };
 
@@ -54,6 +52,7 @@ function progressFromStatus(status: NesEmployeesSyncStatus | null): SyncProgress
     upserted: mapped.upserted,
     hidden: status.hidden ?? 0,
     progressPercent: mapped.progressPercent,
+    phase: status.phase,
     status: status.status,
   };
 }
@@ -73,10 +72,6 @@ export default function NesSync() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-
-  const [positionsOpen, setPositionsOpen] = useState(false);
-  const [positionsLoading, setPositionsLoading] = useState(false);
-  const [positions, setPositions] = useState<PositionWithCurrent[]>([]);
 
   const [filterOptions, setFilterOptions] = useState<{ organizations: string[]; divisions: string[] }>({
     organizations: [],
@@ -245,24 +240,20 @@ export default function NesSync() {
     }
   };
 
-  const openPositions = async (record: NesEmployee) => {
-    setPositionsOpen(true);
-    setPositionsLoading(true);
-    try {
-      const data = await apiService.getNesEmployeePositions(record.id);
-      setPositions(data as PositionWithCurrent[]);
-    } finally {
-      setPositionsLoading(false);
-    }
-  };
-
   const syncLabel = (() => {
     if (!syncing) return 'ENERGO ID sinxronlash';
+    if (syncProgress.phase === 'FINALIZING') return 'Yakunlanmoqda...';
     if (syncProgress.total > 0) {
       return `${syncProgress.current} / ${syncProgress.total} (${syncProgress.progressPercent}%)`;
     }
     return 'Yuklanmoqda...';
   })();
+
+  const syncStatusLabel = syncing
+    ? syncProgress.phase === 'FINALIZING'
+      ? 'Yakunlanmoqda...'
+      : 'Sinxronlanmoqda...'
+    : 'Tayyor';
 
   const columns = useMemo<ColumnsType<NesEmployee>>(() => {
     const base: ColumnsType<NesEmployee> = [
@@ -315,28 +306,16 @@ export default function NesSync() {
       );
     }
 
-    base.push(
-      {
-        title: 'Sync',
-        dataIndex: 'lastSyncedAt',
-        key: 'lastSyncedAt',
-        render: (value: string) => (
-          <span className="text-sm">
-            {value ? new Date(value).toLocaleString() : '—'}
-          </span>
-        ),
-      },
-      {
-        title: '',
-        key: 'actions',
-        width: 160,
-        render: (_: unknown, record: NesEmployee) => (
-          <Button size="small" onClick={() => openPositions(record)}>
-            Xronologiya
-          </Button>
-        ),
-      },
-    );
+    base.push({
+      title: 'Sync',
+      dataIndex: 'lastSyncedAt',
+      key: 'lastSyncedAt',
+      render: (value: string) => (
+        <span className="text-sm">
+          {value ? new Date(value).toLocaleString() : '—'}
+        </span>
+      ),
+    });
 
     return base;
   }, []);
@@ -404,7 +383,7 @@ export default function NesSync() {
               <span
                 className={`w-2 h-2 rounded-full ${syncing ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}
               />
-              {syncing ? 'Sinxronlanmoqda...' : 'Tayyor'}
+              {syncStatusLabel}
             </div>
             <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
               Jami: <strong className="text-white">{total}</strong>
@@ -422,7 +401,9 @@ export default function NesSync() {
         <Card className="!border-blue-200 dark:!border-blue-800 !bg-blue-50/50 dark:!bg-blue-950/20">
           <div className="flex items-center justify-between gap-3 mb-2 text-sm">
             <span className="font-medium text-blue-700 dark:text-blue-300">
-              Energo ID → ElektroLearn sinxron
+              {syncProgress.phase === 'FINALIZING'
+                ? 'Yakunlanmoqda (arxiv va tozalash)'
+                : 'Energo ID → ElektroLearn sinxron'}
             </span>
             <span className="text-slate-600 dark:text-slate-300 font-mono">
               {syncProgress.current} / {syncProgress.total || '…'} ({syncProgress.progressPercent}%)
@@ -545,43 +526,6 @@ export default function NesSync() {
           />
         </Card>
       )}
-
-      <Modal
-        title="Lavozim xronologiyasi"
-        open={positionsOpen}
-        onCancel={() => setPositionsOpen(false)}
-        footer={null}
-        width={1000}
-      >
-        <Table
-          dataSource={positions}
-          rowKey="id"
-          loading={positionsLoading}
-          pagination={false}
-          columns={[
-            {
-              title: 'Holat',
-              key: 'isCurrent',
-              width: 90,
-              render: (_: unknown, record: PositionWithCurrent) =>
-                record.isCurrent ? (
-                  <Tag color="green">Joriy</Tag>
-                ) : (
-                  <Tag color="default">Avvalgi</Tag>
-                ),
-            },
-            {
-              title: 'Sana',
-              dataIndex: 'effectiveAt',
-              render: (v: string | null) =>
-                v ? new Date(v).toLocaleDateString() : '—',
-            },
-            { title: 'Filial', dataIndex: 'organizationName' },
-            { title: "Bo'lim", dataIndex: 'division' },
-            { title: 'Lavozim', dataIndex: 'post' },
-          ]}
-        />
-      </Modal>
 
       <Modal
         title="Barcha xodimlarni o'chirish"
