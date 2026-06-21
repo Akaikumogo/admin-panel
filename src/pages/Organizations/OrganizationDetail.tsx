@@ -1,36 +1,118 @@
-import { Button, Card, Table, Tag, Tabs, message } from 'antd';
-import { ArrowLeft, Download, BarChart3 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+  Avatar,
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Spin,
+  Switch,
+  Table,
+  Tag,
+  Tabs,
+  message,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import {
+  ArrowLeft,
+  BarChart3,
+  Building2,
+  Download,
+  Mail,
+  Pencil,
+  Star,
+  UserMinus,
+  UserPlus,
+} from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
-import apiService, { type NesEmployee, type Organization, type StudentSummary } from '@/services/api';
+import { useQueryParams } from '@/hooks/useQueryParams';
+import apiService, {
+  type NesEmployee,
+  type Organization,
+  type StudentSummary,
+} from '@/services/api';
+import { can } from '@/utils/can';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
+
+const QP_DEFAULTS = {
+  tab: 'nes' as 'nes' | 'app' | 'moderators' | 'analytics',
+  nesPage: undefined,
+  appPage: undefined,
+} as const;
+
+const PAGE_SIZE = 20;
+
+function moderatorUsers(org: Organization | null) {
+  return (org?.users ?? []).filter((u) => u.user.role !== 'USER');
+}
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: org } = useFetch<Organization | null>(
+  const { params: qp, setParam, setParams } = useQueryParams(QP_DEFAULTS);
+  const nesPage = qp.nesPage ? parseInt(qp.nesPage, 10) : 1;
+  const appPage = qp.appPage ? parseInt(qp.appPage, 10) : 1;
+
+  const {
+    data: org,
+    loading: orgLoading,
+    refetch: refetchOrg,
+  } = useFetch<Organization | null>(
     ['organization-detail', id],
     () => apiService.getOrganizationById(id!),
     null,
   );
-  const { data: employees, total, initialLoading } = usePaginatedFetch<NesEmployee>(
-    ['org-nes-employees', org?.name],
+
+  const {
+    data: employees,
+    total: nesTotal,
+    loading: nesLoading,
+    initialLoading: nesInitialLoading,
+  } = usePaginatedFetch<NesEmployee>(
+    ['org-nes-employees', org?.name, nesPage],
     () => {
-      if (!org?.name) return Promise.resolve({ data: [], total: 0, page: 1, limit: 100 });
+      if (!org?.name) return Promise.resolve({ data: [], total: 0, page: 1, limit: PAGE_SIZE });
       return apiService.getNesEmployees({
         organizationName: org.name,
-        page: 1,
-        limit: 100,
+        page: nesPage,
+        limit: PAGE_SIZE,
       });
     },
   );
-  const { data: appEmployees } = usePaginatedFetch<StudentSummary>(
-    ['org-app-employees', id],
+
+  const {
+    data: appEmployees,
+    total: appTotal,
+    loading: appLoading,
+    initialLoading: appInitialLoading,
+  } = usePaginatedFetch<StudentSummary>(
+    ['org-app-employees', id, appPage],
     () => {
-      if (!id) return Promise.resolve({ data: [], total: 0, page: 1, limit: 50 });
-      return apiService.getStudents({ orgId: id, page: 1, limit: 50 });
+      if (!id) return Promise.resolve({ data: [], total: 0, page: 1, limit: PAGE_SIZE });
+      return apiService.getStudents({ orgId: id, page: appPage, limit: PAGE_SIZE });
     },
   );
+
+  const { data: allUsers } = useFetch(
+    ['all-users-for-org-assign'],
+    async () => {
+      const res = await apiService.getUsers();
+      return res.data;
+    },
+    [] as { id: string; firstName: string; lastName: string; email: string; role: string }[],
+  );
+
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [assignForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+
+  const moderators = useMemo(() => moderatorUsers(org), [org]);
 
   const handleExport = async () => {
     if (!id) return;
@@ -42,91 +124,335 @@ export default function OrganizationDetail() {
     }
   };
 
+  const handleAssignUser = async () => {
+    if (!id || !can('organizations', 'update')) return;
+    try {
+      const values = await assignForm.validateFields();
+      await apiService.assignUserToOrg(id, values.userId);
+      message.success('Foydalanuvchi biriktirildi');
+      setAssignOpen(false);
+      assignForm.resetFields();
+      refetchOrg();
+    } catch {
+      /* validation */
+    }
+  };
+
+  const handleRemoveUser = async (userId: string) => {
+    if (!id || !can('organizations', 'update')) return;
+    await apiService.removeUserFromOrg(id, userId);
+    message.success('Foydalanuvchi chiqarildi');
+    refetchOrg();
+  };
+
+  const openEdit = () => {
+    if (!org || !can('organizations', 'update')) return;
+    editForm.setFieldsValue({
+      name: org.name,
+      isDefault: org.isDefault ?? false,
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!id || !can('organizations', 'update')) return;
+    try {
+      const values = await editForm.validateFields();
+      setSaving(true);
+      await apiService.updateOrganization(id, values);
+      message.success('Tashkilot yangilandi');
+      setEditOpen(false);
+      refetchOrg();
+    } catch {
+      /* validation */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const nesColumns: ColumnsType<NesEmployee> = [
+    {
+      title: '№',
+      width: 64,
+      render: (_: unknown, __: NesEmployee, index: number) =>
+        (nesPage - 1) * PAGE_SIZE + index + 1,
+    },
+    {
+      title: 'Tabel',
+      dataIndex: 'personnelNumber',
+      width: 120,
+      render: (value: string) => <Tag>{value}</Tag>,
+    },
+    { title: 'F.I.O', dataIndex: 'fullName' },
+    { title: 'Lavozim', dataIndex: 'post' },
+    { title: "Bo'lim", dataIndex: 'division' },
+    {
+      title: 'Login',
+      dataIndex: 'login',
+      render: (value: string) => <Tag color="blue">{value}</Tag>,
+    },
+  ];
+
+  const appColumns: ColumnsType<StudentSummary> = [
+    {
+      title: '№',
+      width: 64,
+      render: (_: unknown, __: StudentSummary, index: number) =>
+        (appPage - 1) * PAGE_SIZE + index + 1,
+    },
+    {
+      title: 'F.I.O',
+      key: 'name',
+      render: (_: unknown, r: StudentSummary) => (
+        <span className="font-medium text-slate-900 dark:text-white">
+          {r.lastName} {r.firstName}
+        </span>
+      ),
+    },
+    {
+      title: 'Login',
+      dataIndex: 'email',
+      render: (value: string) => (
+        <span className="flex items-center gap-1 text-slate-500">
+          <Mail size={12} />
+          {value}
+        </span>
+      ),
+    },
+    {
+      title: 'Tabel',
+      dataIndex: 'personnelNumber',
+      width: 120,
+      render: (v: string | null) => (v ? <Tag>{v}</Tag> : '—'),
+    },
+    {
+      title: 'XP',
+      dataIndex: 'totalXp',
+      width: 80,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 100,
+      align: 'right',
+      render: (_: unknown, r: StudentSummary) => (
+        <Button size="small" onClick={() => navigate(`/dashboard/students/${r.id}`)}>
+          Profil
+        </Button>
+      ),
+    },
+  ];
+
+  const moderatorColumns: ColumnsType<(typeof moderators)[number]> = [
+    {
+      title: 'Foydalanuvchi',
+      key: 'user',
+      render: (_: unknown, row) => (
+        <div className="flex items-center gap-2">
+          <Avatar size={32} className="bg-blue-500">
+            {(row.user.firstName?.[0] || '') + (row.user.lastName?.[0] || '')}
+          </Avatar>
+          <div>
+            <p className="font-medium text-slate-900 dark:text-white">
+              {row.user.firstName} {row.user.lastName}
+            </p>
+            <p className="text-xs text-slate-500">{row.user.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Rol',
+      key: 'role',
+      width: 140,
+      render: (_: unknown, row) => <Tag color="blue">{row.user.role}</Tag>,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 80,
+      align: 'right',
+      render: (_: unknown, row) => (
+        <Popconfirm
+          title="Chiqarilsinmi?"
+          onConfirm={() => handleRemoveUser(row.user.id)}
+          disabled={!can('organizations', 'update')}
+        >
+          <Button
+            size="small"
+            danger
+            type="text"
+            icon={<UserMinus size={14} />}
+            disabled={!can('organizations', 'update')}
+          />
+        </Popconfirm>
+      ),
+    },
+  ];
+
+  if (orgLoading && !org) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-100px)]">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button icon={<ArrowLeft size={16} />} onClick={() => navigate('/dashboard/organizations')}>
           Orqaga
         </Button>
-        {isSuperAdmin() && (
-          <Button type="primary" icon={<Download size={16} />} onClick={handleExport}>
-            Login-parollar (Excel)
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {can('organizations', 'update') && (
+            <Button icon={<Pencil size={16} />} onClick={openEdit}>
+              Tahrirlash
+            </Button>
+          )}
+          {isSuperAdmin() && (
+            <Button type="primary" icon={<Download size={16} />} onClick={handleExport}>
+              Login-parollar (Excel)
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Card title={org?.name || 'Tashkilot'}>
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div>
-            <div className="text-xs text-slate-500">ID</div>
-            <div className="font-mono text-sm">{org?.id}</div>
+      <Card className="!border-slate-200 dark:!border-slate-700/60">
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+            <Building2 size={26} className="text-white" />
           </div>
-          <div>
-            <div className="text-xs text-slate-500">Moderatorlar</div>
-            <div className="text-sm">
-              {(org?.users ?? [])
-                .filter((u) => u.user.role === 'MODERATOR')
-                .map((u) => `${u.user.firstName} ${u.user.lastName}`)
-                .join(', ') || '—'}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white truncate">
+                {org?.name || 'Tashkilot'}
+              </h1>
+              {org?.isDefault && (
+                <Tag color="gold" className="flex items-center gap-1">
+                  <Star size={12} />
+                  Asosiy
+                </Tag>
+              )}
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+              <div>
+                <div className="text-xs text-slate-500">ID</div>
+                <div className="font-mono text-xs break-all">{org?.id}</div>
+              </div>
+              {org?.branchCode && (
+                <div>
+                  <div className="text-xs text-slate-500">Filial kodi</div>
+                  <div>{org.branchCode}</div>
+                </div>
+              )}
+              {org?.energoExternalId && (
+                <div>
+                  <div className="text-xs text-slate-500">Energo ID (1C)</div>
+                  <div className="font-mono text-xs">{org.energoExternalId}</div>
+                </div>
+              )}
+              <div>
+                <div className="text-xs text-slate-500">Yaratilgan</div>
+                <div>
+                  {org?.createdAt ? new Date(org.createdAt).toLocaleDateString() : '—'}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Tag>ENERGO ID: {nesTotal} ta</Tag>
+              <Tag color="blue">App: {appTotal} ta</Tag>
+              <Tag color="purple">Moderator: {moderators.length} ta</Tag>
             </div>
           </div>
-          <div>
-            <div className="text-xs text-slate-500">App xodimlar</div>
-            <div className="text-sm">{appEmployees.length} ta</div>
-          </div>
         </div>
+      </Card>
 
+      <Card className="!border-slate-200 dark:!border-slate-700/60">
         <Tabs
+          activeKey={qp.tab}
+          onChange={(key) =>
+            setParams({
+              tab: key as typeof qp.tab,
+              nesPage: undefined,
+              appPage: undefined,
+            })
+          }
           items={[
             {
               key: 'nes',
-              label: '1C / NES xodimlar',
-              children: (
-                <>
-                  <Table
-                    rowKey="id"
-                    loading={initialLoading}
-                    dataSource={employees}
-                    pagination={false}
-                    columns={[
-                      {
-                        title: '№',
-                        width: 64,
-                        render: (_: unknown, __: NesEmployee, index: number) => index + 1,
-                      },
-                      {
-                        title: 'Tabel',
-                        dataIndex: 'personnelNumber',
-                        render: (value: string) => <Tag>{value}</Tag>,
-                      },
-                      { title: 'F.I.O', dataIndex: 'fullName' },
-                      { title: 'Lavozim', dataIndex: 'post' },
-                      { title: 'Bo`lim', dataIndex: 'division' },
-                    ]}
-                  />
-                  <div className="mt-3 text-xs text-slate-500">Jami: {total}</div>
-                </>
-              ),
-            },
-            {
-              key: 'app',
-              label: 'App xodimlar',
+              label: `ENERGO ID xodimlar (${nesTotal})`,
               children: (
                 <Table
                   rowKey="id"
-                  dataSource={appEmployees}
-                  pagination={false}
-                  columns={[
-                    { title: 'F.I.O', render: (_: unknown, r: StudentSummary) => `${r.lastName} ${r.firstName}` },
-                    { title: 'Login', dataIndex: 'email' },
-                    { title: 'Tabel', dataIndex: 'personnelNumber', render: (v: string | null) => v ?? '—' },
-                  ]}
+                  loading={nesInitialLoading || nesLoading}
+                  dataSource={employees}
+                  columns={nesColumns}
+                  pagination={{
+                    current: nesPage,
+                    pageSize: PAGE_SIZE,
+                    total: nesTotal,
+                    showSizeChanger: false,
+                    onChange: (page) => setParam('nesPage', page > 1 ? String(page) : undefined),
+                  }}
                 />
               ),
             },
             {
+              key: 'app',
+              label: `App xodimlar (${appTotal})`,
+              children: (
+                <Table
+                  rowKey="id"
+                  loading={appInitialLoading || appLoading}
+                  dataSource={appEmployees}
+                  columns={appColumns}
+                  onRow={(record) => ({
+                    onClick: () => navigate(`/dashboard/students/${record.id}`),
+                    className: 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5',
+                  })}
+                  pagination={{
+                    current: appPage,
+                    pageSize: PAGE_SIZE,
+                    total: appTotal,
+                    showSizeChanger: false,
+                    onChange: (page) => setParam('appPage', page > 1 ? String(page) : undefined),
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'moderators',
+              label: `Moderatorlar (${moderators.length})`,
+              children: (
+                <>
+                  {can('organizations', 'update') && (
+                    <div className="mb-3">
+                      <Button
+                        type="primary"
+                        icon={<UserPlus size={16} />}
+                        onClick={() => {
+                          setAssignOpen(true);
+                          assignForm.resetFields();
+                        }}
+                      >
+                        Moderator biriktirish
+                      </Button>
+                    </div>
+                  )}
+                  <Table
+                    rowKey={(row) => row.id}
+                    dataSource={moderators}
+                    columns={moderatorColumns}
+                    pagination={false}
+                    locale={{ emptyText: 'Moderator biriktirilmagan' }}
+                  />
+                </>
+              ),
+            },
+            {
               key: 'analytics',
-              label: 'Filial analitikasi',
+              label: 'Analitika',
               children: (
                 <div className="py-2">
                   <Button
@@ -145,6 +471,65 @@ export default function OrganizationDetail() {
           ]}
         />
       </Card>
+
+      <Modal
+        title="Moderator biriktirish"
+        open={assignOpen}
+        onCancel={() => setAssignOpen(false)}
+        onOk={handleAssignUser}
+        okText="Saqlash"
+        cancelText="Bekor qilish"
+        okButtonProps={{ disabled: !can('organizations', 'update') }}
+      >
+        <Form form={assignForm} layout="vertical">
+          <Form.Item
+            name="userId"
+            label="Foydalanuvchi"
+            rules={[{ required: true, message: 'Tanlang' }]}
+          >
+            <Select
+              showSearch
+              placeholder="Foydalanuvchini tanlang"
+              optionFilterProp="label"
+              options={allUsers
+                .filter((u) => u.role !== 'USER')
+                .map((u) => ({
+                  value: u.id,
+                  label: `${u.firstName} ${u.lastName} (${u.email})`,
+                }))}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Tashkilotni tahrirlash"
+        open={editOpen}
+        onCancel={() => setEditOpen(false)}
+        onOk={handleEditSave}
+        confirmLoading={saving}
+        okText="Saqlash"
+        cancelText="Bekor qilish"
+        okButtonProps={{ disabled: !can('organizations', 'update') }}
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="name" label="Tashkilot nomi" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="isDefault"
+            label={
+              <span className="flex items-center gap-2">
+                <Star size={14} className="text-amber-500" />
+                Asosiy tashkilot
+              </span>
+            }
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Card,
@@ -9,22 +9,20 @@ import {
   Tag,
   Popconfirm,
   message,
-  Avatar,
-  Select,
-  Switch
+  Switch,
+  Table,
 } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   Plus,
   Pencil,
   Trash2,
   Building2,
-  UserPlus,
-  UserMinus,
   Filter,
   Search,
-  Star
+  Star,
+  Eye,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch } from '@/hooks/useFetch';
@@ -40,49 +38,50 @@ const T = {
   addOrg: {
     uz: 'Tashkilot qo`shish',
     en: 'Add Organization',
-    ru: 'Добавить организацию'
+    ru: 'Добавить организацию',
   },
   editOrg: {
     uz: 'Tashkilotni tahrirlash',
     en: 'Edit Organization',
-    ru: 'Редактировать'
+    ru: 'Редактировать',
   },
   orgName: { uz: 'Tashkilot nomi', en: 'Organization name', ru: 'Название' },
   members: { uz: 'A`zolar', en: 'Members', ru: 'Участники' },
-  addMember: { uz: 'A`zo qo`shish', en: 'Add Member', ru: 'Добавить' },
-  removeMember: { uz: 'Chiqarish', en: 'Remove', ru: 'Удалить' },
+  moderators: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
   save: { uz: 'Saqlash', en: 'Save', ru: 'Сохранить' },
   cancel: { uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' },
   deleteConfirm: {
     uz: 'Rostdan o`chirmoqchimisiz?',
     en: 'Are you sure?',
-    ru: 'Вы уверены?'
+    ru: 'Вы уверены?',
   },
   noData: {
     uz: 'Tashkilotlar yo`q',
     en: 'No organizations',
-    ru: 'Нет организаций'
+    ru: 'Нет организаций',
   },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
-  selectUser: {
-    uz: 'Foydalanuvchini tanlang',
-    en: 'Select user',
-    ru: 'Выберите пользователя'
-  },
   mainOrg: {
     uz: 'Asosiy tashkilot',
     en: 'Main organization',
-    ru: 'Главная организация'
+    ru: 'Главная организация',
   },
   mainOrgHint: {
     uz: 'Faqat bitta tashkilot asosiy bo`la oladi. Yoqilsa, oldingi asosiy tashkilot avtomat o`chiriladi.',
     en: 'Only one organization can be main. Enabling will unset the previous main org.',
-    ru: 'Только одна организация может быть главной. Включение снимет флаг с предыдущей.'
+    ru: 'Только одна организация может быть главной. Включение снимет флаг с предыдущей.',
   },
-  mainTag: { uz: 'Asosiy', en: 'Main', ru: 'Главная' }
+  mainTag: { uz: 'Asosiy', en: 'Main', ru: 'Главная' },
+  actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
+  view: { uz: 'Batafsil', en: 'Details', ru: 'Подробнее' },
+  total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
 } as const;
 
 const QP_DEFAULTS = { search: undefined } as const;
+
+function countModerators(org: Organization) {
+  return org.users?.filter((u) => u.user.role !== 'USER').length ?? 0;
+}
 
 const Organizations = () => {
   const { t } = useTranslation();
@@ -91,26 +90,22 @@ const Organizations = () => {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const {
-    data: organizations, loading, initialLoading, refetch: refetchOrgs,
+    data: organizations,
+    loading,
+    initialLoading,
+    refetch: refetchOrgs,
   } = useFetch(
     ['organizations', qp.search],
     () => apiService.getOrganizations({ search: qp.search || undefined }),
     [] as Organization[],
   );
-  const { data: allUsers } = useFetch(
-    ['all-users'],
-    async () => { const res = await apiService.getUsers(); return res.data; },
-    [] as { id: string; firstName: string; lastName: string; email: string }[],
-  );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Organization | null>(null);
-  const [assignModal, setAssignModal] = useState<{ open: boolean; orgId: string }>({ open: false, orgId: '' });
   const [form] = Form.useForm();
-  const [assignForm] = Form.useForm();
   const [saving, setSaving] = useState(false);
 
-  const openModal = (org?: Organization) => {
+  const openModal = useCallback((org?: Organization) => {
     if (org && !can('organizations', 'update')) return;
     if (!org && !can('organizations', 'create')) return;
     setEditing(org ?? null);
@@ -124,7 +119,7 @@ const Organizations = () => {
       form.resetFields();
       form.setFieldsValue({ isDefault: false });
     }
-  };
+  }, [form]);
 
   const handleSave = async () => {
     if (editing && !can('organizations', 'update')) return;
@@ -156,26 +151,110 @@ const Organizations = () => {
     refetchOrgs();
   };
 
-  const handleAssignUser = async () => {
-    if (!can('organizations', 'update')) return;
-    try {
-      const values = await assignForm.validateFields();
-      await apiService.assignUserToOrg(assignModal.orgId, values.userId);
-      message.success('Foydalanuvchi biriktirildi');
-      setAssignModal({ open: false, orgId: '' });
-      assignForm.resetFields();
-      refetchOrgs();
-    } catch {
-      /* validation */
-    }
-  };
-
-  const handleRemoveUser = async (orgId: string, userId: string) => {
-    if (!can('organizations', 'update')) return;
-    await apiService.removeUserFromOrg(orgId, userId);
-    message.success('Foydalanuvchi chiqarildi');
-    refetchOrgs();
-  };
+  const columns = useMemo<ColumnsType<Organization>>(
+    () => [
+      {
+        title: '№',
+        key: 'index',
+        width: 64,
+        render: (_: unknown, __: Organization, index: number) => (
+          <span className="text-sm text-slate-500">{index + 1}</span>
+        ),
+      },
+      {
+        title: t(T.orgName),
+        key: 'name',
+        render: (_: unknown, org: Organization) => (
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+              <Building2 size={16} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-900 dark:text-white truncate">
+                <HighlightText text={org.name} highlight={qp.search} />
+              </p>
+              {org.branchCode && (
+                <p className="text-xs text-slate-500 truncate">Kod: {org.branchCode}</p>
+              )}
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: t(T.members),
+        key: 'members',
+        width: 110,
+        render: (_: unknown, org: Organization) => (
+          <span className="text-sm">{org.users?.length ?? 0}</span>
+        ),
+      },
+      {
+        title: t(T.moderators),
+        key: 'moderators',
+        width: 120,
+        render: (_: unknown, org: Organization) => {
+          const count = countModerators(org);
+          return count > 0 ? (
+            <Tag color="blue">{count}</Tag>
+          ) : (
+            <span className="text-slate-400">—</span>
+          );
+        },
+      },
+      {
+        title: t(T.mainTag),
+        key: 'isDefault',
+        width: 100,
+        render: (_: unknown, org: Organization) =>
+          org.isDefault ? (
+            <Tag color="gold" className="flex items-center gap-1 w-fit">
+              <Star size={12} />
+              {t(T.mainTag)}
+            </Tag>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+      },
+      {
+        title: t(T.actions),
+        key: 'actions',
+        width: 140,
+        align: 'right',
+        render: (_: unknown, org: Organization) => (
+          <div
+            className="flex items-center justify-end gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button
+              size="small"
+              icon={<Eye size={14} />}
+              title={t(T.view)}
+              onClick={() => navigate(`/dashboard/organizations/${org.id}`)}
+            />
+            <Button
+              size="small"
+              icon={<Pencil size={14} />}
+              onClick={() => openModal(org)}
+              disabled={!can('organizations', 'update')}
+            />
+            <Popconfirm
+              title={t(T.deleteConfirm)}
+              onConfirm={() => handleDelete(org.id)}
+              disabled={!can('organizations', 'delete')}
+            >
+              <Button
+                size="small"
+                danger
+                icon={<Trash2 size={14} />}
+                disabled={!can('organizations', 'delete')}
+              />
+            </Popconfirm>
+          </div>
+        ),
+      },
+    ],
+    [navigate, openModal, qp.search, t],
+  );
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
@@ -192,20 +271,19 @@ const Organizations = () => {
             const val = e.target.value;
             searchTimerRef.current = setTimeout(
               () => setParam('search', val || undefined),
-              400
+              400,
             );
           }}
         />
-        <div className="ml-auto">
-          <Button
-            type="primary"
-            icon={<Plus size={16} />}
-            onClick={() => openModal()}
-            disabled={!can('organizations', 'create')}
-          >
-            {t(T.addOrg)}
-          </Button>
-        </div>
+        <Tag className="text-sm ml-auto">{t(T.total)}: {organizations.length}</Tag>
+        <Button
+          type="primary"
+          icon={<Plus size={16} />}
+          onClick={() => openModal()}
+          disabled={!can('organizations', 'create')}
+        >
+          {t(T.addOrg)}
+        </Button>
       </div>
 
       {initialLoading ? (
@@ -215,128 +293,25 @@ const Organizations = () => {
       ) : organizations.length === 0 && !loading ? (
         <NoData text={t(T.noData)} />
       ) : (
-        <div
-          className={`grid grid-cols-1 lg:grid-cols-2 gap-4 items-start transition-opacity duration-150 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+        <Card
+          className={`!border-slate-200 dark:!border-slate-700/60 transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
         >
-          <AnimatePresence mode="popLayout">
-            {organizations.map((org, index) => (
-              <motion.div
-                key={org.id}
-                layoutId={org.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card className="!border-slate-200 dark:!border-slate-700/60 w-full">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                        <Building2 size={20} className="text-white" />
-                      </div>
-                      <div>
-                        <h3
-                          className="font-semibold text-slate-900 dark:text-white cursor-pointer hover:underline flex items-center gap-2 flex-wrap"
-                          onClick={() => navigate(`/dashboard/organizations/${org.id}`)}
-                        >
-                          <span className="text-slate-400">#{index + 1}</span>
-                          <HighlightText
-                            text={org.name}
-                            highlight={qp.search}
-                          />
-                          {org.isDefault && (
-                            <Tag color="gold" className="!m-0 flex items-center gap-1">
-                              <Star size={12} />
-                              <span>{t(T.mainTag)}</span>
-                            </Tag>
-                          )}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {org.users?.length || 0} {t(T.members).toLowerCase()}
-                          {(() => {
-                            const modCount = org.users?.filter(u => u.user.role !== 'USER').length ?? 0;
-                            return modCount > 0 ? ` · ${modCount} moderator` : '';
-                          })()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="small"
-                        icon={<UserPlus size={14} />}
-                        onClick={() => {
-                          setAssignModal({ open: true, orgId: org.id });
-                          assignForm.resetFields();
-                        }}
-                        disabled={!can('organizations', 'update')}
-                      />
-                      <Button
-                        size="small"
-                        icon={<Pencil size={14} />}
-                        onClick={() => openModal(org)}
-                        disabled={!can('organizations', 'update')}
-                      />
-                      <Popconfirm
-                        title={t(T.deleteConfirm)}
-                        onConfirm={() => handleDelete(org.id)}
-                        disabled={!can('organizations', 'delete')}
-                      >
-                        <Button
-                          size="small"
-                          danger
-                          icon={<Trash2 size={14} />}
-                          disabled={!can('organizations', 'delete')}
-                        />
-                      </Popconfirm>
-                    </div>
-                  </div>
-
-                  {org.users && org.users.some(u => u.user.role !== 'USER') && (
-                    <div className="space-y-2">
-                      {org.users.filter(u => u.user.role !== 'USER').map((uo) => (
-                        <div
-                          key={uo.id}
-                          className="flex items-center justify-between bg-slate-50 dark:bg-black/20 rounded-lg px-3 py-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Avatar size={28} className="bg-blue-500 text-xs">
-                              {(uo.user.firstName?.[0] || '') +
-                                (uo.user.lastName?.[0] || '')}
-                            </Avatar>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                {uo.user.firstName} {uo.user.lastName}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {uo.user.email}
-                              </p>
-                            </div>
-                            <Tag className="text-xs">{uo.user.role}</Tag>
-                          </div>
-                          <Popconfirm
-                            title={t(T.deleteConfirm)}
-                            onConfirm={() =>
-                              handleRemoveUser(org.id, uo.user.id)
-                            }
-                            disabled={!can('organizations', 'update')}
-                          >
-                            <Button
-                              size="small"
-                              danger
-                              type="text"
-                              icon={<UserMinus size={12} />}
-                              disabled={!can('organizations', 'update')}
-                            />
-                          </Popconfirm>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+          <Table
+            rowKey="id"
+            dataSource={organizations}
+            columns={columns}
+            loading={initialLoading}
+            pagination={{
+              pageSize: 20,
+              showSizeChanger: false,
+              showTotal: (total) => `${t(T.total)}: ${total}`,
+            }}
+            onRow={(record) => ({
+              onClick: () => navigate(`/dashboard/organizations/${record.id}`),
+              className: 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5',
+            })}
+          />
+        </Card>
       )}
 
       <Modal
@@ -376,34 +351,6 @@ const Organizations = () => {
             extra={t(T.mainOrgHint)}
           >
             <Switch />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={t(T.addMember)}
-        open={assignModal.open}
-        onCancel={() => setAssignModal({ open: false, orgId: '' })}
-        onOk={handleAssignUser}
-        okText={t(T.save)}
-        cancelText={t(T.cancel)}
-        okButtonProps={{ disabled: !can('organizations', 'update') }}
-      >
-        <Form form={assignForm} layout="vertical">
-          <Form.Item
-            name="userId"
-            label={t(T.selectUser)}
-            rules={[{ required: true }]}
-          >
-            <Select
-              showSearch
-              placeholder={t(T.selectUser)}
-              optionFilterProp="label"
-              options={allUsers.map((u) => ({
-                value: u.id,
-                label: `${u.firstName} ${u.lastName} (${u.email})`
-              }))}
-            />
           </Form.Item>
         </Form>
       </Modal>

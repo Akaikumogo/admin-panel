@@ -219,6 +219,9 @@ export type Organization = {
   name: string;
   parentOrganizationId?: string | null;
   isDefault?: boolean;
+  energoBranchId?: string | null;
+  energoExternalId?: string | null;
+  branchCode?: string | null;
   users?: {
     id: string;
     user: {
