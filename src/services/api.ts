@@ -1038,6 +1038,76 @@ class ApiService {
     );
   }
 
+  private async downloadJson(path: string, filename: string) {
+    const response = await this.api.get(path, { responseType: 'blob' });
+    const blob = new Blob([response.data], {
+      type: 'application/json;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async exportContentBundle() {
+    await this.downloadJson(
+      '/admin/import-export/content/export',
+      'elektrolearn-kontent.json',
+    );
+  }
+
+  async importContentBundle(file: File, replace = false) {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.api.post(
+      `/admin/import-export/content/import?replace=${replace ? 'true' : 'false'}`,
+      form,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 300000,
+      },
+    );
+    return response.data as {
+      success: boolean;
+      levels: { created: number; updated: number };
+      theories: { created: number; updated: number };
+      questions: { created: number; updated: number };
+      options: { created: number; updated: number };
+      errors: string[];
+    };
+  }
+
+  async exportModeratorsBundle() {
+    await this.downloadJson(
+      '/admin/import-export/moderators/export',
+      'elektrolearn-moderatorlar.json',
+    );
+  }
+
+  async importModeratorsBundle(file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.api.post(
+      '/admin/import-export/moderators/import',
+      form,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
+      },
+    );
+    return response.data as {
+      success: boolean;
+      created: number;
+      updated: number;
+      skipped: number;
+      errors: string[];
+    };
+  }
+
   async getAiChatStatus(): Promise<{
     provider: string;
     openRouterConfigured: boolean;

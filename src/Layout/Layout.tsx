@@ -31,7 +31,8 @@ import {
   Library,
   LibraryBig,
   Bot,
-  IdCard
+  IdCard,
+  ArrowDownUp
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -285,7 +286,20 @@ const Layout = () => {
 
   const visibleNavItems = useMemo(() => {
     if (!me) return [];
-    if (me.role === 'SUPERADMIN') return navItems;
+    if (me.role === 'SUPERADMIN') {
+      return [
+        ...navItems,
+        {
+          path: '/dashboard/import-export',
+          label: {
+            uz: 'Import / Export',
+            en: 'Import / Export',
+            ru: 'Import / Export',
+          },
+          icon: ArrowDownUp,
+        },
+      ];
+    }
     if (me.role === 'MODERATOR') {
       const hasAudioPerm =
         can('audioLibrary', 'create') ||
@@ -311,6 +325,7 @@ const Layout = () => {
     (location.pathname === '/dashboard/moderators' ||
       location.pathname === '/dashboard/users' ||
       location.pathname === '/dashboard/permissions' ||
+      location.pathname === '/dashboard/import-export' ||
       (location.pathname === '/dashboard/nes-sync' && !can('nesSync', 'view')) ||
       location.pathname === '/dashboard/exam-analysis' ||
       (location.pathname === '/dashboard/audio-library' &&

@@ -37,6 +37,7 @@ const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
 const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
+const ImportExportPage = lazy(() => import('./pages/ImportExport/ImportExport'));
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -159,6 +160,10 @@ export const routes: RouteObject[] = [
           {
             path: 'user-activity',
             element: withSuspense(UserActivityPage)
+          },
+          {
+            path: 'import-export',
+            element: withSuspense(ImportExportPage)
           },
           {
             path: 'branch-analytics',
