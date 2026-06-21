@@ -157,39 +157,36 @@ const UserActivity = () => {
   const { data: branchSummary } = useFetch<BranchAnalyticsSummary | null>(
     ['branch-summary', effectiveBranchOrgId, branchFrom, branchTo],
     () =>
-      effectiveBranchOrgId
-        ? apiService.getBranchAnalyticsSummary({
-            orgId: effectiveBranchOrgId,
-            from: branchFrom,
-            to: branchTo,
-          })
-        : Promise.resolve(null),
+      apiService.getBranchAnalyticsSummary({
+        orgId: effectiveBranchOrgId,
+        from: branchFrom,
+        to: branchTo,
+      }),
     null,
+    { enabled: !!effectiveBranchOrgId },
   );
 
   const { data: branchMatrix } = useFetch<BranchActivityMatrix | null>(
     ['branch-matrix', effectiveBranchOrgId, branchFrom, branchTo],
     () =>
-      effectiveBranchOrgId
-        ? apiService.getBranchActivityMatrix({
-            orgId: effectiveBranchOrgId,
-            from: branchFrom,
-            to: branchTo,
-          })
-        : Promise.resolve(null),
+      apiService.getBranchActivityMatrix({
+        orgId: effectiveBranchOrgId,
+        from: branchFrom,
+        to: branchTo,
+      }),
     null,
+    { enabled: !!effectiveBranchOrgId },
   );
 
   const { data: dailyPlan } = useFetch<BranchDailyPlanResult | null>(
     ['branch-daily-plan', effectiveBranchOrgId, planDateStr],
     () =>
-      effectiveBranchOrgId
-        ? apiService.getBranchDailyPlanResult({
-            orgId: effectiveBranchOrgId,
-            date: planDateStr,
-          })
-        : Promise.resolve(null),
+      apiService.getBranchDailyPlanResult({
+        orgId: effectiveBranchOrgId,
+        date: planDateStr,
+      }),
     null,
+    { enabled: !!effectiveBranchOrgId },
   );
 
   const branchKpiItems: Array<{

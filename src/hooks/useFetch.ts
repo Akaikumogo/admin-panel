@@ -11,10 +11,12 @@ export function useFetch<T>(
   key: QueryKey,
   fetcher: () => Promise<T>,
   initial: T,
+  options?: { enabled?: boolean },
 ): UseFetchReturn<T> {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: key,
     queryFn: fetcher,
+    enabled: options?.enabled ?? true,
   });
 
   return {

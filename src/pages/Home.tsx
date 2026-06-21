@@ -86,43 +86,39 @@ export default function HomePage() {
   const { data: homeOverview, initialLoading: homeOverviewLoading } =
     useFetch<HomeOverview | null>(
       ['home-overview'],
-      () => (ready ? apiService.getHomeOverview() : Promise.resolve(null)),
+      () => apiService.getHomeOverview(),
       null,
+      { enabled: ready },
     );
 
   const { data: adminPing } = useFetch<{ message: string } | null>(
     ['admin-ping', me?.role],
-    () => (me?.role === 'SUPERADMIN' ? apiService.adminPing() : Promise.resolve(null)),
+    () => apiService.adminPing(),
     null,
+    { enabled: me?.role === 'SUPERADMIN' },
   );
 
   const { data: summary, initialLoading: summaryLoading } =
     useFetch<AnalyticsSummary | null>(
       ['analytics-summary', orgIdForAnalytics],
-      () =>
-        ready
-          ? apiService.getAnalyticsSummary(orgIdForAnalytics)
-          : Promise.resolve(null),
+      () => apiService.getAnalyticsSummary(orgIdForAnalytics),
       null,
+      { enabled: ready },
     );
 
   const { data: funnel, initialLoading: funnelLoading } = useFetch<LevelFunnelItem[]>(
     ['level-funnel', orgIdForAnalytics],
-    () =>
-      ready
-        ? apiService.getLevelFunnel(orgIdForAnalytics)
-        : Promise.resolve([] as LevelFunnelItem[]),
+    () => apiService.getLevelFunnel(orgIdForAnalytics),
     [] as LevelFunnelItem[],
+    { enabled: ready },
   );
 
   const { data: errorQuestions, initialLoading: errorsLoading } =
     useFetch<QuestionError[]>(
       ['question-errors', orgIdForAnalytics],
-      () =>
-        ready
-          ? apiService.getQuestionErrors(orgIdForAnalytics)
-          : Promise.resolve([] as QuestionError[]),
+      () => apiService.getQuestionErrors(orgIdForAnalytics),
       [] as QuestionError[],
+      { enabled: ready },
     );
 
   const errorColumns = [

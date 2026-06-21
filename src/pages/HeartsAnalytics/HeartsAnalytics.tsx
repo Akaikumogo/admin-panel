@@ -88,16 +88,9 @@ export default function HeartsAnalyticsPage() {
 
   const { data, loading, initialLoading } = useFetch<HeartsLostAnalyticsResponse>(
     ['hearts-lost', range, effectiveOrgId],
-    () =>
-      ready
-        ? apiService.getHeartsLostAnalytics({ range, orgId: effectiveOrgId })
-        : Promise.resolve<HeartsLostAnalyticsResponse>({
-            orgId: effectiveOrgId,
-            range: { from: '', to: '' },
-            byUser: [],
-            byQuestion: [],
-          }),
+    () => apiService.getHeartsLostAnalytics({ range, orgId: effectiveOrgId }),
     { orgId: effectiveOrgId, range: { from: '', to: '' }, byUser: [], byQuestion: [] },
+    { enabled: ready },
   );
 
   const totals = useMemo(() => {
