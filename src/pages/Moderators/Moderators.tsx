@@ -28,6 +28,7 @@ import {
   Download,
   KeyRound,
   CheckSquare,
+  Pencil,
 } from 'lucide-react';
 import type { TableRowSelection } from 'antd/es/table/interface';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -76,6 +77,11 @@ const T = {
     en: 'Permissions (table)',
     ru: 'Права (таблица)',
   },
+  editModerator: {
+    uz: 'Moderatorni tahrirlash',
+    en: 'Edit moderator',
+    ru: 'Редактировать модератора',
+  },
   actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
   name: { uz: 'F.I.O', en: 'Full name', ru: 'Ф.И.О' },
   role: { uz: 'Rol', en: 'Role', ru: 'Роль' },
@@ -123,6 +129,9 @@ const Moderators = () => {
   );
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingModerator, setEditingModerator] = useState<UserProfile | null>(
+    null,
+  );
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
@@ -212,6 +221,7 @@ const Moderators = () => {
       await apiService.createModerator(payload);
       message.success('Moderator yaratildi (parol Excel exportda)');
       setModalOpen(false);
+      setEditingModerator(null);
       form.resetFields();
       refetch();
     } catch {
@@ -219,6 +229,62 @@ const Moderators = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openCreateModal = () => {
+    setEditingModerator(null);
+    form.resetFields();
+    setModalOpen(true);
+  };
+
+  const openEditModal = (mod: UserProfile) => {
+    setEditingModerator(mod);
+    form.setFieldsValue({
+      firstName: mod.firstName,
+      lastName: mod.lastName,
+      email: mod.email,
+      organizationId: mod.organizations?.[0]?.id,
+      password: undefined,
+    });
+    setModalOpen(true);
+  };
+
+  const handleSaveModerator = async () => {
+    if (editingModerator) {
+      try {
+        const values = await form.validateFields();
+        setSaving(true);
+        const payload: {
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          password?: string;
+          organizationId?: string | null;
+        } = {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+        };
+        if (values.password?.trim()) {
+          payload.password = values.password.trim();
+        }
+        if (values.organizationId) {
+          payload.organizationId = values.organizationId;
+        }
+        await apiService.updateModerator(editingModerator.id, payload);
+        message.success('Moderator yangilandi');
+        setModalOpen(false);
+        setEditingModerator(null);
+        form.resetFields();
+        refetch();
+      } catch {
+        /* validation */
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+    await handleCreate();
   };
 
   const handleDelete = async (id: string) => {
@@ -369,6 +435,11 @@ const Moderators = () => {
         <div className="flex justify-end gap-1">
           <Button
             size="small"
+            icon={<Pencil size={14} />}
+            onClick={() => openEditModal(mod)}
+          />
+          <Button
+            size="small"
             icon={<Settings size={14} />}
             onClick={() =>
               void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
@@ -460,10 +531,7 @@ const Moderators = () => {
           <Button
             type="primary"
             icon={<Plus size={16} />}
-            onClick={() => {
-              setModalOpen(true);
-              form.resetFields();
-            }}
+            onClick={openCreateModal}
           >
             {t(T.addModerator)}
           </Button>
@@ -496,10 +564,15 @@ const Moderators = () => {
       )}
 
       <Modal
-        title={t(T.addModerator)}
+        title={
+          editingModerator ? t(T.editModerator) : t(T.addModerator)
+        }
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
-        onOk={handleCreate}
+        onCancel={() => {
+          setModalOpen(false);
+          setEditingModerator(null);
+        }}
+        onOk={handleSaveModerator}
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
@@ -529,7 +602,11 @@ const Moderators = () => {
           <Form.Item
             name="password"
             label={`${t(T.password)} (${t(T.optional)})`}
-            extra="Bo'sh qoldirilsa, server avtomat parol generatsiya qiladi (Excel exportda chiqadi)"
+            extra={
+              editingModerator
+                ? 'Bo\'sh qoldirilsa parol o\'zgarmaydi'
+                : 'Bo\'sh qoldirilsa, server avtomat parol generatsiya qiladi (Excel exportda chiqadi)'
+            }
             rules={[
               {
                 validator: (_, value) => {

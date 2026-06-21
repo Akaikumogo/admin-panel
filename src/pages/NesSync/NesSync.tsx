@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
+import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles, Download } from 'lucide-react';
 import NoData from '@/components/NoData';
 import {
   mapSyncStatusToProgress,
@@ -72,6 +72,7 @@ export default function NesSync() {
 
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [positionsLoading, setPositionsLoading] = useState(false);
@@ -216,6 +217,18 @@ export default function NesSync() {
     } catch {
       setSyncing(false);
       setSyncProgress(EMPTY_PROGRESS);
+    }
+  };
+
+  const handleExportCredentials = async () => {
+    try {
+      setExporting(true);
+      await apiService.exportNesEmployeesCredentials(qp.organizationName);
+      message.success('Login/parol Excel yuklab olindi (Energo ID mirror)');
+    } catch {
+      message.error('Export xatosi — avval sinxron qiling');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -475,6 +488,16 @@ export default function NesSync() {
           }
           onChange={(val) => setParams({ division: val ?? undefined, page: undefined })}
         />
+
+        <Button
+          icon={<Download size={16} />}
+          loading={exporting}
+          disabled={syncing || total === 0}
+          hidden={!isSuperAdmin()}
+          onClick={handleExportCredentials}
+        >
+          Login/parol Excel
+        </Button>
 
         <Button
           type="primary"

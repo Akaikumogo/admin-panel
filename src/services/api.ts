@@ -1009,8 +1009,15 @@ class ApiService {
     return response.data;
   }
 
-  private async downloadFile(path: string, filename: string) {
-    const response = await this.api.get(path, { responseType: 'blob' });
+  private async downloadFile(
+    path: string,
+    filename: string,
+    params?: Record<string, string | undefined>,
+  ) {
+    const response = await this.api.get(path, {
+      responseType: 'blob',
+      params,
+    });
     const blob = new Blob([response.data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
@@ -1035,6 +1042,14 @@ class ApiService {
     await this.downloadFile(
       '/admin/branch-analytics/export/moderators-credentials',
       'moderatorlar-login-parollar.xlsx',
+    );
+  }
+
+  async exportNesEmployeesCredentials(organizationName?: string) {
+    await this.downloadFile(
+      '/admin/nes-employees/export-credentials',
+      'energo-id-xodimlar-login-parollar.xlsx',
+      organizationName ? { organizationName } : undefined,
     );
   }
 
@@ -1753,6 +1768,23 @@ class ApiService {
     const response = await this.api.post<UserProfile>(
       '/admin/users/moderators',
       data
+    );
+    return response.data;
+  }
+
+  async updateModerator(
+    id: string,
+    data: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      password?: string;
+      organizationId?: string | null;
+    },
+  ): Promise<UserProfile> {
+    const response = await this.api.put<UserProfile>(
+      `/admin/users/moderators/${id}`,
+      data,
     );
     return response.data;
   }
