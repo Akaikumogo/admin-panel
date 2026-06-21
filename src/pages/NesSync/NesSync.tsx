@@ -1,15 +1,18 @@
-import { useMemo, useRef, useState } from 'react';
-import { Button, Card, DatePicker, Input, Modal, Select, Table, Tag, message } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
-import dayjs from 'dayjs';
 import NoData from '@/components/NoData';
-import { useNesSyncSocket, type SyncDoneEvent } from '@/hooks/useNesSyncSocket';
+import {
+  mapSyncStatusToProgress,
+  useNesSyncSocket,
+} from '@/hooks/useNesSyncSocket';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import apiService, {
   type NesEmployee,
   type NesEmployeePositionHistory,
+  type NesEmployeesSyncStatus,
 } from '@/services/api';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
@@ -20,7 +23,40 @@ const QP_DEFAULTS = {
   page: undefined,
 } as const;
 
+const POLL_MS = 2000;
+
 type PositionWithCurrent = NesEmployeePositionHistory & { isCurrent?: boolean };
+
+type SyncProgress = {
+  current: number;
+  total: number;
+  upserted: number;
+  hidden: number;
+  progressPercent: number;
+  status: NesEmployeesSyncStatus['status'];
+};
+
+const EMPTY_PROGRESS: SyncProgress = {
+  current: 0,
+  total: 0,
+  upserted: 0,
+  hidden: 0,
+  progressPercent: 0,
+  status: 'IDLE',
+};
+
+function progressFromStatus(status: NesEmployeesSyncStatus | null): SyncProgress {
+  if (!status) return EMPTY_PROGRESS;
+  const mapped = mapSyncStatusToProgress(status);
+  return {
+    current: mapped.current,
+    total: mapped.total,
+    upserted: mapped.upserted,
+    hidden: status.hidden ?? 0,
+    progressPercent: mapped.progressPercent,
+    status: status.status,
+  };
+}
 
 export default function NesSync() {
   const { params: qp, setParam, setParams } =
@@ -28,14 +64,11 @@ export default function NesSync() {
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const [syncDate, setSyncDate] = useState(dayjs());
   const [syncing, setSyncing] = useState(false);
-  // { current: nechtasi qayta ishlandi, total: hammasi, created: nechtasi bazaga qo'shildi }
-  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number; created: number }>({
-    current: 0,
-    total: 0,
-    created: 0,
-  });
+  const [syncProgress, setSyncProgress] = useState<SyncProgress>(EMPTY_PROGRESS);
+  const [latestSync, setLatestSync] = useState<NesEmployeesSyncStatus | null>(null);
+  const lastNotifiedFinishedAtRef = useRef<string | null>(null);
+  const wasSyncingRef = useRef(false);
 
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -49,11 +82,9 @@ export default function NesSync() {
     divisions: [],
   });
 
-  useState(() => {
-    apiService.getNesEmployeesFilterOptions()
-      .then(setFilterOptions)
-      .catch(() => {});
-  });
+  useEffect(() => {
+    apiService.getNesEmployeesFilterOptions().then(setFilterOptions).catch(() => {});
+  }, []);
 
   const {
     data: employees,
@@ -73,24 +104,88 @@ export default function NesSync() {
       }),
   );
 
-  // WebSocket — real-time progress
-  useNesSyncSocket({
-    onProgress: ({ current, total, created }) => {
-      setSyncProgress({ current, total, created });
-    },
-    onDone: (res: SyncDoneEvent) => {
+  const applyHealth = useCallback(
+    (health: Awaited<ReturnType<typeof apiService.getNesEmployeesSyncHealth>>) => {
+      const running = health.runningSync;
+      const latest = health.latestSync;
+
+      if (latest) setLatestSync(latest);
+
+      if (running?.running) {
+        wasSyncingRef.current = true;
+        setSyncing(true);
+        setSyncProgress(progressFromStatus(running));
+        return;
+      }
+
       setSyncing(false);
-      setSyncProgress({ current: 0, total: 0, created: 0 });
-      message.success(
-        `Sync tugadi: ${res.total} ta topildi, ${res.created} ta yangi, ${res.updated} ta yangilandi`,
-      );
-      apiService.getNesEmployeesFilterOptions().then(setFilterOptions).catch(() => {});
-      refetch?.();
+
+      if (latest) {
+        setSyncProgress(progressFromStatus(latest));
+      }
+
+      if (
+        wasSyncingRef.current &&
+        latest?.finishedAt &&
+        latest.finishedAt !== lastNotifiedFinishedAtRef.current
+      ) {
+        wasSyncingRef.current = false;
+        lastNotifiedFinishedAtRef.current = latest.finishedAt;
+        if (latest.status === 'SUCCESS') {
+          message.success(
+            `Sync tugadi: ${latest.total} ta, yangilandi ${latest.upserted}, yashirildi ${latest.hidden}`,
+          );
+          apiService.getNesEmployeesFilterOptions().then(setFilterOptions).catch(() => {});
+          refetch?.();
+        } else if (latest.status === 'FAILED' && latest.errorMessage) {
+          message.error(`Sync xatosi: ${latest.errorMessage}`);
+        }
+      }
     },
+    [refetch],
+  );
+
+  const pollSyncHealth = useCallback(async () => {
+    try {
+      const health = await apiService.getNesEmployeesSyncHealth();
+      applyHealth(health);
+    } catch {
+      /* ignore transient poll errors */
+    }
+  }, [applyHealth]);
+
+  useEffect(() => {
+    pollSyncHealth();
+  }, [pollSyncHealth]);
+
+  useEffect(() => {
+    if (!syncing) return;
+    const timer = window.setInterval(pollSyncHealth, POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [syncing, pollSyncHealth]);
+
+  const finishSync = useCallback(() => {
+    pollSyncHealth();
+  }, [pollSyncHealth]);
+
+  useNesSyncSocket({
+    onProgress: ({ current, total, upserted, progressPercent }) => {
+      setSyncing(true);
+      setSyncProgress((prev) => ({
+        ...prev,
+        current,
+        total,
+        upserted,
+        progressPercent,
+        status: 'RUNNING',
+      }));
+    },
+    onDone: finishSync,
     onError: (msg) => {
       setSyncing(false);
-      setSyncProgress({ current: 0, total: 0, created: 0 });
+      setSyncProgress(EMPTY_PROGRESS);
       message.error(`Sync xatosi: ${msg}`);
+      pollSyncHealth();
     },
   });
 
@@ -102,14 +197,25 @@ export default function NesSync() {
   };
 
   const handleSync = async () => {
+    wasSyncingRef.current = true;
     setSyncing(true);
-    setSyncProgress({ current: 0, total: 0, created: 0 });
+    setSyncProgress({ ...EMPTY_PROGRESS, status: 'RUNNING' });
     try {
-      await apiService.syncNesEmployees(syncDate.format('YYYY-MM-DD'));
-      // onDone WebSocket orqali keladi
+      const res = await apiService.syncNesEmployees();
+      if (res.skipped) {
+        setSyncing(false);
+        message.warning(res.reason ?? 'Sync o‘tkazib yuborildi');
+        return;
+      }
+      if (res.sync) {
+        setSyncProgress(progressFromStatus(res.sync));
+      }
+      if (res.started || res.running) {
+        pollSyncHealth();
+      }
     } catch {
       setSyncing(false);
-      setSyncProgress({ current: 0, total: 0, created: 0 });
+      setSyncProgress(EMPTY_PROGRESS);
     }
   };
 
@@ -121,8 +227,6 @@ export default function NesSync() {
       message.success(`${res.deleted} ta xodim o'chirildi`);
       refetch?.();
       setFilterOptions({ organizations: [], divisions: [] });
-    } catch {
-      // xato notification api.ts tomonidan ko'rsatiladi
     } finally {
       setDeleting(false);
     }
@@ -132,8 +236,6 @@ export default function NesSync() {
     setPositionsOpen(true);
     setPositionsLoading(true);
     try {
-      // record.id (UUID) bo'yicha — tabel raqami emas, aks holda boshqa tashkilotdagi
-      // bir xil raqamli xodim bilan aralashib ketadi
       const data = await apiService.getNesEmployeePositions(record.id);
       setPositions(data as PositionWithCurrent[]);
     } finally {
@@ -141,10 +243,11 @@ export default function NesSync() {
     }
   };
 
-  // Sync button label: bazaga qo'shildi / topildi
   const syncLabel = (() => {
     if (!syncing) return 'ENERGO ID sinxronlash';
-    if (syncProgress.total > 0) return `${syncProgress.created} / ${syncProgress.total}`;
+    if (syncProgress.total > 0) {
+      return `${syncProgress.current} / ${syncProgress.total} (${syncProgress.progressPercent}%)`;
+    }
     return 'Yuklanmoqda...';
   })();
 
@@ -227,7 +330,6 @@ export default function NesSync() {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      {/* ENERGO ID — qora gradient hero header */}
       <div
         className="relative overflow-hidden rounded-2xl border border-black/30 shadow-2xl"
         style={{
@@ -235,7 +337,6 @@ export default function NesSync() {
             'linear-gradient(135deg, #000000 0%, #0a0a0a 35%, #1a1a2e 70%, #16213e 100%)',
         }}
       >
-        {/* Glow effect */}
         <div
           className="absolute -top-24 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
           style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)' }}
@@ -244,7 +345,6 @@ export default function NesSync() {
           className="absolute -bottom-20 -left-16 w-72 h-72 rounded-full opacity-10 blur-3xl pointer-events-none"
           style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }}
         />
-        {/* Subtle grid */}
         <div
           className="absolute inset-0 opacity-[0.06] pointer-events-none"
           style={{
@@ -286,17 +386,53 @@ export default function NesSync() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-3 text-xs flex-wrap">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span
+                className={`w-2 h-2 rounded-full ${syncing ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}
+              />
               {syncing ? 'Sinxronlanmoqda...' : 'Tayyor'}
             </div>
             <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
               Jami: <strong className="text-white">{total}</strong>
             </div>
+            {latestSync?.finishedAt && !syncing && (
+              <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
+                Oxirgi: {new Date(latestSync.finishedAt).toLocaleString()}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {(syncing || syncProgress.status === 'RUNNING') && (
+        <Card className="!border-blue-200 dark:!border-blue-800 !bg-blue-50/50 dark:!bg-blue-950/20">
+          <div className="flex items-center justify-between gap-3 mb-2 text-sm">
+            <span className="font-medium text-blue-700 dark:text-blue-300">
+              Energo ID → ElektroLearn sinxron
+            </span>
+            <span className="text-slate-600 dark:text-slate-300 font-mono">
+              {syncProgress.current} / {syncProgress.total || '…'} ({syncProgress.progressPercent}%)
+            </span>
+          </div>
+          <Progress
+            percent={syncProgress.progressPercent}
+            status="active"
+            strokeColor={{ from: '#3b82f6', to: '#6366f1' }}
+            showInfo={false}
+          />
+          <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-600 dark:text-slate-300">
+            <span>
+              Yangilandi: <strong>{syncProgress.upserted}</strong>
+            </span>
+            {syncProgress.hidden > 0 && (
+              <span>
+                Yashirildi: <strong>{syncProgress.hidden}</strong>
+              </span>
+            )}
+          </div>
+        </Card>
+      )}
 
       <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
@@ -340,16 +476,10 @@ export default function NesSync() {
           onChange={(val) => setParams({ division: val ?? undefined, page: undefined })}
         />
 
-        <DatePicker
-          value={syncDate}
-          format="YYYY-MM-DD"
-          onChange={(value) => value && setSyncDate(value)}
-        />
-
         <Button
           type="primary"
-          icon={<RefreshCw size={16} />}
-          loading={syncing}
+          icon={<RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />}
+          loading={syncing && syncProgress.total === 0}
           disabled={deleting}
           onClick={handleSync}
         >
@@ -369,22 +499,6 @@ export default function NesSync() {
 
         <Tag className="text-sm ml-auto">Jami: {total}</Tag>
       </div>
-
-      {/* Sync paytida progress ko'rsatuvchi satır */}
-      {syncing && syncProgress.total > 0 && (
-        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2 flex items-center gap-4 text-sm">
-          <span className="text-blue-600 dark:text-blue-400 font-medium">Sync jarayonida...</span>
-          <span className="text-slate-600 dark:text-slate-300">
-            Topildi: <strong>{syncProgress.total}</strong>
-          </span>
-          <span className="text-slate-600 dark:text-slate-300">
-            Qayta ishlandi: <strong>{syncProgress.current}</strong>
-          </span>
-          <span className="text-green-600 dark:text-green-400 font-semibold">
-            Bazaga qo'shildi: <strong>{syncProgress.created}</strong>
-          </span>
-        </div>
-      )}
 
       {employees.length === 0 && !initialLoading && !loading ? (
         <NoData text="ENERGO ID xodimlari hali sinxron qilinmagan" />
@@ -409,7 +523,6 @@ export default function NesSync() {
         </Card>
       )}
 
-      {/* Xronologiya modal */}
       <Modal
         title="Lavozim xronologiyasi"
         open={positionsOpen}
@@ -437,7 +550,8 @@ export default function NesSync() {
             {
               title: 'Sana',
               dataIndex: 'effectiveAt',
-              render: (v: string | null) => v ? new Date(v).toLocaleDateString() : '—',
+              render: (v: string | null) =>
+                v ? new Date(v).toLocaleDateString() : '—',
             },
             { title: 'Filial', dataIndex: 'organizationName' },
             { title: "Bo'lim", dataIndex: 'division' },
@@ -446,7 +560,6 @@ export default function NesSync() {
         />
       </Modal>
 
-      {/* Bulk delete tasdiqlash modali */}
       <Modal
         title="Barcha xodimlarni o'chirish"
         open={deleteConfirmOpen}
