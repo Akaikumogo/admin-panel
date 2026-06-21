@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Empty, Select, Spin, Table, Tag } from 'antd';
-import { HeartPulse } from 'lucide-react';
+import { Card, Col, Empty, Progress, Row, Select, Spin, Table, Tag } from 'antd';
+import { AlertTriangle, HeartPulse, HelpCircle, Users } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
@@ -8,12 +8,21 @@ import type { HeartsLostAnalyticsResponse, Organization, UserProfile } from '@/s
 
 const T = {
   title: { uz: 'Yurak yo‘qotish', en: 'Hearts lost', ru: 'Потеря сердец' },
+  subtitle: {
+    uz: 'Noto‘g‘ri javoblar bo‘yicha xodim va savol statistikasi',
+    en: 'Wrong-answer stats by user and question',
+    ru: 'Статистика ошибок по пользователям и вопросам',
+  },
   today: { uz: 'Bugun', en: 'Today', ru: 'Сегодня' },
   month: { uz: '1 oy', en: 'Month', ru: 'Месяц' },
   year: { uz: '1 yil', en: 'Year', ru: 'Год' },
   org: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
-  byUser: { uz: 'Kim qancha', en: 'By user', ru: 'По пользователям' },
+  allOrgs: { uz: 'Barcha tashkilotlar', en: 'All organizations', ru: 'Все организации' },
+  byUser: { uz: 'Kim qancha yo‘qotdi', en: 'By user', ru: 'По пользователям' },
   byQuestion: { uz: 'Qaysi savollar', en: 'By question', ru: 'По вопросам' },
+  totalUsers: { uz: 'Xodimlar', en: 'Users', ru: 'Пользователи' },
+  totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
+  totalLost: { uz: 'Jami yo‘qotilgan', en: 'Total lost', ru: 'Всего потеряно' },
   empty: {
     uz: 'Tanlangan davrda yurak yo‘qotilmagan',
     en: 'No hearts lost in the selected range',
@@ -21,16 +30,43 @@ const T = {
   },
 } as const;
 
+function SummaryCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <Card className="!rounded-2xl !border-slate-200 dark:!border-slate-700/60 h-full">
+      <div className="flex items-center gap-4">
+        <div
+          className={`w-12 h-12 rounded-xl flex items-center justify-center text-white ${color}`}
+        >
+          <Icon size={22} />
+        </div>
+        <div>
+          <div className="text-xs text-slate-500 mb-1">{label}</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">{value}</div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function HeartsAnalyticsPage() {
   const { t } = useTranslation();
   const [range, setRange] = useState<'today' | 'month' | 'year'>('today');
   const [orgId, setOrgId] = useState<string>('all');
-
-  // Org select uchun debounce — har tugma bosishda darhol fetch qilmaymiz.
   const [debouncedOrgId, setDebouncedOrgId] = useState(orgId);
+
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedOrgId(orgId), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedOrgId(orgId), 300);
+    return () => clearTimeout(timer);
   }, [orgId]);
 
   const { data: me, initialLoading: meLoading } = useFetch<UserProfile | null>(
@@ -45,7 +81,6 @@ export default function HeartsAnalyticsPage() {
   );
 
   const isSuperadmin = me?.role === 'SUPERADMIN';
-  // Race-condition gate: superadmin uchun orgs yuklanmaguncha so'rov ketmaydi.
   const ready = !!me && (!isSuperadmin || !orgsLoading);
   const effectiveOrgId = isSuperadmin
     ? debouncedOrgId
@@ -65,23 +100,58 @@ export default function HeartsAnalyticsPage() {
     { orgId: effectiveOrgId, range: { from: '', to: '' }, byUser: [], byQuestion: [] },
   );
 
+  const totals = useMemo(() => {
+    const userTotal = data.byUser.reduce((sum, row) => sum + row.lostHearts, 0);
+    const questionTotal = data.byQuestion.reduce((sum, row) => sum + row.lostHearts, 0);
+    return {
+      users: data.byUser.length,
+      questions: data.byQuestion.length,
+      lost: Math.max(userTotal, questionTotal),
+    };
+  }, [data]);
+
+  const topUser = data.byUser[0];
+  const topQuestion = data.byQuestion[0];
+
   const byUserColumns = useMemo(
     () => [
       {
+        title: '#',
+        width: 48,
+        render: (_: unknown, __: unknown, index: number) => index + 1,
+      },
+      {
         title: t({ uz: 'Foydalanuvchi', en: 'User', ru: 'Пользователь' }),
         key: 'user',
-        render: (_: unknown, r: HeartsLostAnalyticsResponse['byUser'][number]) =>
-          `${r.firstName} ${r.lastName} (${r.email})`,
+        render: (_: unknown, r: HeartsLostAnalyticsResponse['byUser'][number]) => (
+          <div>
+            <div className="font-medium">
+              {r.firstName} {r.lastName}
+            </div>
+            <div className="text-xs text-slate-400">{r.email}</div>
+          </div>
+        ),
       },
       {
         title: t({ uz: 'Yo‘qotilgan', en: 'Lost', ru: 'Потеряно' }),
         dataIndex: 'lostHearts',
         key: 'lostHearts',
-        width: 140,
-        render: (v: number) => <Tag color="red">{v}</Tag>,
+        width: 160,
+        render: (v: number) => (
+          <div className="flex items-center gap-2">
+            <Progress
+              percent={totals.lost ? Math.round((v / totals.lost) * 100) : 0}
+              size="small"
+              showInfo={false}
+              strokeColor="#ef4444"
+              className="flex-1 max-w-[80px]"
+            />
+            <Tag color="red">{v}</Tag>
+          </div>
+        ),
       },
     ],
-    [t],
+    [t, totals.lost],
   );
 
   const byQuestionColumns = useMemo(
@@ -96,19 +166,19 @@ export default function HeartsAnalyticsPage() {
         title: t({ uz: 'Modul', en: 'Module', ru: 'Модуль' }),
         dataIndex: 'levelTitle',
         key: 'levelTitle',
-        width: 180,
+        width: 160,
       },
       {
         title: t({ uz: 'Nazariya', en: 'Theory', ru: 'Теория' }),
         dataIndex: 'theoryTitle',
         key: 'theoryTitle',
-        width: 180,
+        width: 160,
       },
       {
         title: t({ uz: 'Yo‘qotilgan', en: 'Lost', ru: 'Потеряно' }),
         dataIndex: 'lostHearts',
         key: 'lostHearts',
-        width: 140,
+        width: 120,
         render: (v: number) => <Tag color="red">{v}</Tag>,
       },
     ],
@@ -129,15 +199,14 @@ export default function HeartsAnalyticsPage() {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <Card
-        className="!border-slate-200 dark:!border-slate-700/60"
-        title={
-          <span className="flex items-center gap-2">
-            <HeartPulse size={16} />
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <HeartPulse size={24} className="text-rose-500" />
             {t(T.title)}
-          </span>
-        }
-      >
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">{t(T.subtitle)}</p>
+        </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Select
             value={range}
@@ -149,50 +218,121 @@ export default function HeartsAnalyticsPage() {
               { value: 'year', label: t(T.year) },
             ]}
           />
-          {me.role === 'SUPERADMIN' ? (
+          {isSuperadmin ? (
             <Select
               value={orgId}
               style={{ width: 320 }}
               onChange={(v) => setOrgId(v)}
               options={[
-                { value: 'all', label: 'All organizations' },
-                ...orgs.map((o) => ({ value: o.id, label: o.name })),
+                { value: 'all', label: t(T.allOrgs) },
+                ...orgs.map((o) => ({
+                  value: o.id,
+                  label: o.isDefault ? `★ ${o.name}` : o.name,
+                })),
               ]}
             />
           ) : null}
         </div>
-      </Card>
+      </div>
 
-      <Card
-        className="!border-slate-200 dark:!border-slate-700/60"
-        title={<span className="font-semibold">{t(T.byUser)}</span>}
-      >
-        <Table
-          rowKey="userId"
-          loading={loading}
-          dataSource={data.byUser}
-          columns={byUserColumns}
-          pagination={false}
-          size="small"
-          locale={emptyLocale}
-        />
-      </Card>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} md={8}>
+          <SummaryCard
+            icon={Users}
+            label={t(T.totalUsers)}
+            value={totals.users}
+            color="bg-gradient-to-br from-rose-500 to-pink-600"
+          />
+        </Col>
+        <Col xs={24} md={8}>
+          <SummaryCard
+            icon={HelpCircle}
+            label={t(T.totalQuestions)}
+            value={totals.questions}
+            color="bg-gradient-to-br from-orange-500 to-amber-600"
+          />
+        </Col>
+        <Col xs={24} md={8}>
+          <SummaryCard
+            icon={AlertTriangle}
+            label={t(T.totalLost)}
+            value={totals.lost}
+            color="bg-gradient-to-br from-red-600 to-rose-700"
+          />
+        </Col>
+      </Row>
 
-      <Card
-        className="!border-slate-200 dark:!border-slate-700/60"
-        title={<span className="font-semibold">{t(T.byQuestion)}</span>}
-      >
-        <Table
-          rowKey="questionId"
-          loading={loading}
-          dataSource={data.byQuestion}
-          columns={byQuestionColumns}
-          pagination={false}
-          size="small"
-          locale={emptyLocale}
-        />
-      </Card>
+      {(topUser || topQuestion) && (
+        <Row gutter={[16, 16]}>
+          {topUser ? (
+            <Col xs={24} lg={12}>
+              <Card className="!rounded-2xl !border-rose-100 dark:!border-rose-900/40">
+                <div className="text-xs uppercase tracking-wide text-rose-500 mb-2">
+                  Top xodim
+                </div>
+                <div className="font-semibold text-lg">
+                  {topUser.firstName} {topUser.lastName}
+                </div>
+                <div className="text-sm text-slate-500">{topUser.email}</div>
+                <Tag color="red" className="mt-3">
+                  {topUser.lostHearts} yo‘qotilgan
+                </Tag>
+              </Card>
+            </Col>
+          ) : null}
+          {topQuestion ? (
+            <Col xs={24} lg={12}>
+              <Card className="!rounded-2xl !border-orange-100 dark:!border-orange-900/40">
+                <div className="text-xs uppercase tracking-wide text-orange-500 mb-2">
+                  Top savol
+                </div>
+                <div className="font-semibold text-sm leading-relaxed">{topQuestion.prompt}</div>
+                <div className="text-xs text-slate-500 mt-2">
+                  {topQuestion.levelTitle} • {topQuestion.theoryTitle}
+                </div>
+                <Tag color="red" className="mt-3">
+                  {topQuestion.lostHearts} yo‘qotilgan
+                </Tag>
+              </Card>
+            </Col>
+          ) : null}
+        </Row>
+      )}
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={12}>
+          <Card
+            className="!rounded-2xl !border-slate-200 dark:!border-slate-700/60"
+            title={<span className="font-semibold">{t(T.byUser)}</span>}
+          >
+            <Table
+              rowKey="userId"
+              loading={loading}
+              dataSource={data.byUser}
+              columns={byUserColumns}
+              pagination={{ pageSize: 8, hideOnSinglePage: true }}
+              size="middle"
+              locale={emptyLocale}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} xl={12}>
+          <Card
+            className="!rounded-2xl !border-slate-200 dark:!border-slate-700/60"
+            title={<span className="font-semibold">{t(T.byQuestion)}</span>}
+          >
+            <Table
+              rowKey="questionId"
+              loading={loading}
+              dataSource={data.byQuestion}
+              columns={byQuestionColumns}
+              pagination={{ pageSize: 8, hideOnSinglePage: true }}
+              size="middle"
+              locale={emptyLocale}
+            />
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 }
-

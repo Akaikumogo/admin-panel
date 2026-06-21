@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { Navigate, type RouteObject } from 'react-router-dom';
+import { Navigate, useLocation, type RouteObject } from 'react-router-dom';
 import Navigator from './Providers/Navigator';
 import NotFoundPage from './pages/NotFounds/NotFoundPage';
 
@@ -48,6 +48,12 @@ const withSuspense = (
     </AnimateWrapper>
   );
 };
+
+function BranchAnalyticsRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/dashboard/user-activity${location.search}`} replace />;
+}
+
 export const routes: RouteObject[] = [
   {
     path: '/',
@@ -167,7 +173,7 @@ export const routes: RouteObject[] = [
           },
           {
             path: 'branch-analytics',
-            element: <Navigate to="/dashboard/user-activity" replace />
+            element: <BranchAnalyticsRedirect />
           }
         ]
       }

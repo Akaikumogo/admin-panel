@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, Segmented, Select, Tabs, Spin, Table, Tag, DatePicker, Row, Col, Progress } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
@@ -85,9 +86,11 @@ const StatCard = ({
 );
 
 const UserActivity = () => {
+  const [searchParams] = useSearchParams();
+  const initialOrg = searchParams.get('orgId') ?? 'all';
   const [group, setGroup] = useState<ActivityGroup>('employees');
   const [range, setRange] = useState<ActivityRange>('day');
-  const [orgFilter, setOrgFilter] = useState<string>('all');
+  const [orgFilter, setOrgFilter] = useState<string>(initialOrg);
   const [onlineFilter, setOnlineFilter] = useState<'all' | 'online' | 'offline'>(
     'all',
   );
@@ -145,8 +148,11 @@ const UserActivity = () => {
   const branchTo = branchRange[1].format('YYYY-MM-DD');
   const planDateStr = planDate.format('YYYY-MM-DD');
 
-  const effectiveBranchOrgId =
-    orgFilter === 'all' ? organizations[0]?.id ?? '' : orgFilter;
+  const effectiveBranchOrgId = useMemo(() => {
+    if (orgFilter !== 'all') return orgFilter;
+    const main = organizations.find((o) => o.isDefault);
+    return main?.id ?? organizations[0]?.id ?? '';
+  }, [orgFilter, organizations]);
 
   const { data: branchSummary } = useFetch<BranchAnalyticsSummary | null>(
     ['branch-summary', effectiveBranchOrgId, branchFrom, branchTo],
@@ -323,7 +329,10 @@ const UserActivity = () => {
             className="!min-w-[200px]"
             options={[
               { value: 'all', label: 'Barcha filiallar' },
-              ...organizations.map((o) => ({ value: o.id, label: o.name })),
+              ...organizations.map((o) => ({
+                value: o.id,
+                label: o.isDefault ? `★ ${o.name}` : o.name,
+              })),
             ]}
           />
           <Select

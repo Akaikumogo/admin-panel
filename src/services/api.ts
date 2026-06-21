@@ -85,6 +85,33 @@ export type AnalyticsSummary = {
   orgId: string;
 };
 
+export type HomeBranchWeek = {
+  weekStart: string;
+  count: number;
+};
+
+export type HomeBranchHeatmapRow = {
+  orgId: string;
+  orgName: string;
+  isDefault: boolean;
+  weeks: HomeBranchWeek[];
+  totalLogins: number;
+};
+
+export type HomeBranchRank = {
+  orgId: string;
+  orgName: string;
+  isDefault: boolean;
+  value: number;
+};
+
+export type HomeOverview = {
+  scopeLabel: string;
+  branchHeatmap: HomeBranchHeatmapRow[];
+  mostActiveBranch: HomeBranchRank | null;
+  topErrorBranches: HomeBranchRank[];
+};
+
 export type BranchAnalyticsSummary = {
   orgId: string;
   range: { from: string; to: string };
@@ -935,6 +962,11 @@ class ApiService {
       `/admin/analytics/summary`,
       { params: { orgId } }
     );
+    return response.data;
+  }
+
+  async getHomeOverview(): Promise<HomeOverview> {
+    const response = await this.api.get<HomeOverview>('/admin/analytics/home-overview');
     return response.data;
   }
 

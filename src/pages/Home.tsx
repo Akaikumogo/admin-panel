@@ -26,10 +26,12 @@ import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type {
   AnalyticsSummary,
+  HomeOverview,
   LevelFunnelItem,
   QuestionError,
   UserProfile
 } from '@/services/api';
+import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
 
 const { Title, Text } = Typography;
 
@@ -78,9 +80,15 @@ export default function HomePage() {
   const { data: me, refetch: refetchMe, initialLoading: meLoading } =
     useFetch<UserProfile | null>(['me'], () => apiService.me(), null);
 
-  const orgIdForAnalytics =
-    me?.role === 'SUPERADMIN' ? 'all' : me?.organizations?.[0]?.id ?? 'all';
+  const orgIdForAnalytics = 'all';
   const ready = !!me;
+
+  const { data: homeOverview, initialLoading: homeOverviewLoading } =
+    useFetch<HomeOverview | null>(
+      ['home-overview'],
+      () => (ready ? apiService.getHomeOverview() : Promise.resolve(null)),
+      null,
+    );
 
   const { data: adminPing } = useFetch<{ message: string } | null>(
     ['admin-ping', me?.role],
@@ -186,6 +194,115 @@ export default function HomePage() {
           </Card>
         ))}
       </div>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={16}>
+          <Card
+            title={
+              <span className="flex items-center gap-2">
+                <Activity size={16} />
+                {t({
+                  uz: 'Filial bo‘yicha faollik (12 hafta)',
+                  en: 'Branch activity (12 weeks)',
+                  ru: 'Активность филиалов (12 недель)',
+                })}
+              </span>
+            }
+            extra={
+              <span className="text-xs text-slate-500">
+                {homeOverview?.scopeLabel}
+              </span>
+            }
+            className="!border-slate-200 dark:!border-slate-700/60"
+          >
+            {homeOverviewLoading ? (
+              <Skeleton active paragraph={{ rows: 6 }} />
+            ) : (
+              <BranchActivityHeatmap rows={homeOverview?.branchHeatmap ?? []} />
+            )}
+          </Card>
+        </Col>
+
+        <Col xs={24} xl={8}>
+          <div className="space-y-4">
+            <Card
+              className="!border-slate-200 dark:!border-slate-700/60"
+              bodyStyle={{ padding: '18px' }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                  <Building2 size={18} className="text-white" />
+                </div>
+                <div>
+                  <Text className="text-slate-500 text-xs block mb-1">
+                    {t({
+                      uz: 'Eng aktiv filial (7 kun)',
+                      en: 'Most active branch (7d)',
+                      ru: 'Самый активный филиал (7д)',
+                    })}
+                  </Text>
+                  {homeOverviewLoading ? (
+                    <Skeleton.Input active size="small" style={{ width: 180 }} />
+                  ) : homeOverview?.mostActiveBranch ? (
+                    <>
+                      <div className="font-semibold text-slate-900 dark:text-white text-sm leading-snug">
+                        {homeOverview.mostActiveBranch.isDefault && '★ '}
+                        {homeOverview.mostActiveBranch.orgName}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {homeOverview.mostActiveBranch.value} ta login
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-slate-400">Ma&apos;lumot yo&apos;q</div>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              title={
+                <span className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                  <AlertTriangle size={15} />
+                  {t({
+                    uz: 'Eng ko‘p xato (30 kun, filial)',
+                    en: 'Most errors by branch (30d)',
+                    ru: 'Больше всего ошибок (30д)',
+                  })}
+                </span>
+              }
+              className="!border-slate-200 dark:!border-slate-700/60"
+              bodyStyle={{ padding: '12px 16px' }}
+            >
+              {homeOverviewLoading ? (
+                <Skeleton active paragraph={{ rows: 3 }} />
+              ) : (homeOverview?.topErrorBranches.length ?? 0) === 0 ? (
+                <div className="text-sm text-slate-400 py-2">Ma&apos;lumot yo&apos;q</div>
+              ) : (
+                <div className="space-y-3">
+                  {homeOverview!.topErrorBranches.map((row, idx) => (
+                    <div
+                      key={row.orgId}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs text-slate-400">#{idx + 1}</div>
+                        <div className="text-sm font-medium truncate">
+                          {row.isDefault && (
+                            <span className="text-amber-500 mr-1">★</span>
+                          )}
+                          {row.orgName}
+                        </div>
+                      </div>
+                      <Tag color="red">{row.value}</Tag>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        </Col>
+      </Row>
 
       <Row gutter={[16, 16]}>
         {/* Profile Card */}
