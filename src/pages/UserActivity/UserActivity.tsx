@@ -144,15 +144,23 @@ const UserActivity = () => {
     dayjs().subtract(27, 'day'),
     dayjs(),
   ]);
+  // Filial KPI tab — alohida filial tanlagich (bo'sh bo'lsa top filter/default ga tushadi)
+  const [branchOrgId, setBranchOrgId] = useState<string>('');
   const branchFrom = branchRange[0].format('YYYY-MM-DD');
   const branchTo = branchRange[1].format('YYYY-MM-DD');
   const planDateStr = planDate.format('YYYY-MM-DD');
 
   const effectiveBranchOrgId = useMemo(() => {
+    if (branchOrgId) return branchOrgId;
     if (orgFilter !== 'all') return orgFilter;
     const main = organizations.find((o) => o.isDefault);
     return main?.id ?? organizations[0]?.id ?? '';
-  }, [orgFilter, organizations]);
+  }, [branchOrgId, orgFilter, organizations]);
+
+  const selectedBranchName = useMemo(
+    () => organizations.find((o) => o.id === effectiveBranchOrgId)?.name ?? '',
+    [organizations, effectiveBranchOrgId],
+  );
 
   const { data: branchSummary } = useFetch<BranchAnalyticsSummary | null>(
     ['branch-summary', effectiveBranchOrgId, branchFrom, branchTo],
@@ -426,7 +434,24 @@ const UserActivity = () => {
             ),
             children: (
               <div className="space-y-6">
-                <div className="flex items-center justify-end gap-2 flex-wrap">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Filial:
+                    </span>
+                    <Select
+                      value={effectiveBranchOrgId || undefined}
+                      onChange={setBranchOrgId}
+                      placeholder="Filial tanlang"
+                      showSearch
+                      optionFilterProp="label"
+                      className="!min-w-[240px]"
+                      options={organizations.map((o) => ({
+                        value: o.id,
+                        label: o.isDefault ? `★ ${o.name}` : o.name,
+                      }))}
+                    />
+                  </div>
                   <DatePicker.RangePicker
                     value={branchRange}
                     onChange={(v) => v && setBranchRange(v as [Dayjs, Dayjs])}
@@ -532,7 +557,12 @@ const UserActivity = () => {
 
                 <Card
                   className="!rounded-2xl"
-                  title="Kunlik aktivlik matritsasi"
+                  title={
+                    <span>
+                      Kunlik aktivlik matritsasi
+                      {selectedBranchName ? ` — ${selectedBranchName}` : ''}
+                    </span>
+                  }
                   extra={
                     <div className="flex gap-2 text-xs">
                       <span className="inline-flex items-center gap-1">
