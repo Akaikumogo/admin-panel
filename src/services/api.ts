@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { notification } from 'antd';
 
-const API_BASE_URL = 'https://elektrolearn-api.uzbekistonmet.uz/api';
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+  '/api';
 
 export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
