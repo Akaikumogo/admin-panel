@@ -969,7 +969,13 @@ class ApiService {
 
   async getHomeOverview(): Promise<HomeOverview> {
     const response = await this.api.get<HomeOverview>('/admin/analytics/home-overview');
-    return response.data;
+    const data = response.data;
+    return {
+      scopeLabel: data?.scopeLabel ?? '',
+      branchHeatmap: data?.branchHeatmap ?? [],
+      mostActiveBranch: data?.mostActiveBranch ?? null,
+      topErrorBranches: data?.topErrorBranches ?? [],
+    };
   }
 
   async getLevelFunnel(orgId: string): Promise<LevelFunnelItem[]> {
@@ -977,7 +983,7 @@ class ApiService {
       '/admin/analytics/level-funnel',
       { params: { orgId } }
     );
-    return response.data;
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   async getQuestionErrors(orgId: string): Promise<QuestionError[]> {
@@ -985,7 +991,7 @@ class ApiService {
       '/admin/analytics/questions',
       { params: { orgId } }
     );
-    return response.data;
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   async getHeartsLostAnalytics(params: {

@@ -272,11 +272,11 @@ export default function HomePage() {
             >
               {homeOverviewLoading ? (
                 <Skeleton active paragraph={{ rows: 3 }} />
-              ) : (homeOverview?.topErrorBranches.length ?? 0) === 0 ? (
+              ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
                 <div className="text-sm text-slate-400 py-2">Ma&apos;lumot yo&apos;q</div>
               ) : (
                 <div className="space-y-3">
-                  {homeOverview!.topErrorBranches.map((row, idx) => (
+                  {(homeOverview?.topErrorBranches ?? []).map((row, idx) => (
                     <div
                       key={row.orgId}
                       className="flex items-center justify-between gap-3"
@@ -372,7 +372,7 @@ export default function HomePage() {
       </Row>
 
       {/* Level Funnel */}
-      {(funnelLoading || funnel.length > 0) && (
+      {(funnelLoading || (funnel?.length ?? 0) > 0) && (
         <Card
           title={
             <span className="flex items-center gap-2">
@@ -418,7 +418,7 @@ export default function HomePage() {
       )}
 
       {/* Error Questions */}
-      {(errorsLoading || errorQuestions.length > 0) && (
+      {(errorsLoading || (errorQuestions?.length ?? 0) > 0) && (
         <Card
           title={
             <span className="flex items-center gap-2 text-red-600 dark:text-red-400">
