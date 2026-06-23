@@ -31,6 +31,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import apiService, {
+  userActivityApi,
+  type EmployeeOnlineSummary,
   type NesEmployee,
   type Organization,
   type StudentSummary,
@@ -39,12 +41,34 @@ import { can } from '@/utils/can';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
 const QP_DEFAULTS = {
-  tab: 'nes' as 'nes' | 'app' | 'moderators' | 'analytics',
-  nesPage: undefined,
+  tab: 'app' as 'app' | 'moderators' | 'analytics',
   appPage: undefined,
 } as const;
 
 const PAGE_SIZE = 20;
+
+/** Online soniyalarni qisqa "Hs Mm" ko'rinishida formatlash. */
+function formatOnlineDuration(sec?: number): string {
+  if (!sec || sec < 60) return '—';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h} s ${m} m`;
+  return `${m} m`;
+}
+
+/** Oxirgi online vaqtini o'qiladigan ko'rinishga keltirish. */
+function formatLastSeen(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('uz-UZ', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 function moderatorUsers(org: Organization | null) {
   return (org?.users ?? []).filter((u) => u.user.role !== 'USER');
@@ -54,7 +78,6 @@ export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { params: qp, setParam, setParams } = useQueryParams(QP_DEFAULTS);
-  const nesPage = qp.nesPage ? parseInt(qp.nesPage, 10) : 1;
   const appPage = qp.appPage ? parseInt(qp.appPage, 10) : 1;
 
   const {
@@ -67,19 +90,16 @@ export default function OrganizationDetail() {
     null,
   );
 
-  const {
-    data: employees,
-    total: nesTotal,
-    loading: nesLoading,
-    initialLoading: nesInitialLoading,
-  } = usePaginatedFetch<NesEmployee>(
-    ['org-nes-employees', org?.name, nesPage],
+  // ENERGO ID xodimlar ro'yxati tab sifatida olib tashlandi; bu yerda faqat
+  // sarlavhadagi "ENERGO ID: N ta" chip uchun umumiy son olinadi.
+  const { total: nesTotal } = usePaginatedFetch<NesEmployee>(
+    ['org-nes-count', org?.name],
     () => {
-      if (!org?.name) return Promise.resolve({ data: [], total: 0, page: 1, limit: PAGE_SIZE });
+      if (!org?.name) return Promise.resolve({ data: [], total: 0, page: 1, limit: 1 });
       return apiService.getNesEmployees({
         organizationName: org.name,
-        page: nesPage,
-        limit: PAGE_SIZE,
+        page: 1,
+        limit: 1,
       });
     },
   );
@@ -96,6 +116,20 @@ export default function OrganizationDetail() {
       return apiService.getStudents({ orgId: id, page: appPage, limit: PAGE_SIZE });
     },
   );
+
+  // Filial xodimlarining online xulosasi (hozir online, oxirgi online,
+  // bugun/kecha/hafta/oy). userId bo'yicha map qilib, jadval qatorlariga ulanadi.
+  const { data: onlineSummary } = useFetch<EmployeeOnlineSummary[]>(
+    ['org-online-summary', id],
+    () =>
+      id ? userActivityApi.onlineSummary({ organizationId: id }) : Promise.resolve([]),
+    [],
+  );
+  const summaryByUser = useMemo(() => {
+    const map = new Map<string, EmployeeOnlineSummary>();
+    for (const s of onlineSummary) map.set(s.userId, s);
+    return map;
+  }, [onlineSummary]);
 
   const { data: allUsers } = useFetch(
     ['all-users-for-org-assign'],
@@ -170,29 +204,6 @@ export default function OrganizationDetail() {
     }
   };
 
-  const nesColumns: ColumnsType<NesEmployee> = [
-    {
-      title: '№',
-      width: 64,
-      render: (_: unknown, __: NesEmployee, index: number) =>
-        (nesPage - 1) * PAGE_SIZE + index + 1,
-    },
-    {
-      title: 'Tabel',
-      dataIndex: 'personnelNumber',
-      width: 120,
-      render: (value: string) => <Tag>{value}</Tag>,
-    },
-    { title: 'F.I.O', dataIndex: 'fullName' },
-    { title: 'Lavozim', dataIndex: 'post' },
-    { title: "Bo'lim", dataIndex: 'division' },
-    {
-      title: 'Login',
-      dataIndex: 'login',
-      render: (value: string) => <Tag color="blue">{value}</Tag>,
-    },
-  ];
-
   const appColumns: ColumnsType<StudentSummary> = [
     {
       title: '№',
@@ -231,10 +242,62 @@ export default function OrganizationDetail() {
       width: 80,
     },
     {
+      title: 'Holat',
+      key: 'online',
+      width: 100,
+      render: (_: unknown, r: StudentSummary) =>
+        summaryByUser.get(r.id)?.isOnline ? (
+          <Tag color="green">Online</Tag>
+        ) : (
+          <Tag>Offline</Tag>
+        ),
+    },
+    {
+      title: 'Oxirgi online',
+      key: 'lastSeen',
+      width: 160,
+      render: (_: unknown, r: StudentSummary) => {
+        const s = summaryByUser.get(r.id);
+        if (s?.isOnline) {
+          return <span className="text-emerald-600 dark:text-emerald-400">Hozir</span>;
+        }
+        return <span className="text-slate-500">{formatLastSeen(s?.lastSeenAt)}</span>;
+      },
+    },
+    {
+      title: 'Bugun',
+      key: 'today',
+      width: 90,
+      render: (_: unknown, r: StudentSummary) =>
+        formatOnlineDuration(summaryByUser.get(r.id)?.todaySeconds),
+    },
+    {
+      title: 'Kecha',
+      key: 'yesterday',
+      width: 90,
+      render: (_: unknown, r: StudentSummary) =>
+        formatOnlineDuration(summaryByUser.get(r.id)?.yesterdaySeconds),
+    },
+    {
+      title: 'Hafta',
+      key: 'week',
+      width: 90,
+      render: (_: unknown, r: StudentSummary) =>
+        formatOnlineDuration(summaryByUser.get(r.id)?.weekSeconds),
+    },
+    {
+      title: 'Oy',
+      key: 'month',
+      width: 90,
+      render: (_: unknown, r: StudentSummary) =>
+        formatOnlineDuration(summaryByUser.get(r.id)?.monthSeconds),
+    },
+    {
       title: '',
       key: 'actions',
       width: 100,
       align: 'right',
+      fixed: 'right',
       render: (_: unknown, r: StudentSummary) => (
         <Button size="small" onClick={() => navigate(`/dashboard/students/${r.id}`)}>
           Profil
@@ -370,34 +433,20 @@ export default function OrganizationDetail() {
 
       <Card className="!border-slate-200 dark:!border-slate-700/60">
         <Tabs
-          activeKey={qp.tab}
+          activeKey={
+            (['app', 'moderators', 'analytics'] as const).includes(
+              qp.tab as 'app' | 'moderators' | 'analytics',
+            )
+              ? qp.tab
+              : 'app'
+          }
           onChange={(key) =>
             setParams({
               tab: key as typeof qp.tab,
-              nesPage: undefined,
               appPage: undefined,
             })
           }
           items={[
-            {
-              key: 'nes',
-              label: `ENERGO ID xodimlar (${nesTotal})`,
-              children: (
-                <Table
-                  rowKey="id"
-                  loading={nesInitialLoading || nesLoading}
-                  dataSource={employees}
-                  columns={nesColumns}
-                  pagination={{
-                    current: nesPage,
-                    pageSize: PAGE_SIZE,
-                    total: nesTotal,
-                    showSizeChanger: false,
-                    onChange: (page) => setParam('nesPage', page > 1 ? String(page) : undefined),
-                  }}
-                />
-              ),
-            },
             {
               key: 'app',
               label: `App xodimlar (${appTotal})`,
@@ -407,6 +456,7 @@ export default function OrganizationDetail() {
                   loading={appInitialLoading || appLoading}
                   dataSource={appEmployees}
                   columns={appColumns}
+                  scroll={{ x: 'max-content' }}
                   onRow={(record) => ({
                     onClick: () => navigate(`/dashboard/students/${record.id}`),
                     className: 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5',

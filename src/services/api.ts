@@ -1146,6 +1146,58 @@ class ApiService {
     };
   }
 
+  async getOAuthIntegration() {
+    const response = await this.api.get('/admin/import-export/oauth/integration');
+    return response.data as {
+      mobileRedirectUri: string;
+      webRedirectUri: string;
+      callbackPath: string;
+      scopes: string;
+      templates: {
+        authorizeUrl: string;
+        callbackMobile: string;
+        callbackWeb: string;
+      };
+      endpoints: {
+        authorizeUrl: string;
+        exchange: string;
+      };
+      energoIdHealth: { configured: boolean; reachable: boolean };
+      deployChecklist: {
+        message: string;
+        requiredRedirectUrls: string[];
+      };
+    };
+  }
+
+  async updateOAuthIntegration(data: {
+    mobileRedirectUri?: string;
+    webRedirectUri?: string;
+    oauthScopes?: string;
+  }) {
+    const response = await this.api.patch(
+      '/admin/import-export/oauth/integration',
+      data,
+    );
+    return response.data;
+  }
+
+  async exportOAuthEnvBundle() {
+    const response = await this.api.get(
+      '/admin/import-export/oauth/integration/env-export',
+      { responseType: 'blob' },
+    );
+    const blob = new Blob([response.data], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'elektrolearn-energo-id-oauth.env';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async getAiChatStatus(): Promise<{
     provider: string;
     openRouterConfigured: boolean;
@@ -2202,6 +2254,16 @@ export type ActivityUserRow = {
   lastEventAt: string | null;
 };
 
+export type EmployeeOnlineSummary = {
+  userId: string;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+  todaySeconds: number;
+  yesterdaySeconds: number;
+  weekSeconds: number;
+  monthSeconds: number;
+};
+
 export type ActivityStats = {
   onlineNow: number;
   loginsToday: number;
@@ -2278,6 +2340,13 @@ export const userActivityApi = {
   }) {
     const { data } = await apiService.api.get<ActivityStats>(
       '/user-activity/stats',
+      { params },
+    );
+    return data;
+  },
+  async onlineSummary(params: { organizationId: string }) {
+    const { data } = await apiService.api.get<EmployeeOnlineSummary[]>(
+      '/user-activity/online-summary',
       { params },
     );
     return data;

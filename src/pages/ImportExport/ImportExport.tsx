@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Checkbox, Modal, Tag, Upload, message } from 'antd';
+import { Button, Card, Checkbox, Input, Modal, Tag, Upload, message } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { Download, UploadCloud, Layers, Shield, FileJson } from 'lucide-react';
+import { Download, UploadCloud, Layers, Shield, FileJson, KeyRound, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '@/services/api';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
@@ -23,6 +23,27 @@ type ModeratorsImportResult = {
   errors: string[];
 };
 
+type OAuthIntegrationView = {
+  mobileRedirectUri: string;
+  webRedirectUri: string;
+  callbackPath: string;
+  scopes: string;
+  templates: {
+    authorizeUrl: string;
+    callbackMobile: string;
+    callbackWeb: string;
+  };
+  endpoints: {
+    authorizeUrl: string;
+    exchange: string;
+  };
+  energoIdHealth: { configured: boolean; reachable: boolean };
+  deployChecklist: {
+    message: string;
+    requiredRedirectUrls: string[];
+  };
+};
+
 export default function ImportExportPage() {
   const navigate = useNavigate();
 
@@ -40,11 +61,76 @@ export default function ImportExportPage() {
   const [lastModeratorsResult, setLastModeratorsResult] =
     useState<ModeratorsImportResult | null>(null);
 
+  const [oauthData, setOAuthData] = useState<OAuthIntegrationView | null>(null);
+  const [oauthLoading, setOAuthLoading] = useState(true);
+  const [oauthSaving, setOAuthSaving] = useState(false);
+  const [oauthExporting, setOAuthExporting] = useState(false);
+  const [mobileRedirectUri, setMobileRedirectUri] = useState('');
+  const [webRedirectUri, setWebRedirectUri] = useState('');
+  const [oauthScopes, setOAuthScopes] = useState('');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isSuperAdmin()) {
       navigate('/dashboard/home');
+      return;
     }
+    void loadOAuthIntegration();
   }, [navigate]);
+
+  const loadOAuthIntegration = async () => {
+    try {
+      setOAuthLoading(true);
+      const data = await apiService.getOAuthIntegration();
+      setOAuthData(data);
+      setMobileRedirectUri(data.mobileRedirectUri);
+      setWebRedirectUri(data.webRedirectUri);
+      setOAuthScopes(data.scopes);
+    } catch {
+      message.error('OAuth sozlamalarini yuklab bo‘lmadi');
+    } finally {
+      setOAuthLoading(false);
+    }
+  };
+
+  const copyTemplate = async (key: string, value: string) => {
+    await navigator.clipboard.writeText(value);
+    setCopiedKey(key);
+    message.success('Nusxalandi');
+    window.setTimeout(() => setCopiedKey(null), 1800);
+  };
+
+  const saveOAuthIntegration = async () => {
+    try {
+      setOAuthSaving(true);
+      const data = await apiService.updateOAuthIntegration({
+        mobileRedirectUri,
+        webRedirectUri,
+        oauthScopes,
+      });
+      setOAuthData(data);
+      message.success('OAuth sozlamalari saqlandi');
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ?? 'Saqlash xatosi';
+      message.error(msg);
+    } finally {
+      setOAuthSaving(false);
+    }
+  };
+
+  const exportOAuthEnv = async () => {
+    try {
+      setOAuthExporting(true);
+      await apiService.exportOAuthEnvBundle();
+      message.success('.env namunasi yuklab olindi');
+    } catch {
+      message.error('Export xatosi');
+    } finally {
+      setOAuthExporting(false);
+    }
+  };
 
   const handleExportContent = async () => {
     try {
@@ -287,6 +373,117 @@ export default function ImportExportPage() {
           ) : null}
         </Card>
       </div>
+
+      <Card
+        title={
+          <span className="flex items-center gap-2">
+            <KeyRound size={18} />
+            Energo ID OAuth
+          </span>
+        }
+        className="!border-slate-200 dark:!border-slate-700/60"
+        loading={oauthLoading}
+      >
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          Redirect URI va scope DB da saqlanadi. Mobil/web ilovalar authorize-url
+          orqali shu URI larni oladi. Energo ID platformasida ham xuddi shu URL lar
+          ro‘yxatga qo‘shilganini tekshiring.
+        </p>
+
+        {oauthData?.deployChecklist ? (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/30 px-4 py-3 text-sm text-blue-900 dark:text-blue-200 mb-4">
+            <strong>Deploy checklist:</strong> {oauthData.deployChecklist.message}
+            <ul className="mt-2 list-disc pl-5 space-y-1">
+              {oauthData.deployChecklist.requiredRedirectUrls.map((url) => (
+                <li key={url} className="font-mono text-xs break-all">
+                  {url}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-2 mb-4">
+          <div>
+            <label className="block text-sm mb-1">Mobile redirect URI</label>
+            <Input
+              value={mobileRedirectUri}
+              onChange={(e) => setMobileRedirectUri(e.target.value)}
+              placeholder="uz.elektroxavfsizlik.app://oauth/callback"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Web redirect URI</label>
+            <Input
+              value={webRedirectUri}
+              onChange={(e) => setWebRedirectUri(e.target.value)}
+              placeholder="https://.../oauth/callback"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">OAuth scope</label>
+            <Input
+              value={oauthScopes}
+              onChange={(e) => setOAuthScopes(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Callback path (readonly)</label>
+            <Input value={oauthData?.callbackPath ?? '/oauth/callback'} disabled />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button type="primary" loading={oauthSaving} onClick={saveOAuthIntegration}>
+            Saqlash
+          </Button>
+          <Button
+            icon={<Download size={16} />}
+            loading={oauthExporting}
+            onClick={exportOAuthEnv}
+          >
+            .env export (secretsiz)
+          </Button>
+          <Tag color={oauthData?.energoIdHealth.configured ? 'green' : 'default'}>
+            {oauthData?.energoIdHealth.configured ? 'Energo ID sozlangan' : 'Sozlanmagan'}
+          </Tag>
+          <Tag color={oauthData?.energoIdHealth.reachable ? 'green' : 'orange'}>
+            {oauthData?.energoIdHealth.reachable ? 'Ulanish OK' : 'Ulanish yo‘q'}
+          </Tag>
+        </div>
+
+        {oauthData?.templates ? (
+          <div className="space-y-3">
+            {[
+              ['authorize', 'Authorize URL', oauthData.templates.authorizeUrl],
+              ['callbackMobile', 'Callback (mobile)', oauthData.templates.callbackMobile],
+              ['callbackWeb', 'Callback (web)', oauthData.templates.callbackWeb],
+            ].map(([key, label, value]) => (
+              <div key={key} className="rounded border border-slate-200 dark:border-slate-700 p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-medium">{label}</span>
+                  <Button
+                    size="small"
+                    icon={
+                      copiedKey === key ? <Check size={14} /> : <Copy size={14} />
+                    }
+                    onClick={() => void copyTemplate(key, value)}
+                  >
+                    {copiedKey === key ? 'Nusxalandi' : 'Nusxalash'}
+                  </Button>
+                </div>
+                <pre className="text-xs overflow-x-auto whitespace-pre-wrap break-all bg-slate-50 dark:bg-slate-900/50 p-2 rounded">
+                  {value}
+                </pre>
+              </div>
+            ))}
+            <p className="text-xs text-slate-500">
+              Exchange: <code>POST {oauthData.endpoints.exchange}</code> — mobil
+              callback dan keyin <code>code</code> yuboriladi.
+            </p>
+          </div>
+        ) : null}
+      </Card>
 
       <Modal
         open={contentConfirmOpen}
