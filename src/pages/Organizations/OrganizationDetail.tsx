@@ -20,7 +20,6 @@ import {
   ArrowLeft,
   BarChart3,
   Building2,
-  Download,
   Mail,
   Pencil,
   Star,
@@ -38,7 +37,6 @@ import apiService, {
   type StudentSummary,
 } from '@/services/api';
 import { can } from '@/utils/can';
-import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
 const QP_DEFAULTS = {
   tab: 'app' as 'app' | 'moderators' | 'analytics',
@@ -132,9 +130,9 @@ export default function OrganizationDetail() {
   }, [onlineSummary]);
 
   const { data: allUsers } = useFetch(
-    ['all-users-for-org-assign'],
+    ['employees-for-moderator-promote', id],
     async () => {
-      const res = await apiService.getUsers();
+      const res = await apiService.getUsers({ role: 'USER', limit: 200 });
       return res.data;
     },
     [] as { id: string; firstName: string; lastName: string; email: string; role: string }[],
@@ -148,22 +146,15 @@ export default function OrganizationDetail() {
 
   const moderators = useMemo(() => moderatorUsers(org), [org]);
 
-  const handleExport = async () => {
-    if (!id) return;
-    try {
-      await apiService.exportOrganizationCredentials(id);
-      message.success('Excel yuklab olindi');
-    } catch {
-      message.error('Export xatosi');
-    }
-  };
-
   const handleAssignUser = async () => {
     if (!id || !can('organizations', 'update')) return;
     try {
       const values = await assignForm.validateFields();
-      await apiService.assignUserToOrg(id, values.userId);
-      message.success('Foydalanuvchi biriktirildi');
+      await apiService.promoteModerator({
+        userId: values.userId,
+        organizationId: id,
+      });
+      message.success('Xodimga moderator statusi berildi');
       setAssignOpen(false);
       assignForm.resetFields();
       refetchOrg();
@@ -373,11 +364,6 @@ export default function OrganizationDetail() {
               Tahrirlash
             </Button>
           )}
-          {isSuperAdmin() && (
-            <Button type="primary" icon={<Download size={16} />} onClick={handleExport}>
-              Login-parollar (Excel)
-            </Button>
-          )}
         </div>
       </div>
 
@@ -541,9 +527,7 @@ export default function OrganizationDetail() {
               showSearch
               placeholder="Foydalanuvchini tanlang"
               optionFilterProp="label"
-              options={allUsers
-                .filter((u) => u.role !== 'USER')
-                .map((u) => ({
+              options={allUsers.map((u) => ({
                   value: u.id,
                   label: `${u.firstName} ${u.lastName} (${u.email})`,
                 }))}

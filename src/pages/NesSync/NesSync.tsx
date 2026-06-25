@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles, Download } from 'lucide-react';
+import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
 import NoData from '@/components/NoData';
 import {
   mapSyncStatusToProgress,
@@ -71,7 +71,6 @@ export default function NesSync() {
 
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [exporting, setExporting] = useState(false);
 
   const [filterOptions, setFilterOptions] = useState<{ organizations: string[]; divisions: string[] }>({
     organizations: [],
@@ -215,18 +214,6 @@ export default function NesSync() {
     }
   };
 
-  const handleExportCredentials = async () => {
-    try {
-      setExporting(true);
-      await apiService.exportNesEmployeesCredentials(qp.organizationName);
-      message.success('Login/parol Excel yuklab olindi (Energo ID mirror)');
-    } catch {
-      message.error('Export xatosi — avval sinxron qiling');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const handleDeleteAll = async () => {
     setDeleting(true);
     setDeleteConfirmOpen(false);
@@ -286,25 +273,6 @@ export default function NesSync() {
         ),
       },
     ];
-
-    if (isSuperAdmin()) {
-      base.push(
-        {
-          title: 'Login',
-          dataIndex: 'login',
-          key: 'login',
-          render: (value: string) => <Tag color="blue">{value}</Tag>,
-        },
-        {
-          title: 'Parol',
-          dataIndex: 'initialPassword',
-          key: 'initialPassword',
-          render: (value: string | null) => (
-            <Tag>{value || 'Excel export orqali'}</Tag>
-          ),
-        },
-      );
-    }
 
     base.push({
       title: 'Sync',
@@ -469,16 +437,6 @@ export default function NesSync() {
           }
           onChange={(val) => setParams({ division: val ?? undefined, page: undefined })}
         />
-
-        <Button
-          icon={<Download size={16} />}
-          loading={exporting}
-          disabled={syncing || total === 0}
-          hidden={!isSuperAdmin()}
-          onClick={handleExportCredentials}
-        >
-          Login/parol Excel
-        </Button>
 
         <Button
           type="primary"

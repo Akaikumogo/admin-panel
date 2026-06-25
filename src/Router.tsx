@@ -9,6 +9,7 @@ import AnimateWrapper from './components/AnimateWrapper';
 import ElektroLearn from './components/qwerttyu';
 
 const LoginPage = lazy(() => import('./pages/Login/Login'));
+const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallback/OAuthCallback'));
 const HomePage = lazy(() => import('./pages/Home'));
 const ProfilePage = lazy(() => import('./pages/Profile/Profile'));
 const LevelsPage = lazy(() => import('./pages/Levels/Levels'));
@@ -182,6 +183,10 @@ export const routes: RouteObject[] = [
   {
     path: 'login',
     element: withSuspense(LoginPage)
+  },
+  {
+    path: 'oauth/callback',
+    element: withSuspense(OAuthCallbackPage)
   },
   { path: 'qwerttyu', element: <ElektroLearn /> },
 

@@ -799,6 +799,64 @@ class ApiService {
     return payload;
   }
 
+  async getEnergoIdAuthorizeUrl(client: 'mobile' | 'web' = 'web') {
+    const callbackOrigin =
+      typeof window !== 'undefined' ? window.location.origin : undefined;
+    const response = await this.api.get<{
+      authorizeUrl: string;
+      redirectUri: string;
+      state: string;
+      codeVerifier?: string;
+      client: 'mobile' | 'web';
+    }>('/auth/energo-id/authorize-url', {
+      params: {
+        client,
+        ...(callbackOrigin ? { callback_origin: callbackOrigin } : {}),
+      },
+    });
+    return response.data;
+  }
+
+  async exchangeAdminEnergoIdCode(
+    code: string,
+    redirectUri?: string,
+    state?: string,
+    client?: 'mobile' | 'web',
+    codeVerifier?: string,
+  ): Promise<LoginResponse> {
+    const response = await this.api.post<LoginResponse>(
+      '/auth/admin/energo-id/exchange',
+      {
+        onetime: code,
+        code,
+        redirect_uri: redirectUri,
+        state,
+        client,
+        code_verifier: codeVerifier,
+      },
+    );
+    const payload = response.data;
+    localStorage.setItem('accessToken', payload.data.accessToken);
+    localStorage.setItem('refreshToken', payload.data.refreshToken);
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('user', JSON.stringify(payload.data.user));
+    return payload;
+  }
+
+  async startEnergoIdLogin() {
+    const { authorizeUrl, redirectUri, state, codeVerifier, client } =
+      await this.getEnergoIdAuthorizeUrl('web');
+    localStorage.setItem('oauth_state', state);
+    localStorage.setItem('oauth_redirect_uri', redirectUri);
+    localStorage.setItem('oauth_client', client);
+    if (codeVerifier) {
+      localStorage.setItem('oauth_code_verifier', codeVerifier);
+    } else {
+      localStorage.removeItem('oauth_code_verifier');
+    }
+    window.location.href = authorizeUrl;
+  }
+
   async logout(): Promise<void> {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) {
@@ -1038,50 +1096,6 @@ class ApiService {
       { params },
     );
     return response.data;
-  }
-
-  private async downloadFile(
-    path: string,
-    filename: string,
-    params?: Record<string, string | undefined>,
-  ) {
-    const response = await this.api.get(path, {
-      responseType: 'blob',
-      params,
-    });
-    const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  async exportOrganizationCredentials(orgId: string) {
-    await this.downloadFile(
-      `/admin/organizations/${orgId}/export-credentials`,
-      `filial-login-parollar.xlsx`,
-    );
-  }
-
-  async exportModeratorsCredentials() {
-    await this.downloadFile(
-      '/admin/branch-analytics/export/moderators-credentials',
-      'moderatorlar-login-parollar.xlsx',
-    );
-  }
-
-  async exportNesEmployeesCredentials(organizationName?: string) {
-    await this.downloadFile(
-      '/admin/nes-employees/export-credentials',
-      'energo-id-xodimlar-login-parollar.xlsx',
-      organizationName ? { organizationName } : undefined,
-    );
   }
 
   private async downloadJson(path: string, filename: string) {
@@ -1826,31 +1840,40 @@ class ApiService {
     return response.data;
   }
 
-  async bulkGenerateModeratorPasswords(
-    userIds: string[]
-  ): Promise<{ updated: number; users: Array<{ id: string; password: string }> }> {
-    const response = await this.api.post<{
-      updated: number;
-      users: Array<{ id: string; password: string }>;
-    }>('/admin/users/moderators/bulk-generate-passwords', { userIds });
-    return response.data;
-  }
-
   async getUserById(id: string): Promise<UserProfile> {
     const response = await this.api.get<UserProfile>(`/admin/users/${id}`);
     return response.data;
   }
 
-  async createModerator(data: {
-    email: string;
-    password?: string;
-    firstName: string;
-    lastName: string;
+  async promoteModerator(data: {
+    userId: string;
     organizationId?: string;
   }): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
-      '/admin/users/moderators',
-      data
+      '/admin/users/moderators/promote',
+      data,
+    );
+    return response.data;
+  }
+
+  async demoteModerator(id: string): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      `/admin/users/moderators/${id}/demote`,
+    );
+    return response.data;
+  }
+
+  async promoteSuperAdmin(userId: string): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      '/admin/users/superadmins/promote',
+      { userId },
+    );
+    return response.data;
+  }
+
+  async demoteSuperAdmin(id: string): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      `/admin/users/superadmins/${id}/demote`,
     );
     return response.data;
   }

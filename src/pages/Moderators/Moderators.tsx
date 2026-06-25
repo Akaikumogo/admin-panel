@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Key } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -18,19 +17,15 @@ import {
 } from 'antd';
 import {
   Plus,
-  Trash2,
   Mail,
   Shield,
   Filter,
   Search,
   Settings,
   Table2,
-  Download,
-  KeyRound,
-  CheckSquare,
   Pencil,
+  UserMinus,
 } from 'lucide-react';
-import type { TableRowSelection } from 'antd/es/table/interface';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
@@ -38,31 +33,21 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { ModeratorPermissions, Organization, UserProfile } from '@/services/api';
-import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
 const T = {
   title: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
   addModerator: {
-    uz: 'Moderator qo`shish',
-    en: 'Add Moderator',
-    ru: 'Добавить модератора',
+    uz: 'Xodimga moderator berish',
+    en: 'Promote employee',
+    ru: 'Назначить модератора',
   },
-  email: { uz: 'Email', en: 'Email', ru: 'Email' },
-  password: { uz: 'Parol', en: 'Password', ru: 'Пароль' },
-  firstName: { uz: 'Ism', en: 'First name', ru: 'Имя' },
-  lastName: { uz: 'Familiya', en: 'Last name', ru: 'Фамилия' },
   organization: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
-  allOrganizations: {
-    uz: 'Barcha tashkilotlar',
-    en: 'All organizations',
-    ru: 'Все организации',
-  },
   save: { uz: 'Saqlash', en: 'Save', ru: 'Сохранить' },
   cancel: { uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' },
-  deleteConfirm: {
-    uz: 'Rostdan o`chirmoqchimisiz?',
-    en: 'Are you sure?',
-    ru: 'Вы уверены?',
+  demoteConfirm: {
+    uz: 'Moderatorlikdan olib tashlansinmi? Xodim USER bo`lib qoladi.',
+    en: 'Remove moderator role? User becomes USER again.',
+    ru: 'Снять роль модератора?',
   },
   noData: {
     uz: 'Moderatorlar yo`q',
@@ -78,13 +63,14 @@ const T = {
     ru: 'Права (таблица)',
   },
   editModerator: {
-    uz: 'Moderatorni tahrirlash',
-    en: 'Edit moderator',
-    ru: 'Редактировать модератора',
+    uz: 'Moderator filiali',
+    en: 'Moderator branch',
+    ru: 'Филиал модератора',
   },
   actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
   name: { uz: 'F.I.O', en: 'Full name', ru: 'Ф.И.О' },
   role: { uz: 'Rol', en: 'Role', ru: 'Роль' },
+  employee: { uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' },
 } as const;
 
 const PAGE_SIZE = 20;
@@ -134,9 +120,9 @@ const Moderators = () => {
   );
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-  const [bulkLoading, setBulkLoading] = useState(false);
-  const [selectingAll, setSelectingAll] = useState(false);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [employeeOptions, setEmployeeOptions] = useState<UserProfile[]>([]);
+  const [employeeLoading, setEmployeeLoading] = useState(false);
 
   const [permOpen, setPermOpen] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
@@ -187,6 +173,20 @@ const Moderators = () => {
     }
   };
 
+  const loadEmployees = async (search?: string) => {
+    setEmployeeLoading(true);
+    try {
+      const res = await apiService.getUsers({
+        role: 'USER',
+        search: search || undefined,
+        limit: 50,
+      });
+      setEmployeeOptions(res.data);
+    } finally {
+      setEmployeeLoading(false);
+    }
+  };
+
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
@@ -206,20 +206,50 @@ const Moderators = () => {
     setParams({ orgMode: value === 'include' ? undefined : value, page: undefined });
   };
 
-  useEffect(() => {
-    setSelectedRowKeys([]);
-  }, [qp.search, qp.orgId, qp.orgMode]);
+  const openCreateModal = () => {
+    setEditingModerator(null);
+    form.resetFields();
+    setEmployeeSearch('');
+    void loadEmployees();
+    setModalOpen(true);
+  };
 
-  const handleCreate = async () => {
+  const openEditModal = (mod: UserProfile) => {
+    setEditingModerator(mod);
+    form.setFieldsValue({
+      organizationId: mod.organizations?.[0]?.id,
+    });
+    setModalOpen(true);
+  };
+
+  const handlePromote = async () => {
     try {
       const values = await form.validateFields();
       setSaving(true);
-      const payload = { ...values };
-      if (!payload.password || !String(payload.password).trim()) {
-        delete payload.password;
-      }
-      await apiService.createModerator(payload);
-      message.success('Moderator yaratildi (parol Excel exportda)');
+      await apiService.promoteModerator({
+        userId: values.userId,
+        organizationId: values.organizationId || undefined,
+      });
+      message.success('Xodimga moderator statusi berildi');
+      setModalOpen(false);
+      form.resetFields();
+      refetch();
+    } catch {
+      /* validation */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditOrganization = async () => {
+    if (!editingModerator) return;
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
+      await apiService.updateModerator(editingModerator.id, {
+        organizationId: values.organizationId ?? null,
+      });
+      message.success('Filial yangilandi');
       setModalOpen(false);
       setEditingModerator(null);
       form.resetFields();
@@ -231,130 +261,28 @@ const Moderators = () => {
     }
   };
 
-  const openCreateModal = () => {
-    setEditingModerator(null);
-    form.resetFields();
-    setModalOpen(true);
-  };
-
-  const openEditModal = (mod: UserProfile) => {
-    setEditingModerator(mod);
-    form.setFieldsValue({
-      firstName: mod.firstName,
-      lastName: mod.lastName,
-      email: mod.email,
-      organizationId: mod.organizations?.[0]?.id,
-      password: undefined,
-    });
-    setModalOpen(true);
-  };
-
-  const handleSaveModerator = async () => {
+  const handleSave = async () => {
     if (editingModerator) {
-      try {
-        const values = await form.validateFields();
-        setSaving(true);
-        const payload: {
-          firstName?: string;
-          lastName?: string;
-          email?: string;
-          password?: string;
-          organizationId?: string | null;
-        } = {
-          firstName: values.firstName,
-          lastName: values.lastName,
-          email: values.email,
-        };
-        if (values.password?.trim()) {
-          payload.password = values.password.trim();
-        }
-        if (values.organizationId) {
-          payload.organizationId = values.organizationId;
-        }
-        await apiService.updateModerator(editingModerator.id, payload);
-        message.success('Moderator yangilandi');
-        setModalOpen(false);
-        setEditingModerator(null);
-        form.resetFields();
-        refetch();
-      } catch {
-        /* validation */
-      } finally {
-        setSaving(false);
-      }
+      await handleEditOrganization();
       return;
     }
-    await handleCreate();
+    await handlePromote();
   };
 
-  const handleDelete = async (id: string) => {
-    await apiService.deleteUser(id);
-    message.success('Moderator o`chirildi');
+  const handleDemote = async (id: string) => {
+    await apiService.demoteModerator(id);
+    message.success('Moderatorlik olib tashlandi');
     refetch();
   };
 
-  const handleExport = async () => {
-    try {
-      await apiService.exportModeratorsCredentials();
-      message.success('Excel yuklab olindi');
-    } catch {
-      message.error('Export xatosi');
-    }
-  };
-
-  const handleSelectAllFiltered = async () => {
-    if (total === 0) return;
-    setSelectingAll(true);
-    try {
-      const res = await apiService.getModerators({
-        search: qp.search || undefined,
-        organizationId: qp.orgId || undefined,
-        organizationMode: qp.orgMode === 'exclude' ? 'exclude' : 'include',
-        page: 1,
-        limit: Math.max(total, PAGE_SIZE),
-      });
-      setSelectedRowKeys(res.data.map((mod) => mod.id));
-      message.success(`${res.data.length} ta moderator tanlandi`);
-    } finally {
-      setSelectingAll(false);
-    }
-  };
-
-  const handleBulkGeneratePasswords = () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('Avval moderatorlarni tanlang');
-      return;
-    }
-
-    Modal.confirm({
-      title: 'Parollarni qayta generatsiya qilish',
-      content: `${selectedRowKeys.length} ta moderator uchun yangi parol generatsiya qilinadi. Eski parollar ishlamaydi.`,
-      okText: 'Generate password',
-      cancelText: t(T.cancel),
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        setBulkLoading(true);
-        try {
-          const res = await apiService.bulkGenerateModeratorPasswords(
-            selectedRowKeys.map(String),
-          );
-          message.success(
-            `${res.updated} ta moderator paroli yangilandi. Excel exportdan yuklab oling.`,
-          );
-          setSelectedRowKeys([]);
-          refetch();
-        } finally {
-          setBulkLoading(false);
-        }
-      },
-    });
-  };
-
-  const rowSelection: TableRowSelection<UserProfile> = {
-    selectedRowKeys,
-    preserveSelectedRowKeys: true,
-    onChange: (keys) => setSelectedRowKeys(keys),
-  };
+  useEffect(() => {
+    if (!modalOpen || editingModerator) return;
+    const timer = setTimeout(() => {
+      void loadEmployees(employeeSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeSearch, modalOpen, editingModerator]);
 
   const columns = [
     {
@@ -391,7 +319,7 @@ const Moderators = () => {
       ),
     },
     {
-      title: t(T.email),
+      title: 'Email',
       key: 'email',
       render: (_: unknown, mod: UserProfile) => (
         <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
@@ -406,7 +334,10 @@ const Moderators = () => {
       ellipsis: true,
       render: (_: unknown, mod: UserProfile) =>
         mod.organizations?.length ? (
-          <span className="text-sm text-slate-600 dark:text-slate-300" title={mod.organizations.map((o) => o.name).join(', ')}>
+          <span
+            className="text-sm text-slate-600 dark:text-slate-300"
+            title={mod.organizations.map((o) => o.name).join(', ')}
+          >
             {mod.organizations.map((o) => o.name).join(', ')}
           </span>
         ) : (
@@ -446,10 +377,10 @@ const Moderators = () => {
             }
           />
           <Popconfirm
-            title={t(T.deleteConfirm)}
-            onConfirm={() => handleDelete(mod.id)}
+            title={t(T.demoteConfirm)}
+            onConfirm={() => handleDemote(mod.id)}
           >
-            <Button size="small" danger icon={<Trash2 size={14} />} />
+            <Button size="small" danger icon={<UserMinus size={14} />} />
           </Popconfirm>
         </div>
       ),
@@ -494,34 +425,7 @@ const Moderators = () => {
         <Tag className="text-xs">
           {t(T.total)}: {total}
         </Tag>
-        {selectedRowKeys.length > 0 ? (
-          <Tag color="processing" className="text-xs">
-            Tanlangan: {selectedRowKeys.length}
-          </Tag>
-        ) : null}
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            icon={<CheckSquare size={16} />}
-            disabled={total === 0 || loading}
-            loading={selectingAll}
-            onClick={handleSelectAllFiltered}
-          >
-            Select all
-          </Button>
-          <Button
-            danger
-            icon={<KeyRound size={16} />}
-            disabled={selectedRowKeys.length === 0}
-            loading={bulkLoading}
-            onClick={handleBulkGeneratePasswords}
-          >
-            Generate password
-          </Button>
-          {isSuperAdmin() && (
-            <Button icon={<Download size={16} />} onClick={handleExport}>
-              Excel export
-            </Button>
-          )}
           <Button
             icon={<Table2 size={16} />}
             onClick={() => navigate('/dashboard/permissions')}
@@ -547,7 +451,6 @@ const Moderators = () => {
       ) : (
         <Table
           rowKey="id"
-          rowSelection={rowSelection}
           columns={columns}
           dataSource={moderators}
           loading={loading}
@@ -572,55 +475,32 @@ const Moderators = () => {
           setModalOpen(false);
           setEditingModerator(null);
         }}
-        onOk={handleSaveModerator}
+        onOk={handleSave}
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="firstName"
-            label={t(T.firstName)}
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="lastName"
-            label={t(T.lastName)}
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="email"
-            label={t(T.email)}
-            rules={[{ required: true, type: 'email' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            label={`${t(T.password)} (${t(T.optional)})`}
-            extra={
-              editingModerator
-                ? 'Bo\'sh qoldirilsa parol o\'zgarmaydi'
-                : 'Bo\'sh qoldirilsa, server avtomat parol generatsiya qiladi (Excel exportda chiqadi)'
-            }
-            rules={[
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  if (value.length < 6) {
-                    return Promise.reject(new Error('Kamida 6 belgi'));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-          >
-            <Input.Password placeholder="Avtomat generatsiya" />
-          </Form.Item>
+          {!editingModerator ? (
+            <Form.Item
+              name="userId"
+              label={t(T.employee)}
+              rules={[{ required: true, message: 'Xodimni tanlang' }]}
+              extra="Faqat Energo ID orqali kelgan xodimlar (USER) ko'rinadi"
+            >
+              <Select
+                showSearch
+                placeholder="Xodim qidirish..."
+                filterOption={false}
+                loading={employeeLoading}
+                onSearch={setEmployeeSearch}
+                options={employeeOptions.map((u) => ({
+                  value: u.id,
+                  label: `${u.lastName} ${u.firstName} (${u.email})`,
+                }))}
+              />
+            </Form.Item>
+          ) : null}
           <Form.Item
             name="organizationId"
             label={`${t(T.organization)} (${t(T.optional)})`}
@@ -680,34 +560,19 @@ const Moderators = () => {
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="font-semibold">{label}</div>
                   <div className="flex items-center gap-6 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">View</span>
-                      <Switch
-                        checked={permissions[key].view}
-                        onChange={(v) => setCrud(key, 'view', v)}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">Create</span>
-                      <Switch
-                        checked={permissions[key].create}
-                        onChange={(v) => setCrud(key, 'create', v)}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">Update</span>
-                      <Switch
-                        checked={permissions[key].update}
-                        onChange={(v) => setCrud(key, 'update', v)}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500">Delete</span>
-                      <Switch
-                        checked={permissions[key].delete}
-                        onChange={(v) => setCrud(key, 'delete', v)}
-                      />
-                    </div>
+                    {(['view', 'create', 'update', 'delete'] as const).map(
+                      (field) => (
+                        <div key={field} className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500 capitalize">
+                            {field}
+                          </span>
+                          <Switch
+                            checked={permissions[key][field]}
+                            onChange={(v) => setCrud(key, field, v)}
+                          />
+                        </div>
+                      ),
+                    )}
                   </div>
                 </div>
               </div>

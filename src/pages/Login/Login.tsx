@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Form, Input, Button, Select, message } from 'antd';
+import { Form, Input, Button, Select, message, Divider } from 'antd';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -10,6 +10,7 @@ const LoginPage = () => {
   const { t, lang, setLang } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onFinish = async (values: any) => {
@@ -20,8 +21,8 @@ const LoginPage = () => {
         t({
           en: 'Login successful',
           uz: 'Muvaffaqiyatli kirildi',
-          ru: 'Успешный вход'
-        })
+          ru: 'Успешный вход',
+        }),
       );
       navigate('/dashboard/home');
     } catch (error: any) {
@@ -30,11 +31,28 @@ const LoginPage = () => {
           t({
             en: 'Login failed',
             uz: 'Kirish muvaffaqiyatsiz',
-            ru: 'Ошибка входа'
-          })
+            ru: 'Ошибка входа',
+          }),
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEnergoIdLogin = async () => {
+    try {
+      setOauthLoading(true);
+      await apiService.startEnergoIdLogin();
+    } catch (error: any) {
+      message.error(
+        error.response?.data?.message ||
+          t({
+            en: 'Energo ID login failed',
+            uz: 'Energo ID orqali kirish muvaffaqiyatsiz',
+            ru: 'Ошибка входа через Energo ID',
+          }),
+      );
+      setOauthLoading(false);
     }
   };
 
@@ -45,7 +63,6 @@ const LoginPage = () => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      {/* BG Layer with animated gradient */}
       <motion.div
         className="absolute inset-0 bg-gradient-to-br from-[#2563EB] to-[#0a36ad] dark:from-[#020617] dark:to-[#0F172A] transition-colors duration-1000"
         initial={{ scale: 1.1, opacity: 0.8 }}
@@ -53,7 +70,6 @@ const LoginPage = () => {
         exit={{ scale: 1.1, opacity: 0 }}
       />
 
-      {/* Top-right controls */}
       <motion.div
         className="absolute top-4 right-4 z-20 flex items-center gap-2"
         initial={{ opacity: 0, y: -12 }}
@@ -77,7 +93,6 @@ const LoginPage = () => {
         <ThemeToggle />
       </motion.div>
 
-      {/* Login Box */}
       <motion.div
         className="w-full max-w-sm relative z-10 bg-white/90 dark:bg-[#0F172A]/90 border border-[#E2E8F0] dark:border-[#1E293B] backdrop-blur-md rounded-2xl shadow-xl p-8"
         initial={{ scale: 0.95, y: 30, opacity: 0 }}
@@ -85,7 +100,7 @@ const LoginPage = () => {
         transition={{ type: 'spring', stiffness: 100, damping: 15 }}
       >
         <motion.h1
-          className="text-3xl font-semibold mb-6 text-[#2563EB] dark:text-[#60A5FA] text-center"
+          className="text-3xl font-semibold mb-2 text-[#2563EB] dark:text-[#60A5FA] text-center"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -93,9 +108,39 @@ const LoginPage = () => {
           {t({
             en: 'Welcome back',
             uz: 'Xush kelibsiz',
-            ru: 'Добро пожаловать'
+            ru: 'Добро пожаловать',
           })}
         </motion.h1>
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-6">
+          {t({
+            en: 'Sign in with Energo ID',
+            uz: 'Energo ID orqali kiring',
+            ru: 'Войдите через Energo ID',
+          })}
+        </p>
+
+        <Button
+          type="primary"
+          block
+          size="large"
+          className="font-medium mb-4"
+          loading={oauthLoading}
+          onClick={() => void handleEnergoIdLogin()}
+        >
+          {t({
+            en: 'Login with Energo ID',
+            uz: 'Energo ID orqali kirish',
+            ru: 'Войти через Energo ID',
+          })}
+        </Button>
+
+        <Divider plain className="text-xs text-slate-400">
+          {t({
+            en: 'or local superadmin',
+            uz: 'yoki local superadmin',
+            ru: 'или локальный superadmin',
+          })}
+        </Divider>
 
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item
@@ -107,20 +152,20 @@ const LoginPage = () => {
                 message: t({
                   en: 'Please enter your email',
                   uz: 'Email kiriting',
-                  ru: 'Введите эл. почту'
-                })
+                  ru: 'Введите эл. почту',
+                }),
               },
               {
                 type: 'email',
                 message: t({
                   en: 'Invalid email',
-                  uz: 'Noto\'g\'ri email',
-                  ru: 'Неверная эл. почта'
-                })
-              }
+                  uz: "Noto'g'ri email",
+                  ru: 'Неверная эл. почта',
+                }),
+              },
             ]}
           >
-            <Input placeholder="example@mail.com" />
+            <Input placeholder="superadmin@example.com" />
           </Form.Item>
 
           <Form.Item
@@ -132,9 +177,9 @@ const LoginPage = () => {
                 message: t({
                   en: 'Please enter your password',
                   uz: 'Parol kiriting',
-                  ru: 'Введите пароль'
-                })
-              }
+                  ru: 'Введите пароль',
+                }),
+              },
             ]}
           >
             <Input.Password placeholder="********" />
@@ -142,13 +187,16 @@ const LoginPage = () => {
 
           <Form.Item>
             <Button
-              type="primary"
               htmlType="submit"
               block
               className="font-medium"
               loading={loading}
             >
-              {t({ en: 'Login', uz: 'Kirish', ru: 'Войти' })}
+              {t({
+                en: 'Local login',
+                uz: 'Local kirish',
+                ru: 'Локальный вход',
+              })}
             </Button>
           </Form.Item>
         </Form>
