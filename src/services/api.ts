@@ -65,6 +65,33 @@ export type UserProfile = {
   avatarUrl?: string | null;
   organizationIds: string[];
   organizations: { id: string; name: string }[];
+  energoId?: string | null;
+};
+
+export type LegacyModeratorMergePreview = {
+  dryRun: boolean;
+  source: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    energoId: string | null;
+  };
+  target: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    energoId: string | null;
+  };
+  sourceRowCounts: Array<{ table: string; count: number }>;
+  conflicts: string[];
+  plannedActions: string[];
+  merged?: boolean;
+  deletedSourceId?: string;
+  targetUserId?: string;
 };
 
 export type LoginResponse = {
@@ -1874,6 +1901,26 @@ class ApiService {
   async demoteSuperAdmin(id: string): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
       `/admin/users/superadmins/${id}/demote`,
+    );
+    return response.data;
+  }
+
+  async listLegacyModerators(): Promise<UserProfile[]> {
+    const response = await this.api.get<UserProfile[]>(
+      '/admin/migrations/legacy-moderators',
+    );
+    return response.data;
+  }
+
+  async mergeLegacyModerator(payload: {
+    sourceUserId: string;
+    targetUserId: string;
+    permissionMerge?: 'prefer-source' | 'prefer-target' | 'union';
+    dryRun?: boolean;
+  }): Promise<LegacyModeratorMergePreview> {
+    const response = await this.api.post<LegacyModeratorMergePreview>(
+      '/admin/migrations/legacy-moderators/merge',
+      payload,
     );
     return response.data;
   }
