@@ -490,14 +490,21 @@ const Moderators = () => {
             >
               <Select
                 showSearch
-                placeholder="Xodim qidirish..."
+                placeholder="Ism, login, tabel №, email yoki filial..."
                 filterOption={false}
                 loading={employeeLoading}
                 onSearch={setEmployeeSearch}
-                options={employeeOptions.map((u) => ({
-                  value: u.id,
-                  label: `${u.lastName} ${u.firstName} (${u.email})`,
-                }))}
+                notFoundContent={
+                  employeeLoading ? 'Qidirilmoqda...' : 'Xodim topilmadi'
+                }
+                options={employeeOptions.map((u) => {
+                  const org = u.organizations?.map((o) => o.name).join(', ');
+                  const name = `${u.lastName} ${u.firstName}`.trim();
+                  const label = org
+                    ? `${name} — ${org} (${u.email})`
+                    : `${name} (${u.email})`;
+                  return { value: u.id, label };
+                })}
               />
             </Form.Item>
           ) : null}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -17,6 +17,12 @@ import apiService, {
   type UserProfile,
 } from '@/services/api';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
+
+function formatEmployeeLabel(u: UserProfile) {
+  const org = u.organizations?.map((o) => o.name).join(', ');
+  const name = `${u.lastName} ${u.firstName}`.trim();
+  return org ? `${name} — ${org} (${u.email})` : `${name} (${u.email})`;
+}
 
 const permissionOptions = [
   { value: 'prefer-source', label: 'Eski moderator ruxsatlari (tavsiya)' },
@@ -45,14 +51,31 @@ const ModeratorMigrationPage = () => {
     [] as UserProfile[],
   );
 
-  const { data: employees, loading: employeesLoading } = useFetch(
-    ['employees-for-migration'],
-    async () => {
-      const res = await apiService.getUsers({ role: 'USER', limit: 500 });
-      return res.data.filter((u) => u.energoId);
-    },
-    [] as UserProfile[],
-  );
+  const [employees, setEmployees] = useState<UserProfile[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+
+  const loadEmployees = async (search?: string) => {
+    setEmployeesLoading(true);
+    try {
+      const res = await apiService.getUsers({
+        role: 'USER',
+        search: search?.trim() || undefined,
+        limit: 50,
+      });
+      setEmployees(res.data);
+    } finally {
+      setEmployeesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadEmployees(employeeSearch);
+    }, employeeSearch ? 300 : 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeSearch]);
 
   const source = useMemo(
     () => legacyModerators.find((m) => m.id === sourceId),
@@ -186,14 +209,18 @@ const ModeratorMigrationPage = () => {
             showSearch
             allowClear
             className="w-full"
-            placeholder="Xodim qidirish..."
+            placeholder="Ism, login, tabel №, email yoki filial..."
             loading={employeesLoading}
             value={targetId}
             onChange={setTargetId}
-            optionFilterProp="label"
+            filterOption={false}
+            onSearch={setEmployeeSearch}
+            notFoundContent={
+              employeesLoading ? 'Qidirilmoqda...' : 'Xodim topilmadi'
+            }
             options={employees.map((e) => ({
               value: e.id,
-              label: `${e.lastName} ${e.firstName} (${e.email})`,
+              label: formatEmployeeLabel(e),
             }))}
           />
           {target ? (
