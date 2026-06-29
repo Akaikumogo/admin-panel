@@ -101,6 +101,28 @@ export type MigrationSuggestion = {
   matchReasons: string[];
 };
 
+export type BulkModeratorMigrationPreview = {
+  summary: {
+    total: number;
+    sourceFound: number;
+    targetFound: number;
+    readyToMerge: number;
+  };
+  items: Array<{
+    row: {
+      index: number;
+      fullName: string;
+      login: string;
+      organizationName: string;
+    };
+    source: LegacyModeratorMergePreview['source'] | null;
+    target: LegacyModeratorMergePreview['target'] | null;
+    confidence: 'high' | 'medium' | 'low' | 'none';
+    matchReasons: string[];
+    canAutoMerge: boolean;
+  }>;
+};
+
 export type LoginResponse = {
   success: boolean;
   message: string;
@@ -1950,6 +1972,33 @@ class ApiService {
       '/admin/migrations/legacy-moderators/merge',
       payload,
     );
+    return response.data;
+  }
+
+  async previewBulkModeratorMigration(fileBase64: string) {
+    const response = await this.api.post<BulkModeratorMigrationPreview>(
+      '/admin/migrations/legacy-moderators/bulk/preview',
+      { fileBase64 },
+    );
+    return response.data;
+  }
+
+  async applyBulkModeratorMigration(payload: {
+    fileBase64: string;
+    dryRun?: boolean;
+    permissionMerge?: 'prefer-source' | 'prefer-target' | 'union';
+    onlyReady?: boolean;
+  }) {
+    const response = await this.api.post<{
+      dryRun: boolean;
+      merged: number;
+      failed: number;
+      results: Array<{
+        row: { index: number; fullName: string; login: string };
+        success: boolean;
+        message: string;
+      }>;
+    }>('/admin/migrations/legacy-moderators/bulk/apply', payload);
     return response.data;
   }
 

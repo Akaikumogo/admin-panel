@@ -8,11 +8,13 @@ import {
   Space,
   Table,
   Tag,
+  Upload,
   message,
 } from 'antd';
-import { ArrowRightLeft, Eye, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { ArrowRightLeft, Eye, FileSpreadsheet, Play, RefreshCw, Sparkles } from 'lucide-react';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, {
+  type BulkModeratorMigrationPreview,
   type LegacyModeratorMergePreview,
   type MigrationSuggestion,
   type UserProfile,
@@ -67,6 +69,72 @@ const ModeratorMigrationPage = () => {
 
   const [suggestions, setSuggestions] = useState<MigrationSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<BulkModeratorMigrationPreview | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkFileBase64, setBulkFileBase64] = useState<string | null>(null);
+
+  const readExcelBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('Fayl o‘qilmadi'));
+          return;
+        }
+        const base64 = result.split(',')[1];
+        if (!base64) {
+          reject(new Error('Base64 xato'));
+          return;
+        }
+        resolve(base64);
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Fayl xato'));
+      reader.readAsDataURL(file);
+    });
+
+  const runBulkPreview = async (file: File) => {
+    setBulkLoading(true);
+    try {
+      const fileBase64 = await readExcelBase64(file);
+      setBulkFileBase64(fileBase64);
+      const res = await apiService.previewBulkModeratorMigration(fileBase64);
+      setBulkPreview(res);
+      message.success(
+        `Preview: ${res.summary.readyToMerge}/${res.summary.total} ta tayyor`,
+      );
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Preview xatosi');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const runBulkApply = async (dryRun: boolean) => {
+    if (!bulkFileBase64) {
+      message.warning('Avval Excel yuklang');
+      return;
+    }
+    setBulkLoading(true);
+    try {
+      const res = await apiService.applyBulkModeratorMigration({
+        fileBase64: bulkFileBase64,
+        dryRun,
+        permissionMerge,
+        onlyReady: true,
+      });
+      if (dryRun) {
+        message.info(`Dry run: ${res.merged} ta tayyor, ${res.failed} ta muammo`);
+      } else {
+        message.success(`Birlashtirildi: ${res.merged}, xato: ${res.failed}`);
+        refetchLegacy();
+        setBulkPreview(null);
+        setBulkFileBase64(null);
+      }
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const loadEmployees = async (search?: string) => {
     const q = search?.trim() ?? '';
@@ -234,6 +302,94 @@ const ModeratorMigrationPage = () => {
         message="Bu DB migration emas — admin panel orqali bir martalik amal"
         description="Avval «Ko‘rib chiqish», keyin «Migratsiya qilish». Har bir eski moderator uchun alohida bajariladi."
       />
+
+      <Card
+        title={
+          <span className="flex items-center gap-2">
+            <FileSpreadsheet size={18} />
+            Excel orqali bulk migratsiya
+          </span>
+        }
+      >
+        <Alert
+          type="warning"
+          showIcon
+          className="mb-4"
+          message="Avval Energo ID da MODERATOR ruxsatini bering"
+          description="Energo ID admin: POST /admin/migrations/elektrolearn-moderators/apply — shu Excel bilan. Keyin bu yerda 2-bosqichni bajaring."
+        />
+        <Space wrap className="mb-4">
+          <Upload
+            accept=".xlsx,.xls"
+            showUploadList={false}
+            beforeUpload={(file) => {
+              void runBulkPreview(file);
+              return false;
+            }}
+          >
+            <Button loading={bulkLoading}>Excel yuklash (preview)</Button>
+          </Upload>
+          <Button
+            disabled={!bulkPreview}
+            loading={bulkLoading}
+            onClick={() => void runBulkApply(true)}
+          >
+            Dry run
+          </Button>
+          <Button
+            type="primary"
+            disabled={!bulkPreview || (bulkPreview.summary.readyToMerge ?? 0) === 0}
+            loading={bulkLoading}
+            onClick={() => void runBulkApply(false)}
+          >
+            {bulkPreview?.summary.readyToMerge ?? 0} tasini birlashtirish
+          </Button>
+        </Space>
+        {bulkPreview ? (
+          <Table
+            size="small"
+            pagination={{ pageSize: 10 }}
+            rowKey={(r) => String(r.row.index)}
+            dataSource={bulkPreview.items}
+            columns={[
+              { title: '№', dataIndex: ['row', 'index'], width: 48 },
+              { title: 'F.I.O', dataIndex: ['row', 'fullName'] },
+              { title: 'Login', dataIndex: ['row', 'login'] },
+              {
+                title: 'Eski mod.',
+                render: (_, r) => (r.source ? '✓' : '—'),
+              },
+              {
+                title: 'Energo xodim',
+                render: (_, r) =>
+                  r.target
+                    ? `${r.target.lastName} ${r.target.firstName}`
+                    : '—',
+              },
+              {
+                title: 'Moslik',
+                render: (_, r) => (
+                  <Tag
+                    color={
+                      r.confidence === 'high'
+                        ? 'green'
+                        : r.confidence === 'medium'
+                          ? 'orange'
+                          : 'default'
+                    }
+                  >
+                    {r.confidence}
+                  </Tag>
+                ),
+              },
+              {
+                title: 'Auto',
+                render: (_, r) => (r.canAutoMerge ? '✓' : '—'),
+              },
+            ]}
+          />
+        ) : null}
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title={`Eski moderatorlar (${legacyModerators.length})`}>
