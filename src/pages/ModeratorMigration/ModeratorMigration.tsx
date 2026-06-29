@@ -10,10 +10,11 @@ import {
   Tag,
   message,
 } from 'antd';
-import { ArrowRightLeft, Eye, Play, RefreshCw } from 'lucide-react';
+import { ArrowRightLeft, Eye, Play, RefreshCw, Sparkles } from 'lucide-react';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, {
   type LegacyModeratorMergePreview,
+  type MigrationSuggestion,
   type UserProfile,
 } from '@/services/api';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
@@ -23,6 +24,15 @@ function formatEmployeeLabel(u: UserProfile) {
   const name = `${u.lastName} ${u.firstName}`.trim();
   return org ? `${name} — ${org} (${u.email})` : `${name} (${u.email})`;
 }
+
+const CONFIDENCE_META: Record<
+  MigrationSuggestion['confidence'],
+  { color: string; label: string }
+> = {
+  high: { color: 'green', label: 'Yuqori moslik' },
+  medium: { color: 'orange', label: "O'rtacha moslik" },
+  low: { color: 'default', label: 'Past moslik' },
+};
 
 const permissionOptions = [
   { value: 'prefer-source', label: 'Eski moderator ruxsatlari (tavsiya)' },
@@ -55,6 +65,9 @@ const ModeratorMigrationPage = () => {
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
 
+  const [suggestions, setSuggestions] = useState<MigrationSuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
   const loadEmployees = async (search?: string) => {
     const q = search?.trim() ?? '';
     if (q.length < 2) {
@@ -77,6 +90,36 @@ const ModeratorMigrationPage = () => {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeSearch]);
+
+  // Eski moderator tanlanganda mos Energo ID xodimlarini avtomatik tavsiya qilamiz
+  useEffect(() => {
+    if (!sourceId) {
+      setSuggestions([]);
+      return;
+    }
+    let active = true;
+    setSuggestionsLoading(true);
+    apiService
+      .suggestMigrationTargets(sourceId)
+      .then((res) => {
+        if (active) setSuggestions(res);
+      })
+      .finally(() => {
+        if (active) setSuggestionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [sourceId]);
+
+  const pickSuggestion = (suggestion: MigrationSuggestion) => {
+    setEmployees((prev) =>
+      prev.some((e) => e.id === suggestion.user.id)
+        ? prev
+        : [suggestion.user, ...prev],
+    );
+    setTargetId(suggestion.user.id);
+  };
 
   const source = useMemo(
     () => legacyModerators.find((m) => m.id === sourceId),
@@ -228,6 +271,69 @@ const ModeratorMigrationPage = () => {
               label: formatEmployeeLabel(e),
             }))}
           />
+
+          {sourceId ? (
+            <div className="mt-4">
+              <div className="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <Sparkles size={15} className="text-amber-500" />
+                Avtomatik tavsiya
+              </div>
+              {suggestionsLoading ? (
+                <div className="text-sm text-slate-400">Tavsiyalar qidirilmoqda...</div>
+              ) : suggestions.length === 0 ? (
+                <div className="text-sm text-slate-400">
+                  Mos Energo ID xodimi topilmadi — qo‘lda qidiring
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {suggestions.map((s) => {
+                    const meta = CONFIDENCE_META[s.confidence];
+                    const isPicked = targetId === s.user.id;
+                    return (
+                      <div
+                        key={s.user.id}
+                        className={`flex items-start justify-between gap-3 rounded-lg border p-3 transition-colors ${
+                          isPicked
+                            ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/30'
+                            : 'border-slate-200 dark:border-slate-700/60'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-slate-900 dark:text-white truncate">
+                              {s.user.lastName} {s.user.firstName}
+                            </span>
+                            <Tag color={meta.color} className="!m-0">
+                              {meta.label}
+                            </Tag>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5 truncate">
+                            {s.user.email}
+                            {s.user.organizations?.length
+                              ? ` · ${s.user.organizations.map((o) => o.name).join(', ')}`
+                              : ''}
+                          </div>
+                          {s.matchReasons.length ? (
+                            <div className="text-xs text-slate-400 mt-1">
+                              {s.matchReasons.join(' · ')}
+                            </div>
+                          ) : null}
+                        </div>
+                        <Button
+                          size="small"
+                          type={isPicked ? 'primary' : 'default'}
+                          onClick={() => pickSuggestion(s)}
+                        >
+                          {isPicked ? 'Tanlandi' : 'Tanlash'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+
           {target ? (
             <div className="mt-4 text-sm text-slate-600 dark:text-slate-300 space-y-1">
               <div>

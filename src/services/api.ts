@@ -94,6 +94,13 @@ export type LegacyModeratorMergePreview = {
   targetUserId?: string;
 };
 
+export type MigrationSuggestion = {
+  user: UserProfile;
+  score: number;
+  confidence: 'high' | 'medium' | 'low';
+  matchReasons: string[];
+};
+
 export type LoginResponse = {
   success: boolean;
   message: string;
@@ -1918,6 +1925,17 @@ class ApiService {
     const response = await this.api.get<UserProfile[]>(
       '/admin/migrations/legacy-moderators/targets',
       { params: { search: q, limit: 50 } },
+    );
+    return response.data;
+  }
+
+  async suggestMigrationTargets(
+    sourceUserId: string,
+    limit = 5,
+  ): Promise<MigrationSuggestion[]> {
+    const response = await this.api.get<MigrationSuggestion[]>(
+      `/admin/migrations/legacy-moderators/${sourceUserId}/suggestions`,
+      { params: { limit } },
     );
     return response.data;
   }
