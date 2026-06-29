@@ -56,14 +56,15 @@ const ModeratorMigrationPage = () => {
   const [employeeSearch, setEmployeeSearch] = useState('');
 
   const loadEmployees = async (search?: string) => {
+    const q = search?.trim() ?? '';
+    if (q.length < 2) {
+      setEmployees([]);
+      return;
+    }
     setEmployeesLoading(true);
     try {
-      const res = await apiService.getUsers({
-        role: 'USER',
-        search: search?.trim() || undefined,
-        limit: 50,
-      });
-      setEmployees(res.data);
+      const data = await apiService.searchMigrationTargets(q);
+      setEmployees(data);
     } finally {
       setEmployeesLoading(false);
     }
@@ -216,7 +217,11 @@ const ModeratorMigrationPage = () => {
             filterOption={false}
             onSearch={setEmployeeSearch}
             notFoundContent={
-              employeesLoading ? 'Qidirilmoqda...' : 'Xodim topilmadi'
+              employeeSearch.trim().length < 2
+                ? 'Kamida 2 ta belgi yozing (login, tabel №, ism)'
+                : employeesLoading
+                  ? 'Qidirilmoqda...'
+                  : 'Xodim topilmadi — ENERGO ID sinxronini tekshiring'
             }
             options={employees.map((e) => ({
               value: e.id,

@@ -1912,6 +1912,16 @@ class ApiService {
     return response.data;
   }
 
+  async searchMigrationTargets(search: string): Promise<UserProfile[]> {
+    const q = search.trim();
+    if (q.length < 2) return [];
+    const response = await this.api.get<UserProfile[]>(
+      '/admin/migrations/legacy-moderators/targets',
+      { params: { search: q, limit: 50 } },
+    );
+    return response.data;
+  }
+
   async mergeLegacyModerator(payload: {
     sourceUserId: string;
     targetUserId: string;
