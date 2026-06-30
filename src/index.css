@@ -187,3 +187,30 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Moderatorlar — filial nomi to‘liq ko‘rinsin */
+.moderators-page .moderator-filial-select .ant-select-selector {
+  height: auto !important;
+  min-height: 28px;
+  align-items: flex-start;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.moderators-page .moderator-filial-select .ant-select-selection-item,
+.moderators-page .moderator-filial-select .ant-select-selection-placeholder {
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.moderators-page .moderator-filial-cell {
+  min-width: 400px;
+  max-width: 520px;
+}
+
+.moderators-table .ant-table-cell {
+  vertical-align: top;
+}

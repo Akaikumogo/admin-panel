@@ -184,16 +184,17 @@ const ModeratorOrgSelect = memo(function ModeratorOrgSelect({
       allowClear
       showSearch
       size="small"
+      className="moderator-filial-select w-full"
       placeholder={placeholder}
       value={value ?? undefined}
       loading={loading}
       optionFilterProp="label"
       filterOption={filterSelectOption}
       options={options}
-      style={{ minWidth: 220, maxWidth: 300 }}
+      style={{ width: '100%', minWidth: 400 }}
       popupMatchSelectWidth={false}
-      dropdownStyle={{ minWidth: 420, maxWidth: 520 }}
-      listHeight={280}
+      dropdownStyle={{ minWidth: 480, maxWidth: 640 }}
+      listHeight={320}
       virtual
       title={typeof selectedLabel === 'string' ? selectedLabel : undefined}
       optionRender={(option) => (
@@ -465,16 +466,19 @@ const Moderators = () => {
       {
         title: t(T.filial),
         key: 'organization',
-        width: 320,
+        width: 480,
+        ellipsis: false,
         render: (_: unknown, mod: UserProfile) => (
-          <ModeratorOrgSelect
+          <div className="moderator-filial-cell py-1">
+            <ModeratorOrgSelect
             value={getModeratorOrgId(mod)}
             options={orgOptions}
             loading={!!orgUpdating[mod.id]}
             placeholder={t(T.selectOrg)}
             notFoundText={t(T.notFound)}
             onChange={(next) => void handleInlineOrgChange(mod.id, next)}
-          />
+            />
+          </div>
         ),
       },
       {
@@ -527,7 +531,7 @@ const Moderators = () => {
   );
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)] moderators-page">
       <div className="flex items-end gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400 mb-2" />
         <div className="flex flex-col gap-1">
@@ -616,8 +620,8 @@ const Moderators = () => {
             showSizeChanger: false,
             onChange: (page) => setParam('page', page === 1 ? undefined : String(page)),
           }}
-          scroll={{ x: 900 }}
-          className="bg-white dark:bg-[#141414] rounded-lg border border-slate-200 dark:border-slate-700/60"
+          scroll={{ x: 1280 }}
+          className="bg-white dark:bg-[#141414] rounded-lg border border-slate-200 dark:border-slate-700/60 moderators-table"
         />
       )}
 
