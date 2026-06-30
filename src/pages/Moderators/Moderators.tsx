@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -15,6 +15,7 @@ import {
   Switch,
   Table,
 } from 'antd';
+import type { DefaultOptionType } from 'antd/es/select';
 import {
   Plus,
   Mail,
@@ -23,7 +24,6 @@ import {
   Search,
   Settings,
   Table2,
-  Pencil,
   UserMinus,
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -31,8 +31,7 @@ import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
-import apiService, { BACKEND_ORIGIN } from '@/services/api';
-import type { ModeratorPermissions, Organization, UserProfile } from '@/services/api';
+import apiService, { BACKEND_ORIGIN, type Organization, type UserProfile } from '@/services/api';
 
 const T = {
   title: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
@@ -62,15 +61,15 @@ const T = {
     en: 'Permissions (table)',
     ru: 'Права (таблица)',
   },
-  editModerator: {
-    uz: 'Moderator filiali',
-    en: 'Moderator branch',
-    ru: 'Филиал модератора',
-  },
   actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
   name: { uz: 'F.I.O', en: 'Full name', ru: 'Ф.И.О' },
   role: { uz: 'Rol', en: 'Role', ru: 'Роль' },
   employee: { uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' },
+  selectOrg: {
+    uz: 'Filial tanlang',
+    en: 'Select branch',
+    ru: 'Выберите филиал',
+  },
 } as const;
 
 const PAGE_SIZE = 20;
@@ -81,6 +80,66 @@ const QP_DEFAULTS = {
   orgMode: undefined,
   page: undefined,
 } as const;
+
+type OrgRow = { id: string; name: string };
+
+function resolveUserOrganizations(mod: UserProfile): OrgRow[] {
+  const rows = mod.organizations ?? [];
+  const mapped = rows
+    .map((row) => {
+      const nested = row as OrgRow & { organization?: OrgRow };
+      if (nested.organization?.id && nested.organization?.name) {
+        return {
+          id: nested.organization.id,
+          name: nested.organization.name,
+        };
+      }
+      if (row.id && row.name) {
+        return { id: row.id, name: row.name };
+      }
+      return null;
+    })
+    .filter((v): v is OrgRow => v !== null);
+
+  if (mapped.length > 0) return mapped;
+  if (mod.organizationIds?.length) {
+    return mod.organizationIds.map((id) => ({ id, name: id }));
+  }
+  return [];
+}
+
+function resolveModeratorOrgId(mod: UserProfile): string | undefined {
+  return mod.organizationIds?.[0] ?? resolveUserOrganizations(mod)[0]?.id;
+}
+
+const ModeratorOrgSelect = memo(function ModeratorOrgSelect({
+  value,
+  options,
+  loading,
+  onChange,
+}: {
+  value?: string;
+  options: DefaultOptionType[];
+  loading?: boolean;
+  onChange: (next: string | null) => void;
+}) {
+  return (
+    <Select
+      allowClear
+      showSearch
+      size="small"
+      placeholder="Filial"
+      value={value ?? undefined}
+      loading={loading}
+      optionFilterProp="label"
+      options={options}
+      style={{ minWidth: 200, maxWidth: 280 }}
+      popupMatchSelectWidth={320}
+      virtual
+      onChange={(next) => onChange(next ?? null)}
+    />
+  );
+});
 
 const Moderators = () => {
   const { t } = useTranslation();
@@ -94,6 +153,11 @@ const Moderators = () => {
     ['organizations'],
     () => apiService.getOrganizations(),
     [] as Organization[],
+  );
+
+  const orgOptions = useMemo<DefaultOptionType[]>(
+    () => organizations.map((o) => ({ value: o.id, label: o.name })),
+    [organizations],
   );
 
   const {
@@ -115,25 +179,60 @@ const Moderators = () => {
   );
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingModerator, setEditingModerator] = useState<UserProfile | null>(
-    null,
-  );
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeOptions, setEmployeeOptions] = useState<UserProfile[]>([]);
   const [employeeLoading, setEmployeeLoading] = useState(false);
+  const [orgOverrides, setOrgOverrides] = useState<Record<string, string | null>>({});
+  const [orgUpdating, setOrgUpdating] = useState<Record<string, boolean>>({});
 
   const [permOpen, setPermOpen] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
   const [permSaving, setPermSaving] = useState(false);
   const [permUserId, setPermUserId] = useState<string | null>(null);
   const [permUserName, setPermUserName] = useState<string>('');
-  const [permissions, setPermissions] = useState<ModeratorPermissions | null>(null);
+  const [permissions, setPermissions] = useState<import('@/services/api').ModeratorPermissions | null>(null);
+
+  const getModeratorOrgId = useCallback(
+    (mod: UserProfile) => {
+      if (Object.prototype.hasOwnProperty.call(orgOverrides, mod.id)) {
+        return orgOverrides[mod.id] ?? undefined;
+      }
+      return resolveModeratorOrgId(mod);
+    },
+    [orgOverrides],
+  );
+
+  const handleInlineOrgChange = useCallback(
+    async (moderatorId: string, organizationId: string | null) => {
+      const mod = moderators.find((m) => m.id === moderatorId);
+      const previous = mod ? getModeratorOrgId(mod) ?? null : null;
+      if (previous === organizationId) return;
+
+      setOrgOverrides((prev) => ({ ...prev, [moderatorId]: organizationId }));
+      setOrgUpdating((prev) => ({ ...prev, [moderatorId]: true }));
+
+      try {
+        await apiService.updateModerator(moderatorId, { organizationId });
+        message.success('Filial yangilandi');
+      } catch {
+        setOrgOverrides((prev) => ({ ...prev, [moderatorId]: previous }));
+        message.error('Filialni saqlashda xato');
+      } finally {
+        setOrgUpdating((prev) => {
+          const next = { ...prev };
+          delete next[moderatorId];
+          return next;
+        });
+      }
+    },
+    [getModeratorOrgId, moderators],
+  );
 
   const setCrud = (
-    moduleKey: keyof ModeratorPermissions,
-    field: keyof ModeratorPermissions[keyof ModeratorPermissions],
+    moduleKey: keyof import('@/services/api').ModeratorPermissions,
+    field: keyof import('@/services/api').ModeratorPermissions[keyof import('@/services/api').ModeratorPermissions],
     value: boolean,
   ) => {
     setPermissions((prev) => {
@@ -207,18 +306,9 @@ const Moderators = () => {
   };
 
   const openCreateModal = () => {
-    setEditingModerator(null);
     form.resetFields();
     setEmployeeSearch('');
     void loadEmployees();
-    setModalOpen(true);
-  };
-
-  const openEditModal = (mod: UserProfile) => {
-    setEditingModerator(mod);
-    form.setFieldsValue({
-      organizationId: mod.organizations?.[0]?.id,
-    });
     setModalOpen(true);
   };
 
@@ -241,151 +331,131 @@ const Moderators = () => {
     }
   };
 
-  const handleEditOrganization = async () => {
-    if (!editingModerator) return;
-    try {
-      const values = await form.validateFields();
-      setSaving(true);
-      await apiService.updateModerator(editingModerator.id, {
-        organizationId: values.organizationId ?? null,
-      });
-      message.success('Filial yangilandi');
-      setModalOpen(false);
-      setEditingModerator(null);
-      form.resetFields();
-      refetch();
-    } catch {
-      /* validation */
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (editingModerator) {
-      await handleEditOrganization();
-      return;
-    }
-    await handlePromote();
-  };
-
   const handleDemote = async (id: string) => {
     await apiService.demoteModerator(id);
     message.success('Moderatorlik olib tashlandi');
+    setOrgOverrides((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     refetch();
   };
 
   useEffect(() => {
-    if (!modalOpen || editingModerator) return;
+    if (!modalOpen) return;
     const timer = setTimeout(() => {
       void loadEmployees(employeeSearch);
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeSearch, modalOpen, editingModerator]);
+  }, [employeeSearch, modalOpen]);
 
-  const columns = [
-    {
-      title: '№',
-      key: 'rowNumber',
-      width: 64,
-      render: (_: unknown, __: UserProfile, index: number) => (
-        <span className="text-sm font-medium text-slate-500">
-          {(currentPage - 1) * PAGE_SIZE + index + 1}
-        </span>
-      ),
-    },
-    {
-      title: t(T.name),
-      key: 'name',
-      render: (_: unknown, mod: UserProfile) => (
-        <div className="flex items-center gap-3 min-w-[180px]">
-          <Avatar
-            size={36}
-            src={
-              mod.avatarUrl ? `${BACKEND_ORIGIN}${mod.avatarUrl}` : undefined
-            }
-            className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
-          >
-            {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
-          </Avatar>
-          <span className="font-medium text-slate-900 dark:text-white">
-            <HighlightText
-              text={`${mod.lastName} ${mod.firstName}`}
-              highlight={qp.search}
-            />
+  const columns = useMemo(
+    () => [
+      {
+        title: '№',
+        key: 'rowNumber',
+        width: 64,
+        render: (_: unknown, __: UserProfile, index: number) => (
+          <span className="text-sm font-medium text-slate-500">
+            {(currentPage - 1) * PAGE_SIZE + index + 1}
           </span>
-        </div>
-      ),
-    },
-    {
-      title: 'Email',
-      key: 'email',
-      render: (_: unknown, mod: UserProfile) => (
-        <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
-          <Mail size={12} />
-          <HighlightText text={mod.email} highlight={qp.search} />
-        </span>
-      ),
-    },
-    {
-      title: t(T.organization),
-      key: 'organization',
-      ellipsis: true,
-      render: (_: unknown, mod: UserProfile) =>
-        mod.organizations?.length ? (
-          <span
-            className="text-sm text-slate-600 dark:text-slate-300"
-            title={mod.organizations.map((o) => o.name).join(', ')}
-          >
-            {mod.organizations.map((o) => o.name).join(', ')}
-          </span>
-        ) : (
-          <span className="text-slate-400">—</span>
         ),
-    },
-    {
-      title: t(T.role),
-      key: 'role',
-      width: 130,
-      render: () => (
-        <Tag color="blue">
-          <span className="inline-flex items-center gap-1">
-            <Shield size={13} />
-            MODERATOR
+      },
+      {
+        title: t(T.name),
+        key: 'name',
+        render: (_: unknown, mod: UserProfile) => (
+          <div className="flex items-center gap-3 min-w-[180px]">
+            <Avatar
+              size={36}
+              src={
+                mod.avatarUrl ? `${BACKEND_ORIGIN}${mod.avatarUrl}` : undefined
+              }
+              className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
+            >
+              {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
+            </Avatar>
+            <span className="font-medium text-slate-900 dark:text-white">
+              <HighlightText
+                text={`${mod.lastName} ${mod.firstName}`}
+                highlight={qp.search}
+              />
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: 'Email',
+        key: 'email',
+        render: (_: unknown, mod: UserProfile) => (
+          <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <Mail size={12} />
+            <HighlightText text={mod.email} highlight={qp.search} />
           </span>
-        </Tag>
-      ),
-    },
-    {
-      title: t(T.actions),
-      key: 'actions',
-      width: 110,
-      align: 'right' as const,
-      render: (_: unknown, mod: UserProfile) => (
-        <div className="flex justify-end gap-1">
-          <Button
-            size="small"
-            icon={<Pencil size={14} />}
-            onClick={() => openEditModal(mod)}
+        ),
+      },
+      {
+        title: t(T.organization),
+        key: 'organization',
+        width: 300,
+        render: (_: unknown, mod: UserProfile) => (
+          <ModeratorOrgSelect
+            value={getModeratorOrgId(mod)}
+            options={orgOptions}
+            loading={!!orgUpdating[mod.id]}
+            onChange={(next) => void handleInlineOrgChange(mod.id, next)}
           />
-          <Button
-            size="small"
-            icon={<Settings size={14} />}
-            onClick={() =>
-              void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
-            }
-          />
-          <Popconfirm
-            title={t(T.demoteConfirm)}
-            onConfirm={() => handleDemote(mod.id)}
-          >
-            <Button size="small" danger icon={<UserMinus size={14} />} />
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ];
+        ),
+      },
+      {
+        title: t(T.role),
+        key: 'role',
+        width: 130,
+        render: () => (
+          <Tag color="blue">
+            <span className="inline-flex items-center gap-1">
+              <Shield size={13} />
+              MODERATOR
+            </span>
+          </Tag>
+        ),
+      },
+      {
+        title: t(T.actions),
+        key: 'actions',
+        width: 88,
+        align: 'right' as const,
+        render: (_: unknown, mod: UserProfile) => (
+          <div className="flex justify-end gap-1">
+            <Button
+              size="small"
+              icon={<Settings size={14} />}
+              onClick={() =>
+                void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
+              }
+            />
+            <Popconfirm
+              title={t(T.demoteConfirm)}
+              onConfirm={() => handleDemote(mod.id)}
+            >
+              <Button size="small" danger icon={<UserMinus size={14} />} />
+            </Popconfirm>
+          </div>
+        ),
+      },
+    ],
+    [
+      currentPage,
+      getModeratorOrgId,
+      handleInlineOrgChange,
+      orgOptions,
+      orgUpdating,
+      qp.search,
+      t,
+    ],
+  );
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
@@ -407,10 +477,8 @@ const Moderators = () => {
           onChange={handleOrgChange}
           optionFilterProp="label"
           style={{ minWidth: 260, maxWidth: 360 }}
-          options={organizations.map((o) => ({
-            value: o.id,
-            label: o.name,
-          }))}
+          options={orgOptions}
+          virtual
         />
         <Select
           value={qp.orgMode === 'exclude' ? 'exclude' : 'include'}
@@ -467,47 +535,42 @@ const Moderators = () => {
       )}
 
       <Modal
-        title={
-          editingModerator ? t(T.editModerator) : t(T.addModerator)
-        }
+        title={t(T.addModerator)}
         open={modalOpen}
-        onCancel={() => {
-          setModalOpen(false);
-          setEditingModerator(null);
-        }}
-        onOk={handleSave}
+        onCancel={() => setModalOpen(false)}
+        onOk={() => void handlePromote()}
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
       >
         <Form form={form} layout="vertical">
-          {!editingModerator ? (
-            <Form.Item
-              name="userId"
-              label={t(T.employee)}
-              rules={[{ required: true, message: 'Xodimni tanlang' }]}
-              extra="Faqat Energo ID orqali kelgan xodimlar (USER) ko'rinadi"
-            >
-              <Select
-                showSearch
-                placeholder="Ism, login, tabel №, email yoki filial..."
-                filterOption={false}
-                loading={employeeLoading}
-                onSearch={setEmployeeSearch}
-                notFoundContent={
-                  employeeLoading ? 'Qidirilmoqda...' : 'Xodim topilmadi'
-                }
-                options={employeeOptions.map((u) => {
-                  const org = u.organizations?.map((o) => o.name).join(', ');
-                  const name = `${u.lastName} ${u.firstName}`.trim();
-                  const label = org
-                    ? `${name} — ${org} (${u.email})`
-                    : `${name} (${u.email})`;
-                  return { value: u.id, label };
-                })}
-              />
-            </Form.Item>
-          ) : null}
+          <Form.Item
+            name="userId"
+            label={t(T.employee)}
+            rules={[{ required: true, message: 'Xodimni tanlang' }]}
+            extra="Faqat Energo ID orqali kelgan xodimlar (USER) ko'rinadi"
+          >
+            <Select
+              showSearch
+              placeholder="Ism, login, tabel №, email yoki filial..."
+              filterOption={false}
+              loading={employeeLoading}
+              onSearch={setEmployeeSearch}
+              notFoundContent={
+                employeeLoading ? 'Qidirilmoqda...' : 'Xodim topilmadi'
+              }
+              options={employeeOptions.map((u) => {
+                const org = resolveUserOrganizations(u)
+                  .map((o) => o.name)
+                  .join(', ');
+                const name = `${u.lastName} ${u.firstName}`.trim();
+                const label = org
+                  ? `${name} — ${org} (${u.email})`
+                  : `${name} (${u.email})`;
+                return { value: u.id, label };
+              })}
+            />
+          </Form.Item>
           <Form.Item
             name="organizationId"
             label={`${t(T.organization)} (${t(T.optional)})`}
@@ -516,11 +579,9 @@ const Moderators = () => {
               allowClear
               showSearch
               optionFilterProp="label"
-              placeholder={t(T.organization)}
-              options={organizations.map((o) => ({
-                value: o.id,
-                label: o.name,
-              }))}
+              placeholder={t(T.selectOrg)}
+              options={orgOptions}
+              virtual
             />
           </Form.Item>
         </Form>
