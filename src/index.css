@@ -188,29 +188,55 @@ body {
   white-space: nowrap;
 }
 
-/* Moderatorlar — filial nomi to‘liq ko‘rinsin */
+/* Moderatorlar — filial select (yopiq: 1 qator, ochiq: to‘liq nom) */
+.moderators-page .moderator-filial-cell {
+  width: 100%;
+  max-width: 400px;
+}
+
+.moderators-page .moderator-filial-select {
+  width: 100%;
+}
+
 .moderators-page .moderator-filial-select .ant-select-selector {
-  height: auto !important;
-  min-height: 28px;
-  align-items: flex-start;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  height: 32px !important;
+  align-items: center;
+  padding-inline: 10px 28px !important;
 }
 
 .moderators-page .moderator-filial-select .ant-select-selection-item,
-.moderators-page .moderator-filial-select .ant-select-selection-placeholder {
-  overflow: visible;
-  text-overflow: unset;
-  white-space: normal;
-  word-break: break-word;
-  line-height: 1.35;
+.moderators-page .moderator-filial-select .moderator-filial-select-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 30px;
+  max-width: 100%;
 }
 
-.moderators-page .moderator-filial-cell {
-  min-width: 400px;
-  max-width: 520px;
+.moderators-page .moderator-filial-filter {
+  min-width: 280px;
+}
+
+.moderator-filial-popup {
+  min-width: 520px !important;
+  max-width: min(680px, 92vw) !important;
+}
+
+.moderator-filial-popup .ant-select-item {
+  min-height: 36px;
+  align-items: flex-start;
+  padding-block: 6px;
+}
+
+.moderator-filial-popup .ant-select-item-option-content,
+.moderator-filial-option {
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .moderators-table .ant-table-cell {
-  vertical-align: top;
+  vertical-align: middle;
 }

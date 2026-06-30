@@ -10,6 +10,7 @@ import {
   Tag,
   Popconfirm,
   message,
+  Tooltip,
   Avatar,
   Divider,
   Switch,
@@ -51,6 +52,7 @@ const T = {
     en: 'Remove moderator role? User becomes USER again.',
     ru: 'Снять роль модератора?',
   },
+  demote: { uz: 'Olib tashlash', en: 'Remove', ru: 'Снять' },
   noData: {
     uz: 'Moderatorlar yo`q',
     en: 'No moderators',
@@ -177,34 +179,42 @@ const ModeratorOrgSelect = memo(function ModeratorOrgSelect({
   notFoundText: string;
   onChange: (next: string | null) => void;
 }) {
-  const selectedLabel = options.find((o) => o.value === value)?.label;
+  const selected = options.find((o) => o.value === value);
+  const selectedLabel =
+    typeof selected?.label === 'string' ? selected.label : '';
 
   return (
-    <Select
-      allowClear
-      showSearch
-      size="small"
-      className="moderator-filial-select w-full"
-      placeholder={placeholder}
-      value={value ?? undefined}
-      loading={loading}
-      optionFilterProp="label"
-      filterOption={filterSelectOption}
-      options={options}
-      style={{ width: '100%', minWidth: 400 }}
-      popupMatchSelectWidth={false}
-      dropdownStyle={{ minWidth: 480, maxWidth: 640 }}
-      listHeight={320}
-      virtual
-      title={typeof selectedLabel === 'string' ? selectedLabel : undefined}
-      optionRender={(option) => (
-        <span className="block whitespace-normal leading-snug py-0.5">
-          {option.label}
-        </span>
-      )}
-      onChange={(next) => onChange(next ?? null)}
-      notFoundContent={notFoundText}
-    />
+    <Tooltip
+      title={selectedLabel || undefined}
+      placement="topLeft"
+      mouseEnterDelay={0.35}
+    >
+      <Select
+        allowClear
+        showSearch
+        size="middle"
+        className="moderator-filial-select"
+        popupClassName="moderator-filial-popup"
+        placeholder={placeholder}
+        value={value ?? undefined}
+        loading={loading}
+        optionFilterProp="label"
+        filterOption={filterSelectOption}
+        options={options}
+        listHeight={300}
+        virtual
+        labelRender={(item) => (
+          <span className="moderator-filial-select-label">
+            {String(item.label ?? '')}
+          </span>
+        )}
+        optionRender={(option) => (
+          <span className="moderator-filial-option">{option.label}</span>
+        )}
+        onChange={(next) => onChange(next ?? null)}
+        notFoundContent={notFoundText}
+      />
+    </Tooltip>
   );
 });
 
@@ -253,6 +263,7 @@ const Moderators = () => {
   const [employeeLoading, setEmployeeLoading] = useState(false);
   const [orgOverrides, setOrgOverrides] = useState<Record<string, string | null>>({});
   const [orgUpdating, setOrgUpdating] = useState<Record<string, boolean>>({});
+  const [demotingId, setDemotingId] = useState<string | null>(null);
 
   const [permOpen, setPermOpen] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
@@ -399,14 +410,23 @@ const Moderators = () => {
   };
 
   const handleDemote = async (id: string) => {
-    await apiService.demoteModerator(id);
-    message.success('Moderatorlik olib tashlandi');
-    setOrgOverrides((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    refetch();
+    if (demotingId) return;
+    setDemotingId(id);
+    try {
+      await apiService.demoteModerator(id);
+      message.success({
+        content: 'Moderatorlik olib tashlandi',
+        key: 'demote-moderator',
+      });
+      setOrgOverrides((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      refetch();
+    } finally {
+      setDemotingId(null);
+    }
   };
 
   useEffect(() => {
@@ -466,10 +486,10 @@ const Moderators = () => {
       {
         title: t(T.filial),
         key: 'organization',
-        width: 480,
+        width: 420,
         ellipsis: false,
         render: (_: unknown, mod: UserProfile) => (
-          <div className="moderator-filial-cell py-1">
+          <div className="moderator-filial-cell">
             <ModeratorOrgSelect
             value={getModeratorOrgId(mod)}
             options={orgOptions}
@@ -511,9 +531,19 @@ const Moderators = () => {
             />
             <Popconfirm
               title={t(T.demoteConfirm)}
-              onConfirm={() => handleDemote(mod.id)}
+              description={`${mod.lastName} ${mod.firstName}`}
+              okText={t(T.demote)}
+              cancelText={t(T.cancel)}
+              okButtonProps={{ danger: true, loading: demotingId === mod.id }}
+              onConfirm={() => void handleDemote(mod.id)}
             >
-              <Button size="small" danger icon={<UserMinus size={14} />} />
+              <Button
+                size="small"
+                danger
+                icon={<UserMinus size={14} />}
+                loading={demotingId === mod.id}
+                disabled={!!demotingId && demotingId !== mod.id}
+              />
             </Popconfirm>
           </div>
         ),
@@ -525,6 +555,7 @@ const Moderators = () => {
       handleInlineOrgChange,
       orgOptions,
       orgUpdating,
+      demotingId,
       qp.search,
       t,
     ],
@@ -555,16 +586,14 @@ const Moderators = () => {
             onChange={handleOrgChange}
             optionFilterProp="label"
             filterOption={filterSelectOption}
-            style={{ minWidth: 280, maxWidth: 360 }}
-            popupMatchSelectWidth={false}
-            dropdownStyle={{ minWidth: 420, maxWidth: 520 }}
-            listHeight={280}
+            className="moderator-filial-filter"
+            popupClassName="moderator-filial-popup"
+            style={{ width: 320 }}
+            listHeight={300}
             virtual
             options={orgOptions}
             optionRender={(option) => (
-              <span className="block whitespace-normal leading-snug py-0.5">
-                {option.label}
-              </span>
+              <span className="moderator-filial-option">{option.label}</span>
             )}
           />
         </div>
@@ -672,15 +701,12 @@ const Moderators = () => {
               optionFilterProp="label"
               filterOption={filterSelectOption}
               placeholder={t(T.selectOrg)}
+              popupClassName="moderator-filial-popup"
               options={orgOptions}
-              popupMatchSelectWidth={false}
-              dropdownStyle={{ minWidth: 420 }}
-              listHeight={280}
+              listHeight={300}
               virtual
               optionRender={(option) => (
-                <span className="block whitespace-normal leading-snug py-0.5">
-                  {option.label}
-                </span>
+                <span className="moderator-filial-option">{option.label}</span>
               )}
             />
           </Form.Item>
