@@ -32,6 +32,7 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN, type Organization, type UserProfile } from '@/services/api';
+import { filterSelectOption } from '@/utils/selectSearch.util';
 
 const T = {
   title: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
@@ -41,6 +42,8 @@ const T = {
     ru: 'Назначить модератора',
   },
   organization: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
+  filial: { uz: 'Filial', en: 'Branch', ru: 'Филиал' },
+  login: { uz: 'Login', en: 'Login', ru: 'Логин' },
   save: { uz: 'Saqlash', en: 'Save', ru: 'Сохранить' },
   cancel: { uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' },
   demoteConfirm: {
@@ -53,14 +56,36 @@ const T = {
     en: 'No moderators',
     ru: 'Нет модераторов',
   },
-  search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
+  search: {
+    uz: 'Ism, login, email...',
+    en: 'Name, login, email...',
+    ru: 'Имя, логин, email...',
+  },
+  searchLabel: { uz: 'Qidiruv', en: 'Search', ru: 'Поиск' },
+  filialFilter: {
+    uz: 'Filial bo‘yicha',
+    en: 'Filter by branch',
+    ru: 'Фильтр по филиалу',
+  },
+  allFiliallar: {
+    uz: 'Barcha filiallar',
+    en: 'All branches',
+    ru: 'Все филиалы',
+  },
+  orgModeInclude: {
+    uz: 'Faqat tanlangan filial',
+    en: 'Selected branch only',
+    ru: 'Только выбранный филиал',
+  },
+  orgModeExclude: {
+    uz: 'Tanlanganlardan tashqari',
+    en: 'Except selected',
+    ru: 'Кроме выбранного',
+  },
+  filterMode: { uz: 'Filtr rejimi', en: 'Filter mode', ru: 'Режим фильтра' },
   optional: { uz: 'Ixtiyoriy', en: 'Optional', ru: 'Необязательно' },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
-  permissionsPage: {
-    uz: 'Ruxsatlar (jadval)',
-    en: 'Permissions (table)',
-    ru: 'Права (таблица)',
-  },
+  permissions: { uz: 'Ruxsatlar', en: 'Permissions', ru: 'Права' },
   actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
   name: { uz: 'F.I.O', en: 'Full name', ru: 'Ф.И.О' },
   role: { uz: 'Rol', en: 'Role', ru: 'Роль' },
@@ -69,6 +94,31 @@ const T = {
     uz: 'Filial tanlang',
     en: 'Select branch',
     ru: 'Выберите филиал',
+  },
+  notFound: {
+    uz: 'Filial topilmadi',
+    en: 'Branch not found',
+    ru: 'Филиал не найден',
+  },
+  orgUpdated: {
+    uz: 'Filial yangilandi',
+    en: 'Branch updated',
+    ru: 'Филиал обновлён',
+  },
+  orgSaveError: {
+    uz: 'Filialni saqlashda xato',
+    en: 'Failed to save branch',
+    ru: 'Ошибка сохранения филиала',
+  },
+  employeeSearch: {
+    uz: 'Ism, login, tabel №, email yoki filial...',
+    en: 'Name, login, personnel #, email or branch...',
+    ru: 'Имя, логин, табельный №, email или филиал...',
+  },
+  permissionsPage: {
+    uz: 'Ruxsatlar (jadval)',
+    en: 'Permissions (table)',
+    ru: 'Права (таблица)',
   },
 } as const;
 
@@ -116,27 +166,43 @@ const ModeratorOrgSelect = memo(function ModeratorOrgSelect({
   value,
   options,
   loading,
+  placeholder,
+  notFoundText,
   onChange,
 }: {
   value?: string;
   options: DefaultOptionType[];
   loading?: boolean;
+  placeholder: string;
+  notFoundText: string;
   onChange: (next: string | null) => void;
 }) {
+  const selectedLabel = options.find((o) => o.value === value)?.label;
+
   return (
     <Select
       allowClear
       showSearch
       size="small"
-      placeholder="Filial"
+      placeholder={placeholder}
       value={value ?? undefined}
       loading={loading}
       optionFilterProp="label"
+      filterOption={filterSelectOption}
       options={options}
-      style={{ minWidth: 200, maxWidth: 280 }}
-      popupMatchSelectWidth={320}
+      style={{ minWidth: 220, maxWidth: 300 }}
+      popupMatchSelectWidth={false}
+      dropdownStyle={{ minWidth: 420, maxWidth: 520 }}
+      listHeight={280}
       virtual
+      title={typeof selectedLabel === 'string' ? selectedLabel : undefined}
+      optionRender={(option) => (
+        <span className="block whitespace-normal leading-snug py-0.5">
+          {option.label}
+        </span>
+      )}
       onChange={(next) => onChange(next ?? null)}
+      notFoundContent={notFoundText}
     />
   );
 });
@@ -215,10 +281,10 @@ const Moderators = () => {
 
       try {
         await apiService.updateModerator(moderatorId, { organizationId });
-        message.success('Filial yangilandi');
+        message.success(t(T.orgUpdated));
       } catch {
         setOrgOverrides((prev) => ({ ...prev, [moderatorId]: previous }));
-        message.error('Filialni saqlashda xato');
+        message.error(t(T.orgSaveError));
       } finally {
         setOrgUpdating((prev) => {
           const next = { ...prev };
@@ -227,7 +293,7 @@ const Moderators = () => {
         });
       }
     },
-    [getModeratorOrgId, moderators],
+    [getModeratorOrgId, moderators, t],
   );
 
   const setCrud = (
@@ -387,7 +453,7 @@ const Moderators = () => {
         ),
       },
       {
-        title: 'Email',
+        title: t(T.login),
         key: 'email',
         render: (_: unknown, mod: UserProfile) => (
           <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
@@ -397,14 +463,16 @@ const Moderators = () => {
         ),
       },
       {
-        title: t(T.organization),
+        title: t(T.filial),
         key: 'organization',
-        width: 300,
+        width: 320,
         render: (_: unknown, mod: UserProfile) => (
           <ModeratorOrgSelect
             value={getModeratorOrgId(mod)}
             options={orgOptions}
             loading={!!orgUpdating[mod.id]}
+            placeholder={t(T.selectOrg)}
+            notFoundText={t(T.notFound)}
             onChange={(next) => void handleInlineOrgChange(mod.id, next)}
           />
         ),
@@ -432,6 +500,7 @@ const Moderators = () => {
             <Button
               size="small"
               icon={<Settings size={14} />}
+              title={t(T.permissions)}
               onClick={() =>
                 void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
               }
@@ -459,41 +528,59 @@ const Moderators = () => {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
-        <Filter size={16} className="text-slate-400" />
-        <Input
-          allowClear
-          defaultValue={qp.search}
-          prefix={<Search size={14} className="text-slate-400" />}
-          placeholder={t(T.search)}
-          style={{ width: 220 }}
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
-        <Select
-          allowClear
-          showSearch
-          placeholder={t(T.organization)}
-          value={qp.orgId}
-          onChange={handleOrgChange}
-          optionFilterProp="label"
-          style={{ minWidth: 260, maxWidth: 360 }}
-          options={orgOptions}
-          virtual
-        />
-        <Select
-          value={qp.orgMode === 'exclude' ? 'exclude' : 'include'}
-          onChange={handleOrgModeChange}
-          disabled={!qp.orgId}
-          style={{ width: 230 }}
-          options={[
-            { value: 'include', label: 'Faqat tanlangan filial' },
-            { value: 'exclude', label: 'Tanlanganlardan tashqari' },
-          ]}
-        />
-        <Tag className="text-xs">
+      <div className="flex items-end gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
+        <Filter size={16} className="text-slate-400 mb-2" />
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t(T.searchLabel)}</span>
+          <Input
+            allowClear
+            defaultValue={qp.search}
+            prefix={<Search size={14} className="text-slate-400" />}
+            placeholder={t(T.search)}
+            style={{ width: 240 }}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t(T.filialFilter)}</span>
+          <Select
+            allowClear
+            showSearch
+            placeholder={t(T.allFiliallar)}
+            value={qp.orgId}
+            onChange={handleOrgChange}
+            optionFilterProp="label"
+            filterOption={filterSelectOption}
+            style={{ minWidth: 280, maxWidth: 360 }}
+            popupMatchSelectWidth={false}
+            dropdownStyle={{ minWidth: 420, maxWidth: 520 }}
+            listHeight={280}
+            virtual
+            options={orgOptions}
+            optionRender={(option) => (
+              <span className="block whitespace-normal leading-snug py-0.5">
+                {option.label}
+              </span>
+            )}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">{t(T.filterMode)}</span>
+          <Select
+            value={qp.orgMode === 'exclude' ? 'exclude' : 'include'}
+            onChange={handleOrgModeChange}
+            disabled={!qp.orgId}
+            style={{ width: 240 }}
+            options={[
+              { value: 'include', label: t(T.orgModeInclude) },
+              { value: 'exclude', label: t(T.orgModeExclude) },
+            ]}
+          />
+        </div>
+        <Tag className="text-xs mb-0.5">
           {t(T.total)}: {total}
         </Tag>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 mb-0.5">
           <Button
             icon={<Table2 size={16} />}
             onClick={() => navigate('/dashboard/permissions')}
@@ -552,7 +639,7 @@ const Moderators = () => {
           >
             <Select
               showSearch
-              placeholder="Ism, login, tabel №, email yoki filial..."
+              placeholder={t(T.employeeSearch)}
               filterOption={false}
               loading={employeeLoading}
               onSearch={setEmployeeSearch}
@@ -573,22 +660,31 @@ const Moderators = () => {
           </Form.Item>
           <Form.Item
             name="organizationId"
-            label={`${t(T.organization)} (${t(T.optional)})`}
+            label={`${t(T.filial)} (${t(T.optional)})`}
           >
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
+              filterOption={filterSelectOption}
               placeholder={t(T.selectOrg)}
               options={orgOptions}
+              popupMatchSelectWidth={false}
+              dropdownStyle={{ minWidth: 420 }}
+              listHeight={280}
               virtual
+              optionRender={(option) => (
+                <span className="block whitespace-normal leading-snug py-0.5">
+                  {option.label}
+                </span>
+              )}
             />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title={`Permissions: ${permUserName || ''}`}
+        title={`${t(T.permissions)}: ${permUserName || ''}`}
         open={permOpen}
         onCancel={() => setPermOpen(false)}
         onOk={() => void savePermissions()}
