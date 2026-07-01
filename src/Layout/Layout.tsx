@@ -33,7 +33,6 @@ import {
   Bot,
   IdCard,
   ArrowDownUp,
-  ArrowRightLeft,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -290,15 +289,6 @@ const Layout = () => {
     if (me.role === 'SUPERADMIN') {
       return [
         ...navItems,
-        {
-          path: '/dashboard/moderator-migration',
-          label: {
-            uz: 'Moderator migratsiyasi',
-            en: 'Moderator migration',
-            ru: 'Миграция модераторов',
-          },
-          icon: ArrowRightLeft,
-        },
         {
           path: '/dashboard/import-export',
           label: {

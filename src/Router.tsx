@@ -39,9 +39,6 @@ const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
 const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
 const ImportExportPage = lazy(() => import('./pages/ImportExport/ImportExport'));
-const ModeratorMigrationPage = lazy(
-  () => import('./pages/ModeratorMigration/ModeratorMigration'),
-);
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -174,10 +171,6 @@ export const routes: RouteObject[] = [
           {
             path: 'import-export',
             element: withSuspense(ImportExportPage)
-          },
-          {
-            path: 'moderator-migration',
-            element: withSuspense(ModeratorMigrationPage)
           },
           {
             path: 'branch-analytics',
