@@ -10,6 +10,8 @@ import type {
   Organization,
   UserProfile
 } from '@/services/api';
+import { DateTimeDisplay } from '@/components/DateTimeDisplay';
+import { fmtDateTime } from '@/lib/format';
 
 const { Text } = Typography;
 
@@ -28,7 +30,7 @@ const T = {
 } as const;
 
 function formatLine(r: AdminAuditLogRow) {
-  const t = new Date(r.createdAt).toLocaleString();
+  const t = fmtDateTime(r.createdAt);
   const who = r.actorRole
     ? `${r.actorRole}${r.actorUserId ? `:${r.actorUserId}` : ''}`
     : 'anonymous';
@@ -99,7 +101,7 @@ export default function LogsPage() {
         dataIndex: 'createdAt',
         key: 'createdAt',
         width: 180,
-        render: (v: string) => new Date(v).toLocaleString()
+        render: (v: string) => <DateTimeDisplay value={v} />
       },
       {
         title: t({ uz: 'Status', en: 'Status', ru: 'Статус' }),

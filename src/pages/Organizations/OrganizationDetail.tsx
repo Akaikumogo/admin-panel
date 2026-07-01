@@ -37,6 +37,8 @@ import apiService, {
   type StudentSummary,
 } from '@/services/api';
 import { can } from '@/utils/can';
+import { DateTimeDisplay } from '@/components/DateTimeDisplay';
+import { fmtDateTime } from '@/lib/format';
 
 const QP_DEFAULTS = {
   tab: 'app' as 'app' | 'moderators' | 'analytics',
@@ -54,18 +56,8 @@ function formatOnlineDuration(sec?: number): string {
   return `${m} m`;
 }
 
-/** Oxirgi online vaqtini o'qiladigan ko'rinishga keltirish. */
 function formatLastSeen(iso?: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('uz-UZ', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return fmtDateTime(iso);
 }
 
 function moderatorUsers(org: Organization | null) {
@@ -404,7 +396,7 @@ export default function OrganizationDetail() {
               <div>
                 <div className="text-xs text-slate-500">Yaratilgan</div>
                 <div>
-                  {org?.createdAt ? new Date(org.createdAt).toLocaleDateString() : '—'}
+                  {org?.createdAt ? <DateTimeDisplay value={org.createdAt} showRelative={false} /> : '—'}
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, Form, Input, Modal, Spin, Switch, Tag, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Spin, Switch, Tag, Tooltip, message } from 'antd';
 import { ArrowLeft, ArrowLeftRight, Pencil, Plus, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
@@ -219,14 +219,26 @@ export default function QuestionDetail() {
               >
                 {t(T.back)}
               </Button>,
-              <Button
+              <Tooltip
                 key="edit"
-                icon={<Pencil size={16} />}
-                onClick={() => setEditMode(true)}
-                disabled={!can('contentQuestions', 'update') || initialLoading || !question}
+                title={
+                  !can('contentQuestions', 'update')
+                    ? t({
+                        uz: 'Savollarni tahrirlash uchun ruxsat yo‘q',
+                        en: 'No permission to edit questions',
+                        ru: 'Нет прав на редактирование вопросов',
+                      })
+                    : undefined
+                }
               >
-                {t({ uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' })}
-              </Button>,
+                <Button
+                  icon={<Pencil size={16} />}
+                  onClick={() => setEditMode(true)}
+                  disabled={!can('contentQuestions', 'update') || initialLoading || !question}
+                >
+                  {t({ uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' })}
+                </Button>
+              </Tooltip>,
             ]
       }
     >

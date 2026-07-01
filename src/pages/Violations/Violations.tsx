@@ -5,6 +5,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { ModeratorViolationRow, UserProfile } from '@/services/api';
+import { DateTimeDisplay } from '@/components/DateTimeDisplay';
 
 const T = {
   title: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
@@ -60,7 +61,7 @@ export default function ViolationsPage() {
         dataIndex: 'createdAt',
         key: 'createdAt',
         width: 180,
-        render: (v: string) => new Date(v).toLocaleString(),
+        render: (v: string) => <DateTimeDisplay value={v} />,
       },
       {
         title: t({ uz: 'Moderator', en: 'Moderator', ru: 'Модератор' }),

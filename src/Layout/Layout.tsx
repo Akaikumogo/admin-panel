@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
-import { latinTextToCyrillic } from '@/utils/latinToCyrillic';
+import { fmtHeaderDate } from '@/lib/format';
 import { Button, Select, Spin } from 'antd';
 import { Sidebar } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
@@ -179,59 +179,7 @@ const Layout = () => {
     );
   };
 
-  const getCurrentDate = () => {
-    const now = new Date();
-    const day = now.getDate();
-    const year = now.getFullYear();
-
-    if (lang === 'en') {
-      return now.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-      });
-    }
-    if (lang === 'ru') {
-      return now.toLocaleDateString('ru-RU', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-      });
-    }
-
-    const uzWeekdays = [
-      'Yakshanba',
-      'Dushanba',
-      'Seshanba',
-      'Chorshanba',
-      'Payshanba',
-      'Juma',
-      'Shanba'
-    ];
-    const uzMonths = [
-      'yanvar',
-      'fevral',
-      'mart',
-      'aprel',
-      'may',
-      'iyun',
-      'iyul',
-      'avgust',
-      'sentabr',
-      'oktabr',
-      'noyabr',
-      'dekabr'
-    ];
-    const weekday = uzWeekdays[now.getDay()];
-    const month = uzMonths[now.getMonth()];
-
-    if (lang === 'uz-cyrl') {
-      return latinTextToCyrillic(`${weekday}, ${day} ${month}, ${year}`);
-    }
-    return `${weekday}, ${day} ${month}, ${year}`;
-  };
+  const getCurrentDate = () => fmtHeaderDate(lang);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
