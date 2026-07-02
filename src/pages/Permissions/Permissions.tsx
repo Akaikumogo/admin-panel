@@ -11,7 +11,7 @@ import {
   Tag,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { Filter, Mail, Search } from 'lucide-react';
+import { Filter, Mail, Search, Star } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
@@ -273,11 +273,17 @@ const PermissionsPage = () => {
             {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-slate-900 dark:text-white truncate">
+            <div className="font-medium text-slate-900 dark:text-white truncate flex items-center gap-1.5">
               <HighlightText
                 text={`${mod.firstName} ${mod.lastName}`}
                 highlight={qp.search}
               />
+              {mod.organizations?.some((o) => o.isDefault) ? (
+                <Star
+                  size={14}
+                  className="flex-shrink-0 fill-amber-400 text-amber-500"
+                />
+              ) : null}
             </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
               <Mail size={10} className="flex-shrink-0" />

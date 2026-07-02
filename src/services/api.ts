@@ -64,7 +64,7 @@ export type UserProfile = {
   role: Role;
   avatarUrl?: string | null;
   organizationIds: string[];
-  organizations: { id: string; name: string }[];
+  organizations: { id: string; name: string; isDefault?: boolean }[];
   energoId?: string | null;
 };
 

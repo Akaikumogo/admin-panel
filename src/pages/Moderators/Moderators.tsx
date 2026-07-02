@@ -24,6 +24,7 @@ import {
   Filter,
   Search,
   Settings,
+  Star,
   Table2,
   UserMinus,
 } from 'lucide-react';
@@ -121,6 +122,11 @@ const T = {
     uz: 'Ruxsatlar (jadval)',
     en: 'Permissions (table)',
     ru: 'Права (таблица)',
+  },
+  mainBranchModerator: {
+    uz: 'Bosh filial moderatori',
+    en: 'Main branch moderator',
+    ru: 'Модератор главного филиала',
   },
 } as const;
 
@@ -237,6 +243,11 @@ const Moderators = () => {
     [organizations],
   );
 
+  const defaultOrgIds = useMemo(
+    () => new Set(organizations.filter((o) => o.isDefault).map((o) => o.id)),
+    [organizations],
+  );
+
   const {
     data: moderators,
     total,
@@ -280,6 +291,19 @@ const Moderators = () => {
       return resolveModeratorOrgId(mod);
     },
     [orgOverrides],
+  );
+
+  // Bosh (default) filial moderatori — ro'yxatda yulduzcha bilan belgilanadi.
+  const isMainBranchModerator = useCallback(
+    (mod: UserProfile) => {
+      const orgId = getModeratorOrgId(mod);
+      if (!orgId) return false;
+      if (defaultOrgIds.size > 0) return defaultOrgIds.has(orgId);
+      return (mod.organizations ?? []).some(
+        (o) => o.id === orgId && o.isDefault === true,
+      );
+    },
+    [defaultOrgIds, getModeratorOrgId],
   );
 
   const handleInlineOrgChange = useCallback(
@@ -464,11 +488,19 @@ const Moderators = () => {
             >
               {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
             </Avatar>
-            <span className="font-medium text-slate-900 dark:text-white">
+            <span className="font-medium text-slate-900 dark:text-white inline-flex items-center gap-1.5">
               <HighlightText
                 text={`${mod.lastName} ${mod.firstName}`}
                 highlight={qp.search}
               />
+              {isMainBranchModerator(mod) ? (
+                <Tooltip title={t(T.mainBranchModerator)}>
+                  <Star
+                    size={15}
+                    className="flex-shrink-0 fill-amber-400 text-amber-500"
+                  />
+                </Tooltip>
+              ) : null}
             </span>
           </div>
         ),
@@ -552,6 +584,7 @@ const Moderators = () => {
     [
       currentPage,
       getModeratorOrgId,
+      isMainBranchModerator,
       handleInlineOrgChange,
       orgOptions,
       orgUpdating,
