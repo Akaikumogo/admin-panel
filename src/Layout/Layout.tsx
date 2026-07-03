@@ -122,7 +122,7 @@ const navItems = [
   },
   {
     path: '/dashboard/hearts-analytics',
-    label: { uz: 'Yurak yo‘qotish', en: 'Hearts lost', ru: 'Потеря сердец' },
+    label: { uz: 'Xato javoblar', en: 'Wrong answers', ru: 'Ошибочные ответы' },
     icon: HeartPulse
   },
   {

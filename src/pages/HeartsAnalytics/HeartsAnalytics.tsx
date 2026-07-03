@@ -7,26 +7,26 @@ import apiService from '@/services/api';
 import type { HeartsLostAnalyticsResponse, Organization, UserProfile } from '@/services/api';
 
 const T = {
-  title: { uz: 'Yurak yo‘qotish', en: 'Hearts lost', ru: 'Потеря сердец' },
+  title: { uz: 'Xato javoblar', en: 'Wrong answers', ru: 'Ошибочные ответы' },
   subtitle: {
-    uz: 'Noto‘g‘ri javoblar bo‘yicha xodim va savol statistikasi',
-    en: 'Wrong-answer stats by user and question',
-    ru: 'Статистика ошибок по пользователям и вопросам',
+    uz: 'Noto‘g‘ri javoblar bo‘yicha xodim va savol statistikasi (har urinish 1 energiya sarflaydi)',
+    en: 'Wrong-answer stats by user and question (each attempt costs 1 energy)',
+    ru: 'Статистика ошибок по пользователям и вопросам (каждая попытка тратит 1 энергию)',
   },
   today: { uz: 'Bugun', en: 'Today', ru: 'Сегодня' },
   month: { uz: '1 oy', en: 'Month', ru: 'Месяц' },
   year: { uz: '1 yil', en: 'Year', ru: 'Год' },
   org: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
   allOrgs: { uz: 'Barcha tashkilotlar', en: 'All organizations', ru: 'Все организации' },
-  byUser: { uz: 'Kim qancha yo‘qotdi', en: 'By user', ru: 'По пользователям' },
+  byUser: { uz: 'Kim qancha xato qildi', en: 'By user', ru: 'По пользователям' },
   byQuestion: { uz: 'Qaysi savollar', en: 'By question', ru: 'По вопросам' },
   totalUsers: { uz: 'Xodimlar', en: 'Users', ru: 'Пользователи' },
   totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
-  totalLost: { uz: 'Jami yo‘qotilgan', en: 'Total lost', ru: 'Всего потеряно' },
+  totalLost: { uz: 'Jami xato javoblar', en: 'Total wrong answers', ru: 'Всего ошибок' },
   empty: {
-    uz: 'Tanlangan davrda yurak yo‘qotilmagan',
-    en: 'No hearts lost in the selected range',
-    ru: 'За выбранный период сердца не теряли',
+    uz: 'Tanlangan davrda xato javob yo‘q',
+    en: 'No wrong answers in the selected range',
+    ru: 'За выбранный период ошибок нет',
   },
 } as const;
 
@@ -268,7 +268,7 @@ export default function HeartsAnalyticsPage() {
                 </div>
                 <div className="text-sm text-slate-500">{topUser.email}</div>
                 <Tag color="red" className="mt-3">
-                  {topUser.lostHearts} yo‘qotilgan
+                  {topUser.lostHearts} ta xato javob
                 </Tag>
               </Card>
             </Col>
@@ -284,7 +284,7 @@ export default function HeartsAnalyticsPage() {
                   {topQuestion.levelTitle} • {topQuestion.theoryTitle}
                 </div>
                 <Tag color="red" className="mt-3">
-                  {topQuestion.lostHearts} yo‘qotilgan
+                  {topQuestion.lostHearts} ta xato javob
                 </Tag>
               </Card>
             </Col>

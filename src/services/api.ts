@@ -179,6 +179,10 @@ export type BranchAnalyticsSummary = {
   activeTodayCount: number;
   offlineEmployeesCount: number;
   dailyPlanTarget: number;
+  /** Kunlik maqsad: shu kunda nechta TO'G'RI javob kerak (10). */
+  dailyGoalCorrect: number;
+  /** Bugun kunlik planni bajargan xodimlar soni. */
+  planCompletedTodayCount: number;
 };
 
 export type BranchActivityDay = {
@@ -206,6 +210,7 @@ export type BranchDailyPlanResult = {
   planDate: string;
   questionCount: number;
   targetQuestions: number;
+  dailyGoalCorrect: number;
   completedEmployees: number;
   totalEmployees: number;
   questions: Array<{
@@ -223,6 +228,46 @@ export type BranchDailyPlanResult = {
     completed: boolean;
     completionPercent: number;
   }>;
+};
+
+export type BranchMonthlyProgressEmployee = {
+  userId: string;
+  fullName: string;
+  email: string;
+  daysCompleted: number;
+  monthlyPercent: number;
+  correctTotal: number;
+  wrongTotal: number;
+  lastActiveAt: string | null;
+};
+
+export type BranchMonthlyProgress = {
+  orgId: string;
+  orgName: string;
+  month: string;
+  daysInMonth: number;
+  dailyGoalCorrect: number;
+  totalEmployees: number;
+  averageMonthlyPercent: number;
+  fullCompletedEmployees: number;
+  employees: BranchMonthlyProgressEmployee[];
+};
+
+export type BranchComparisonRow = {
+  orgId: string;
+  orgName: string;
+  isDefault: boolean;
+  totalEmployees: number;
+  completedDays: number;
+  averageMonthlyPercent: number;
+  rank: number;
+};
+
+export type BranchComparison = {
+  month: string;
+  daysInMonth: number;
+  dailyGoalCorrect: number;
+  branches: BranchComparisonRow[];
 };
 
 export type Level = {
@@ -1152,6 +1197,52 @@ class ApiService {
       { params },
     );
     return response.data;
+  }
+
+  async getBranchMonthlyProgress(params: {
+    orgId: string;
+    month?: string;
+  }): Promise<BranchMonthlyProgress> {
+    const response = await this.api.get<BranchMonthlyProgress>(
+      '/admin/branch-analytics/monthly-progress',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getBranchComparison(params: {
+    month?: string;
+  }): Promise<BranchComparison> {
+    const response = await this.api.get<BranchComparison>(
+      '/admin/branch-analytics/branch-comparison',
+      { params },
+    );
+    return response.data;
+  }
+
+  async downloadBranchMonthlyProgressExcel(params: {
+    orgId: string;
+    month?: string;
+    filename?: string;
+  }) {
+    const response = await this.api.get(
+      '/admin/branch-analytics/export/monthly-progress',
+      {
+        params: { orgId: params.orgId, month: params.month },
+        responseType: 'blob',
+      },
+    );
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = params.filename ?? `${params.month ?? 'monthly'}-progress.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   private async downloadJson(path: string, filename: string) {

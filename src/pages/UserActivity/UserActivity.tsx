@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, Segmented, Select, Tabs, Spin, Table, Tag, DatePicker, Row, Col, Progress } from 'antd';
+import { Button, Card, Segmented, Select, Tabs, Spin, Table, Tag, DatePicker, Row, Col, Progress, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   Activity,
@@ -13,6 +13,9 @@ import {
   UserX,
   BarChart3,
   CalendarDays,
+  Target,
+  Trophy,
+  Download,
 } from 'lucide-react';
 import {
   userActivityApi,
@@ -26,6 +29,8 @@ import {
   type BranchActivityMatrix,
   type BranchAnalyticsSummary,
   type BranchDailyPlanResult,
+  type BranchMonthlyProgress,
+  type BranchComparison,
 } from '@/services/api';
 import { userActivitySocket } from '@/services/userActivitySocket';
 import { useFetch } from '@/hooks/useFetch';
@@ -197,6 +202,46 @@ const UserActivity = () => {
     { enabled: !!effectiveBranchOrgId },
   );
 
+  // Oylik progress: bajarilgan kunlar / oy kunlari
+  const [progressMonth, setProgressMonth] = useState<Dayjs>(dayjs());
+  const monthStr = progressMonth.format('YYYY-MM');
+  const [exporting, setExporting] = useState(false);
+
+  const { data: monthlyProgress } = useFetch<BranchMonthlyProgress | null>(
+    ['branch-monthly-progress', effectiveBranchOrgId, monthStr],
+    () =>
+      apiService.getBranchMonthlyProgress({
+        orgId: effectiveBranchOrgId,
+        month: monthStr,
+      }),
+    null,
+    { enabled: !!effectiveBranchOrgId },
+  );
+
+  const { data: branchComparison } = useFetch<BranchComparison | null>(
+    ['branch-comparison', monthStr],
+    () => apiService.getBranchComparison({ month: monthStr }),
+    null,
+  );
+
+  const handleExportMonthly = async () => {
+    if (!effectiveBranchOrgId) return;
+    setExporting(true);
+    try {
+      const orgName = (monthlyProgress?.orgName ?? selectedBranchName ?? 'filial')
+        .replace(/\s+/g, '_');
+      await apiService.downloadBranchMonthlyProgressExcel({
+        orgId: effectiveBranchOrgId,
+        month: monthStr,
+        filename: `${monthStr}_${orgName}.xlsx`,
+      });
+    } catch {
+      message.error('Excel yuklab olishda xatolik');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const branchKpiItems: Array<{
     key: keyof BranchAnalyticsSummary;
     label: string;
@@ -208,6 +253,12 @@ const UserActivity = () => {
     { key: 'quizTakersCount', label: 'Test yechganlar', icon: ClipboardCheck, color: 'bg-violet-500' },
     { key: 'activeTodayCount', label: 'Bugun aktiv', icon: Activity, color: 'bg-cyan-500' },
     { key: 'offlineEmployeesCount', label: 'Offline (interval)', icon: UserX, color: 'bg-rose-500' },
+    {
+      key: 'planCompletedTodayCount',
+      label: 'Bugun plan bajarganlar (10 to‘g‘ri)',
+      icon: Target,
+      color: 'bg-emerald-600',
+    },
   ];
 
   const statusBg = (s: 'active' | 'offline' | 'never') =>
@@ -496,9 +547,12 @@ const UserActivity = () => {
                   }
                 >
                   <div className="mb-3 flex flex-wrap gap-2">
+                    <Tag color="gold">
+                      Kunlik maqsad: {dailyPlan?.dailyGoalCorrect ?? 10} ta
+                      to‘g‘ri javob
+                    </Tag>
                     <Tag color="blue">
-                      Savollar: {dailyPlan?.questionCount ?? 0} /{' '}
-                      {dailyPlan?.targetQuestions ?? 10}
+                      Plan savollari: {dailyPlan?.questionCount ?? 0}
                     </Tag>
                     <Tag color="green">
                       Bajargan xodimlar: {dailyPlan?.completedEmployees ?? 0} /{' '}
@@ -518,7 +572,10 @@ const UserActivity = () => {
                       { title: 'Nazariya', dataIndex: 'theoryTitle', width: 140 },
                     ]}
                   />
-                  <div className="font-semibold mt-6 mb-3">Xodimlar natijasi</div>
+                  <div className="font-semibold mt-6 mb-3">
+                    Xodimlar natijasi (progress = to‘g‘ri javoblar /{' '}
+                    {dailyPlan?.dailyGoalCorrect ?? 10})
+                  </div>
                   <Table
                     size="small"
                     rowKey="userId"
@@ -550,6 +607,153 @@ const UserActivity = () => {
                           ) : (
                             <Tag>Jarayonda</Tag>
                           ),
+                      },
+                    ]}
+                  />
+                </Card>
+
+                <Card
+                  className="!rounded-2xl"
+                  title={
+                    <span className="flex items-center gap-2">
+                      <TrendingUp size={16} /> Oylik progress — bajarilgan
+                      kunlar / oy kunlari
+                    </span>
+                  }
+                  extra={
+                    <div className="flex items-center gap-2">
+                      <DatePicker
+                        picker="month"
+                        value={progressMonth}
+                        onChange={(d) => d && setProgressMonth(d)}
+                        allowClear={false}
+                      />
+                      <Button
+                        icon={<Download size={14} />}
+                        loading={exporting}
+                        onClick={handleExportMonthly}
+                      >
+                        Excel
+                      </Button>
+                    </div>
+                  }
+                >
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <Tag color="blue">
+                      Oy: {monthlyProgress?.month ?? monthStr} (
+                      {monthlyProgress?.daysInMonth ?? '—'} kun)
+                    </Tag>
+                    <Tag color="purple">
+                      O‘rtacha progress:{' '}
+                      {monthlyProgress?.averageMonthlyPercent ?? 0}%
+                    </Tag>
+                    <Tag color="green">
+                      To‘liq bajarganlar:{' '}
+                      {monthlyProgress?.fullCompletedEmployees ?? 0} /{' '}
+                      {monthlyProgress?.totalEmployees ?? 0}
+                    </Tag>
+                  </div>
+                  <Table
+                    size="small"
+                    rowKey="userId"
+                    dataSource={monthlyProgress?.employees ?? []}
+                    pagination={{ pageSize: 10 }}
+                    scroll={{ x: true }}
+                    columns={[
+                      { title: 'Xodim', dataIndex: 'fullName' },
+                      {
+                        title: 'Bajarilgan kunlar',
+                        dataIndex: 'daysCompleted',
+                        width: 140,
+                        render: (v: number) =>
+                          `${v} / ${monthlyProgress?.daysInMonth ?? '—'}`,
+                      },
+                      {
+                        title: 'Oylik progress',
+                        dataIndex: 'monthlyPercent',
+                        width: 180,
+                        sorter: (
+                          a: { monthlyPercent: number },
+                          b: { monthlyPercent: number },
+                        ) => a.monthlyPercent - b.monthlyPercent,
+                        render: (v: number) => (
+                          <Progress
+                            percent={v}
+                            size="small"
+                            status={v >= 100 ? 'success' : 'active'}
+                          />
+                        ),
+                      },
+                      { title: 'To`g`ri', dataIndex: 'correctTotal', width: 80 },
+                      { title: 'Xato', dataIndex: 'wrongTotal', width: 70 },
+                      {
+                        title: 'Oxirgi faollik',
+                        dataIndex: 'lastActiveAt',
+                        width: 150,
+                        render: (v: string | null) =>
+                          v ? dayjs(v).format('DD.MM.YYYY HH:mm') : '—',
+                      },
+                    ]}
+                  />
+                </Card>
+
+                <Card
+                  className="!rounded-2xl"
+                  title={
+                    <span className="flex items-center gap-2">
+                      <Trophy size={16} /> Filiallar reytingi —{' '}
+                      {branchComparison?.month ?? monthStr}
+                    </span>
+                  }
+                >
+                  <Table
+                    size="small"
+                    rowKey="orgId"
+                    dataSource={branchComparison?.branches ?? []}
+                    pagination={{ pageSize: 10 }}
+                    columns={[
+                      {
+                        title: '№',
+                        dataIndex: 'rank',
+                        width: 60,
+                        render: (v: number) =>
+                          v === 1 ? '🥇' : v === 2 ? '🥈' : v === 3 ? '🥉' : v,
+                      },
+                      {
+                        title: 'Filial',
+                        dataIndex: 'orgName',
+                        render: (
+                          v: string,
+                          row: { isDefault: boolean; orgId: string },
+                        ) => (
+                          <span
+                            className={
+                              row.orgId === effectiveBranchOrgId
+                                ? 'font-semibold'
+                                : ''
+                            }
+                          >
+                            {row.isDefault ? `★ ${v}` : v}
+                          </span>
+                        ),
+                      },
+                      {
+                        title: 'Xodimlar',
+                        dataIndex: 'totalEmployees',
+                        width: 100,
+                      },
+                      {
+                        title: 'Bajarilgan kunlar',
+                        dataIndex: 'completedDays',
+                        width: 140,
+                      },
+                      {
+                        title: 'O‘rtacha oylik %',
+                        dataIndex: 'averageMonthlyPercent',
+                        width: 200,
+                        render: (v: number) => (
+                          <Progress percent={v} size="small" />
+                        ),
                       },
                     ]}
                   />
