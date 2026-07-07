@@ -270,6 +270,32 @@ export type BranchComparison = {
   branches: BranchComparisonRow[];
 };
 
+export type EmployeeAttemptRow = {
+  id: string;
+  questionId: string;
+  prompt: string;
+  type: QuestionType;
+  levelTitle: string;
+  theoryTitle: string;
+  selectedOptionText: string | null;
+  correctOptionText: string | null;
+  isCorrect: boolean;
+  answeredAt: string;
+};
+
+export type EmployeeAttemptsResponse = {
+  orgId: string;
+  userId: string;
+  fullName: string;
+  range: { from: string; to: string };
+  total: number;
+  correctTotal: number;
+  wrongTotal: number;
+  page: number;
+  limit: number;
+  items: EmployeeAttemptRow[];
+};
+
 export type Level = {
   id: string;
   title: string;
@@ -340,6 +366,12 @@ export type Question = {
   level?: { id: string; title: string };
   theory?: { id: string; title: string };
   options: QuestionOption[];
+  /** Lavozim bog'lamalari — bo'sh bo'lsa savol barcha xodimlarga tushadi. */
+  positionLinks?: {
+    id: string;
+    positionId: string;
+    position?: { id: string; title: string };
+  }[];
   createdAt: string;
   updatedAt: string;
 };
@@ -1199,6 +1231,21 @@ class ApiService {
     return response.data;
   }
 
+  async getBranchEmployeeAttempts(params: {
+    orgId: string;
+    userId: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<EmployeeAttemptsResponse> {
+    const response = await this.api.get<EmployeeAttemptsResponse>(
+      '/admin/branch-analytics/employee-attempts',
+      { params },
+    );
+    return response.data;
+  }
+
   async getBranchMonthlyProgress(params: {
     orgId: string;
     month?: string;
@@ -1858,6 +1905,7 @@ class ApiService {
       isCorrect: boolean;
       matchText?: string;
     }[];
+    positionIds?: string[];
   }): Promise<Question> {
     const response = await this.api.post<Question>('/admin/questions', data);
     return response.data;
@@ -1877,6 +1925,7 @@ class ApiService {
         isCorrect?: boolean;
         matchText?: string;
       }[];
+      positionIds?: string[];
     }
   ): Promise<Question> {
     const response = await this.api.put<Question>(
@@ -1892,6 +1941,12 @@ class ApiService {
 
   async deleteQuestionOption(id: string): Promise<void> {
     await this.api.delete(`/admin/question-options/${id}`);
+  }
+
+  /** Savolga biriktirish uchun lavozimlar (barcha moderatorlarga ochiq). */
+  async getContentPositions(): Promise<Position[]> {
+    const response = await this.api.get<Position[]>('/admin/content-positions');
+    return response.data;
   }
 
   // ===== Organizations =====

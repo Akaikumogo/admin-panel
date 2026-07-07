@@ -37,6 +37,7 @@ import { useFetch } from '@/hooks/useFetch';
 import ActivityTable from './ActivityTable';
 import QuestionStatsPanel from './QuestionStatsPanel';
 import UserTimelineDrawer from './UserTimelineDrawer';
+import EmployeeAttemptsDrawer from './EmployeeAttemptsDrawer';
 
 const RANGE_OPTIONS: { label: string; value: ActivityRange }[] = [
   { label: 'Bugun', value: 'day' },
@@ -100,6 +101,10 @@ const UserActivity = () => {
     'all',
   );
   const [drawerUserId, setDrawerUserId] = useState<string | null>(null);
+  const [attemptsUser, setAttemptsUser] = useState<{
+    userId: string;
+    fullName: string;
+  } | null>(null);
   const [liveStatus, setLiveStatus] = useState<Record<string, boolean>>({});
 
   const { data: organizations } = useFetch(
@@ -552,35 +557,33 @@ const UserActivity = () => {
                       to‘g‘ri javob
                     </Tag>
                     <Tag color="blue">
-                      Plan savollari: {dailyPlan?.questionCount ?? 0}
+                      Savollar har xodimga lavozimi bo‘yicha random beriladi
                     </Tag>
                     <Tag color="green">
                       Bajargan xodimlar: {dailyPlan?.completedEmployees ?? 0} /{' '}
                       {dailyPlan?.totalEmployees ?? 0}
                     </Tag>
                   </div>
-                  <Table
-                    size="small"
-                    rowKey="id"
-                    pagination={false}
-                    dataSource={dailyPlan?.questions ?? []}
-                    scroll={{ x: true }}
-                    columns={[
-                      { title: '№', dataIndex: 'orderIndex', width: 48 },
-                      { title: 'Savol', dataIndex: 'prompt' },
-                      { title: 'Modul', dataIndex: 'levelTitle', width: 140 },
-                      { title: 'Nazariya', dataIndex: 'theoryTitle', width: 140 },
-                    ]}
-                  />
-                  <div className="font-semibold mt-6 mb-3">
+                  <div className="font-semibold mb-1">
                     Xodimlar natijasi (progress = to‘g‘ri javoblar /{' '}
                     {dailyPlan?.dailyGoalCorrect ?? 10})
                   </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    Xodim qatorini bosing — barcha javoblari (audit) ochiladi
+                  </p>
                   <Table
                     size="small"
                     rowKey="userId"
                     dataSource={dailyPlan?.userResults ?? []}
                     pagination={{ pageSize: 10 }}
+                    onRow={(row) => ({
+                      onClick: () =>
+                        setAttemptsUser({
+                          userId: row.userId,
+                          fullName: row.fullName,
+                        }),
+                      style: { cursor: 'pointer' },
+                    })}
                     columns={[
                       { title: 'Xodim', dataIndex: 'fullName' },
                       { title: 'Javoblar', dataIndex: 'answeredCount', width: 90 },
@@ -816,6 +819,15 @@ const UserActivity = () => {
       <UserTimelineDrawer
         userId={drawerUserId}
         onClose={() => setDrawerUserId(null)}
+      />
+
+      {/* Xodim javoblari auditi (kunlik plan) */}
+      <EmployeeAttemptsDrawer
+        orgId={effectiveBranchOrgId}
+        userId={attemptsUser?.userId ?? null}
+        fullName={attemptsUser?.fullName ?? ''}
+        initialDate={planDateStr}
+        onClose={() => setAttemptsUser(null)}
       />
     </div>
   );

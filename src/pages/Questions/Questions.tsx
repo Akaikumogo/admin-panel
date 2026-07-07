@@ -31,7 +31,7 @@ import { useInfiniteList } from '@/hooks/useInfiniteList';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
-import type { Level, Theory, Question, QuestionType } from '@/services/api';
+import type { Level, Theory, Question, QuestionType, Position } from '@/services/api';
 import { can } from '@/utils/can';
 import { latinizeQuestionPayload } from '@/utils/cyrillicToLatin';
 
@@ -57,6 +57,13 @@ const T = {
   allTheories: { uz: 'Barcha nazariyalar', en: 'All theories', ru: 'Все теории' },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
   questionType: { uz: 'Savol turi', en: 'Question type', ru: 'Тип вопроса' },
+  positions: { uz: 'Lavozimlar', en: 'Positions', ru: 'Должности' },
+  positionsHint: {
+    uz: 'Bo`sh qoldirilsa — savol barcha xodimlarga tushadi. Tanlansa — faqat shu lavozimdagi xodimlarga.',
+    en: 'Leave empty — the question is shown to everyone. Select — only for these positions.',
+    ru: 'Пусто — вопрос виден всем. Выбрано — только этим должностям.',
+  },
+  allEmployees: { uz: 'Barcha xodimlarga', en: 'All employees', ru: 'Все сотрудники' },
 } as const;
 
 const QUESTION_TYPE_LABELS: Record<QuestionType, { uz: string; en: string; ru: string }> = {
@@ -79,6 +86,11 @@ const Questions = () => {
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
 
   const { data: levels } = useFetch(['levels'], () => apiService.getLevels(), [] as Level[]);
+  const { data: positions } = useFetch(
+    ['content-positions'],
+    () => apiService.getContentPositions(),
+    [] as Position[],
+  );
   const { data: theories } = useFetch(
     ['theories-by-level', qp.levelId],
     () => (qp.levelId ? apiService.getTheoriesByLevel(qp.levelId) : Promise.resolve([])),
@@ -145,6 +157,7 @@ const Questions = () => {
         prompt: question.prompt,
         type: qType,
         isActive: question.isActive,
+        positionIds: question.positionLinks?.map((l) => l.positionId) ?? [],
         options: question.options.map((o) => ({
           id: o.id,
           optionText: o.optionText,
@@ -158,6 +171,7 @@ const Questions = () => {
       form.setFieldsValue({
         type: 'SINGLE_CHOICE',
         isActive: true,
+        positionIds: [],
         options: [
           { optionText: '', isCorrect: false, matchText: '' },
           { optionText: '', isCorrect: false, matchText: '' },
@@ -214,6 +228,7 @@ const Questions = () => {
             type: values.type,
             isActive: values.isActive,
             options: values.options,
+            positionIds: values.positionIds ?? [],
           }),
         );
         message.success('Savol yangilandi');
@@ -226,6 +241,7 @@ const Questions = () => {
             type: values.type,
             isActive: values.isActive ?? true,
             options: values.options,
+            positionIds: values.positionIds ?? [],
           }),
         );
         message.success('Savol yaratildi');
@@ -353,6 +369,17 @@ const Questions = () => {
                     <Tag color={q.isActive ? 'green' : 'default'} className="!text-xs !m-0">
                       {q.isActive ? t(T.active) : 'Nofaol'}
                     </Tag>
+                    {q.positionLinks?.length ? (
+                      q.positionLinks.map((l) => (
+                        <Tag key={l.id} color="geekblue" className="!text-xs !m-0">
+                          {l.position?.title ?? '—'}
+                        </Tag>
+                      ))
+                    ) : (
+                      <Tag color="default" className="!text-xs !m-0">
+                        {t(T.allEmployees)}
+                      </Tag>
+                    )}
                     {q.createdBy && (
                       <span className="text-xs text-slate-400">
                         {q.createdBy.firstName} {q.createdBy.lastName}
@@ -482,6 +509,22 @@ const Questions = () => {
               rows={3}
               placeholder="Savol matnini kiriting..."
               style={{ resize: 'vertical' }}
+            />
+          </Form.Item>
+
+          {/* Positions — bo'sh bo'lsa savol hammaga tushadi */}
+          <Form.Item
+            name="positionIds"
+            label={t(T.positions)}
+            extra={t(T.positionsHint)}
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder={t(T.allEmployees)}
+              options={positions.map((p) => ({ value: p.id, label: p.title }))}
             />
           </Form.Item>
 
