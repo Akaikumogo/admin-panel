@@ -80,6 +80,7 @@ const QUESTION_TYPE_COLORS: Record<QuestionType, string> = {
 
 const PAGE_SIZE = 15;
 const QP_DEFAULTS = { search: undefined, levelId: undefined, theoryId: undefined } as const;
+const ALL_POSITIONS_VALUE = '__all_positions__';
 
 const Questions = () => {
   const { t } = useTranslation();
@@ -157,7 +158,9 @@ const Questions = () => {
         prompt: question.prompt,
         type: qType,
         isActive: question.isActive,
-        positionIds: question.positionLinks?.map((l) => l.positionId) ?? [],
+        positionIds: question.positionLinks?.length
+          ? question.positionLinks.map((l) => l.positionId)
+          : [ALL_POSITIONS_VALUE],
         options: question.options.map((o) => ({
           id: o.id,
           optionText: o.optionText,
@@ -171,7 +174,7 @@ const Questions = () => {
       form.setFieldsValue({
         type: 'SINGLE_CHOICE',
         isActive: true,
-        positionIds: [],
+        positionIds: [ALL_POSITIONS_VALUE],
         options: [
           { optionText: '', isCorrect: false, matchText: '' },
           { optionText: '', isCorrect: false, matchText: '' },
@@ -214,6 +217,31 @@ const Questions = () => {
     }
   };
 
+  const normalizePositionIds = (value?: string[]) =>
+    (value ?? []).filter((id) => id !== ALL_POSITIONS_VALUE);
+
+  const handlePositionsChange = (nextValue: string[]) => {
+    const previousValue: string[] = form.getFieldValue('positionIds') ?? [];
+    const hasAll = nextValue.includes(ALL_POSITIONS_VALUE);
+
+    if (!hasAll) {
+      form.setFieldValue('positionIds', nextValue);
+      return;
+    }
+
+    if (previousValue.includes(ALL_POSITIONS_VALUE) && nextValue.length > 1) {
+      form.setFieldValue('positionIds', nextValue.filter((id) => id !== ALL_POSITIONS_VALUE));
+      return;
+    }
+
+    form.setFieldValue('positionIds', [ALL_POSITIONS_VALUE]);
+  };
+
+  const positionOptions = [
+    { value: ALL_POSITIONS_VALUE, label: t(T.allEmployees) },
+    ...positions.map((p) => ({ value: p.id, label: p.title })),
+  ];
+
   const handleSave = async () => {
     if (editing && !can('contentQuestions', 'update')) return;
     if (!editing && !can('contentQuestions', 'create')) return;
@@ -228,7 +256,7 @@ const Questions = () => {
             type: values.type,
             isActive: values.isActive,
             options: values.options,
-            positionIds: values.positionIds ?? [],
+            positionIds: normalizePositionIds(values.positionIds),
           }),
         );
         message.success('Savol yangilandi');
@@ -241,7 +269,7 @@ const Questions = () => {
             type: values.type,
             isActive: values.isActive ?? true,
             options: values.options,
-            positionIds: values.positionIds ?? [],
+            positionIds: normalizePositionIds(values.positionIds),
           }),
         );
         message.success('Savol yaratildi');
@@ -461,7 +489,12 @@ const Questions = () => {
                 <Select
                   placeholder={t(T.allLevels)}
                   options={levels.map((l) => ({ value: l.id, label: l.title }))}
-                  onChange={() => form.setFieldValue('theoryId', undefined)}
+                  onChange={() => {
+                    form.setFieldValue('theoryId', undefined);
+                    if (!form.getFieldValue('positionIds')?.length) {
+                      form.setFieldValue('positionIds', [ALL_POSITIONS_VALUE]);
+                    }
+                  }}
                 />
               </Form.Item>
               <Form.Item name="theoryId" label={t(T.theory)} rules={[{ required: true, message: 'Nazariyani tanlang' }]}>
@@ -524,7 +557,8 @@ const Questions = () => {
               showSearch
               optionFilterProp="label"
               placeholder={t(T.allEmployees)}
-              options={positions.map((p) => ({ value: p.id, label: p.title }))}
+              options={positionOptions}
+              onChange={handlePositionsChange}
             />
           </Form.Item>
 
