@@ -30,7 +30,7 @@ import { useFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
-import type { Level, Theory, Question, QuestionType } from '@/services/api';
+import type { Level, Theory, Question, QuestionType, Position } from '@/services/api';
 import { can } from '@/utils/can';
 import { latinizeQuestionPayload } from '@/utils/cyrillicToLatin';
 
@@ -131,6 +131,7 @@ const QUESTION_TYPE_LABELS: Record<
 };
 
 const QP_DEFAULTS = { search: undefined, status: undefined } as const;
+const ALL_LEVEL_POSITIONS_VALUE = '__all_level_positions__';
 
 const Levels = () => {
   const { t } = useTranslation();
@@ -142,6 +143,11 @@ const Levels = () => {
     ['levels', qp.search],
     () => apiService.getLevels({ search: qp.search || undefined }),
     [] as Level[],
+  );
+  const { data: positions } = useFetch(
+    ['content-positions'],
+    () => apiService.getContentPositions(),
+    [] as Position[],
   );
 
   const [levelModal, setLevelModal] = useState<{ open: boolean; editing: Level | null }>({ open: false, editing: null });
@@ -170,6 +176,34 @@ const Levels = () => {
     useState<QuestionType>('SINGLE_CHOICE');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  const normalizeLevelPositionIds = (value?: string[]) =>
+    (value ?? []).filter((id) => id !== ALL_LEVEL_POSITIONS_VALUE);
+
+  const handleLevelPositionsChange = (nextValue: string[]) => {
+    const previousValue: string[] = levelForm.getFieldValue('positionIds') ?? [];
+    const hasAll = nextValue.includes(ALL_LEVEL_POSITIONS_VALUE);
+
+    if (!hasAll) {
+      levelForm.setFieldValue('positionIds', nextValue);
+      return;
+    }
+
+    if (previousValue.includes(ALL_LEVEL_POSITIONS_VALUE) && nextValue.length > 1) {
+      levelForm.setFieldValue(
+        'positionIds',
+        nextValue.filter((id) => id !== ALL_LEVEL_POSITIONS_VALUE),
+      );
+      return;
+    }
+
+    levelForm.setFieldValue('positionIds', [ALL_LEVEL_POSITIONS_VALUE]);
+  };
+
+  const levelPositionOptions = [
+    { value: ALL_LEVEL_POSITIONS_VALUE, label: 'Barcha xodimlarga' },
+    ...positions.map((p) => ({ value: p.id, label: p.title })),
+  ];
+
   const fetchTheories = useCallback(async (levelId: string) => {
     try {
       const data = await apiService.getTheoryTreeByLevel(levelId);
@@ -196,10 +230,17 @@ const Levels = () => {
     if (level) {
       levelForm.setFieldsValue({
         title: level.title,
-        isActive: level.isActive
+        isActive: level.isActive,
+        positionIds: level.positionLinks?.length
+          ? level.positionLinks.map((l) => l.positionId)
+          : [ALL_LEVEL_POSITIONS_VALUE],
       });
     } else {
       levelForm.resetFields();
+      levelForm.setFieldsValue({
+        isActive: true,
+        positionIds: [ALL_LEVEL_POSITIONS_VALUE],
+      });
     }
   };
 
@@ -208,12 +249,16 @@ const Levels = () => {
     if (!levelModal.editing && !can('contentLevels', 'create')) return;
     try {
       const values = await levelForm.validateFields();
+      const payload = {
+        ...values,
+        positionIds: normalizeLevelPositionIds(values.positionIds),
+      };
       setSaving(true);
       if (levelModal.editing) {
-        await apiService.updateLevel(levelModal.editing.id, values);
+        await apiService.updateLevel(levelModal.editing.id, payload);
         message.success('Modul yangilandi');
       } else {
-        await apiService.createLevel(values);
+        await apiService.createLevel(payload);
         message.success('Modul yaratildi');
       }
       setLevelModal({ open: false, editing: null });
@@ -532,6 +577,15 @@ const Levels = () => {
                         <Tag color={level.isActive ? 'green' : 'default'}>
                           {level.isActive ? t(T.active) : 'Inactive'}
                         </Tag>
+                        {level.positionLinks?.length ? (
+                          level.positionLinks.map((l) => (
+                            <Tag key={l.id} color="geekblue">
+                              {l.position?.title ?? '-'}
+                            </Tag>
+                          ))
+                        ) : (
+                          <Tag>Barcha xodimlarga</Tag>
+                        )}
                       </div>
                       <div
                         className="flex items-center gap-2"
@@ -901,6 +955,21 @@ const Levels = () => {
             valuePropName="checked"
           >
             <Switch />
+          </Form.Item>
+          <Form.Item
+            name="positionIds"
+            label="Lavozimlar"
+            extra="All bo`lsa modul barcha xodimlarga ochiq. Lavozim tanlansa modul faqat shu lavozimlarga ko`rinadi."
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Barcha xodimlarga"
+              options={levelPositionOptions}
+              onChange={handleLevelPositionsChange}
+            />
           </Form.Item>
         </Form>
       </Modal>

@@ -31,7 +31,7 @@ import { useInfiniteList } from '@/hooks/useInfiniteList';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
-import type { Level, Theory, Question, QuestionType, Position } from '@/services/api';
+import type { Level, Theory, Question, QuestionType } from '@/services/api';
 import { can } from '@/utils/can';
 import { latinizeQuestionPayload } from '@/utils/cyrillicToLatin';
 
@@ -80,18 +80,11 @@ const QUESTION_TYPE_COLORS: Record<QuestionType, string> = {
 
 const PAGE_SIZE = 15;
 const QP_DEFAULTS = { search: undefined, levelId: undefined, theoryId: undefined } as const;
-const ALL_POSITIONS_VALUE = '__all_positions__';
-
 const Questions = () => {
   const { t } = useTranslation();
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
 
   const { data: levels } = useFetch(['levels'], () => apiService.getLevels(), [] as Level[]);
-  const { data: positions } = useFetch(
-    ['content-positions'],
-    () => apiService.getContentPositions(),
-    [] as Position[],
-  );
   const { data: theories } = useFetch(
     ['theories-by-level', qp.levelId],
     () => (qp.levelId ? apiService.getTheoriesByLevel(qp.levelId) : Promise.resolve([])),
@@ -158,9 +151,6 @@ const Questions = () => {
         prompt: question.prompt,
         type: qType,
         isActive: question.isActive,
-        positionIds: question.positionLinks?.length
-          ? question.positionLinks.map((l) => l.positionId)
-          : [ALL_POSITIONS_VALUE],
         options: question.options.map((o) => ({
           id: o.id,
           optionText: o.optionText,
@@ -174,7 +164,6 @@ const Questions = () => {
       form.setFieldsValue({
         type: 'SINGLE_CHOICE',
         isActive: true,
-        positionIds: [ALL_POSITIONS_VALUE],
         options: [
           { optionText: '', isCorrect: false, matchText: '' },
           { optionText: '', isCorrect: false, matchText: '' },
@@ -217,31 +206,6 @@ const Questions = () => {
     }
   };
 
-  const normalizePositionIds = (value?: string[]) =>
-    (value ?? []).filter((id) => id !== ALL_POSITIONS_VALUE);
-
-  const handlePositionsChange = (nextValue: string[]) => {
-    const previousValue: string[] = form.getFieldValue('positionIds') ?? [];
-    const hasAll = nextValue.includes(ALL_POSITIONS_VALUE);
-
-    if (!hasAll) {
-      form.setFieldValue('positionIds', nextValue);
-      return;
-    }
-
-    if (previousValue.includes(ALL_POSITIONS_VALUE) && nextValue.length > 1) {
-      form.setFieldValue('positionIds', nextValue.filter((id) => id !== ALL_POSITIONS_VALUE));
-      return;
-    }
-
-    form.setFieldValue('positionIds', [ALL_POSITIONS_VALUE]);
-  };
-
-  const positionOptions = [
-    { value: ALL_POSITIONS_VALUE, label: t(T.allEmployees) },
-    ...positions.map((p) => ({ value: p.id, label: p.title })),
-  ];
-
   const handleSave = async () => {
     if (editing && !can('contentQuestions', 'update')) return;
     if (!editing && !can('contentQuestions', 'create')) return;
@@ -256,7 +220,6 @@ const Questions = () => {
             type: values.type,
             isActive: values.isActive,
             options: values.options,
-            positionIds: normalizePositionIds(values.positionIds),
           }),
         );
         message.success('Savol yangilandi');
@@ -269,7 +232,6 @@ const Questions = () => {
             type: values.type,
             isActive: values.isActive ?? true,
             options: values.options,
-            positionIds: normalizePositionIds(values.positionIds),
           }),
         );
         message.success('Savol yaratildi');
@@ -491,9 +453,6 @@ const Questions = () => {
                   options={levels.map((l) => ({ value: l.id, label: l.title }))}
                   onChange={() => {
                     form.setFieldValue('theoryId', undefined);
-                    if (!form.getFieldValue('positionIds')?.length) {
-                      form.setFieldValue('positionIds', [ALL_POSITIONS_VALUE]);
-                    }
                   }}
                 />
               </Form.Item>
@@ -546,22 +505,6 @@ const Questions = () => {
           </Form.Item>
 
           {/* Positions — bo'sh bo'lsa savol hammaga tushadi */}
-          <Form.Item
-            name="positionIds"
-            label={t(T.positions)}
-            extra={t(T.positionsHint)}
-          >
-            <Select
-              mode="multiple"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              placeholder={t(T.allEmployees)}
-              options={positionOptions}
-              onChange={handlePositionsChange}
-            />
-          </Form.Item>
-
           {/* Active toggle */}
           <Form.Item name="isActive" label={t(T.active)} valuePropName="checked" initialValue={true}>
             <Switch />

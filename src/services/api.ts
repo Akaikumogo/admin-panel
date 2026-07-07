@@ -303,6 +303,11 @@ export type Level = {
   isActive: boolean;
   createdById: string | null;
   createdBy?: { id: string; firstName: string; lastName: string } | null;
+  positionLinks?: {
+    id: string;
+    positionId: string;
+    position?: { id: string; title: string };
+  }[];
   theories?: Theory[];
   questions?: Question[];
   createdAt: string;
@@ -1788,6 +1793,7 @@ class ApiService {
     title: string;
     orderIndex?: number;
     isActive?: boolean;
+    positionIds?: string[];
   }): Promise<Level> {
     const response = await this.api.post<Level>('/admin/levels', data);
     return response.data;
@@ -1795,7 +1801,12 @@ class ApiService {
 
   async updateLevel(
     id: string,
-    data: { title?: string; orderIndex?: number; isActive?: boolean }
+    data: {
+      title?: string;
+      orderIndex?: number;
+      isActive?: boolean;
+      positionIds?: string[];
+    }
   ): Promise<Level> {
     const response = await this.api.put<Level>(`/admin/levels/${id}`, data);
     return response.data;
