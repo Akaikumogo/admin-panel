@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Spin } from 'antd';
+import { Spin } from '@/components/ui';
 import apiService from '@/services/api';
 
 function resolveCallbackRedirectUri() {

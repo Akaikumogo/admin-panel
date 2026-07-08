@@ -1,7 +1,7 @@
 // 'use client';
 
 // import { useEffect, useState, useMemo, useCallback, memo } from 'react';
-// import { Image, Popover } from 'antd';
+// import { Image, Popover } from '@/components/ui';
 // import { FixedSizeGrid as Grid } from 'react-window';
 // import roomImage from '@/assets/room.png';
 

@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Divider, Form, Input, Spin, Tag, message } from 'antd';
-import { CameraOutlined } from '@ant-design/icons';
+import { Button, Card, Divider, Form, Input, Spin, Tag, message } from '@/components/ui';
 import {
   Building2,
+  Camera,
   KeyRound,
   LogOut,
   Mail,
@@ -215,7 +215,7 @@ const AvatarCard = memo(function AvatarCard({
               {uploading ? (
                 <Spin size="small" />
               ) : (
-                <CameraOutlined className="text-white text-2xl" />
+                <Camera className="text-white" size={24} />
               )}
             </span>
           </button>

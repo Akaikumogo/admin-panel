@@ -37,7 +37,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
 import { fmtHeaderDate } from '@/lib/format';
-import { Button, Select, Spin } from 'antd';
+import { Button, Select, Spin } from '@/components/ui';
 import { Sidebar } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 import { cacheModeratorPermissions } from '@/utils/permissions';
@@ -116,7 +116,7 @@ const navItems = [
     icon: IdCard
   },
   {
-    path: '/dashboard/user-activity',
+    path: '/dashboard/analytics',
     label: { uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' },
     icon: Activity
   },

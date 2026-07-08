@@ -1,5 +1,5 @@
-import { Avatar, Badge, Table, Tag, Tooltip } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Avatar, Badge, Table, Tag, Tooltip } from '@/components/ui';
+import type { ColumnsType } from '@/components/ui';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/uz-latn';

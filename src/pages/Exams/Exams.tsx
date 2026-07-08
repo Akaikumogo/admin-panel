@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Card, Form, Input, Modal, Select, Spin, Switch, Table, Tag, message, Popconfirm } from 'antd';
+import { Button, Card, Form, Input, Modal, Select, Spin, Switch, Table, Tag, message, Popconfirm } from '@/components/ui';
 import { ClipboardList, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, Select, Spin, Table, Tag } from 'antd';
+import { Card, Select, Spin, Table, Tag } from '@/components/ui';
 import { Trophy } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

@@ -1,5 +1,5 @@
-import { Card, Progress, Table, Tag, Tooltip } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Card, Progress, Table, Tag, Tooltip } from '@/components/ui';
+import type { ColumnsType } from '@/components/ui';
 import { AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
 import type { QuestionStatsRow } from '@/services/api';

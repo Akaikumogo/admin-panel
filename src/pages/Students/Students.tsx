@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Input, Select, Spin, Table, Tag } from 'antd';
+import { Avatar, Input, Select, Spin, Table, Tag } from '@/components/ui';
 import { Filter, Mail, Search, Trophy, Zap } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';

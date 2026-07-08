@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Avatar, Button, Card, Form, Input, Modal, Popconfirm, Spin, Table, Tag, message } from 'antd';
+import { Avatar, Button, Card, Form, Input, Modal, Popconfirm, Spin, Table, Tag, message } from '@/components/ui';
 import { Filter, Mail, Search } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';

@@ -39,6 +39,11 @@ const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
 const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
 const ImportExportPage = lazy(() => import('./pages/ImportExport/ImportExport'));
+const AnalyticsLayout = lazy(() => import('./pages/Analytics'));
+const ExecutiveDashboard = lazy(() => import('./pages/Analytics/ExecutiveDashboard'));
+const BranchDetail = lazy(() => import('./pages/Analytics/BranchDetail'));
+const DepartmentEmployees = lazy(() => import('./pages/Analytics/DepartmentEmployees'));
+const UnderperformersPage = lazy(() => import('./pages/Analytics/UnderperformersPage'));
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -52,7 +57,7 @@ const withSuspense = (
 
 function BranchAnalyticsRedirect() {
   const location = useLocation();
-  return <Navigate to={`/dashboard/user-activity${location.search}`} replace />;
+  return <Navigate to={`/dashboard/analytics${location.search}`} replace />;
 }
 
 export const routes: RouteObject[] = [
@@ -167,6 +172,23 @@ export const routes: RouteObject[] = [
           {
             path: 'user-activity',
             element: withSuspense(UserActivityPage)
+          },
+          {
+            path: 'analytics',
+            element: withSuspense(AnalyticsLayout),
+            children: [
+              { index: true, element: withSuspense(ExecutiveDashboard) },
+              { path: 'branches/:orgId', element: withSuspense(BranchDetail) },
+              {
+                path: 'branches/:orgId/dept/:division',
+                element: withSuspense(DepartmentEmployees),
+              },
+              {
+                path: 'branches/:orgId/employees',
+                element: withSuspense(DepartmentEmployees),
+              },
+              { path: 'underperformers', element: withSuspense(UnderperformersPage) },
+            ],
           },
           {
             path: 'import-export',

@@ -8,7 +8,7 @@ import {
   Tag,
   Typography,
   message
-} from 'antd';
+} from '@/components/ui';
 import { Plus, Trash2, Pencil, RefreshCcw, Headphones, Music2 } from 'lucide-react';
 import apiService, { BACKEND_ORIGIN, type AdminAudioBookRow } from '@/services/api';
 import { usePaginatedFetch } from '@/hooks/useFetch';

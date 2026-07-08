@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Card, Form, Input, Modal, Spin, Table, message, Popconfirm } from 'antd';
+import { Button, Card, Form, Input, Modal, Spin, Table, message, Popconfirm } from '@/components/ui';
 import { BriefcaseBusiness, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

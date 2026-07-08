@@ -9,7 +9,7 @@ import {
   Tag,
   Popconfirm,
   message,
-} from 'antd';
+} from '@/components/ui';
 import { Plus, Pencil, Trash2, Filter, Search, BookOpen, ChevronRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';

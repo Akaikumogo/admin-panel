@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from '@/components/ui';
+import type { ColumnsType } from '@/components/ui';
 import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
 import NoData from '@/components/NoData';
 import {

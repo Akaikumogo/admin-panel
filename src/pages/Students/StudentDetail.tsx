@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Form, Input, Progress, Select, Spin, Table, Tag, Tooltip } from 'antd';
+import { Avatar, Button, Form, Input, Progress, Select, Spin, Table, Tag, Tooltip } from '@/components/ui';
 import { ArrowLeft, Pencil, X, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

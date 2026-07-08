@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Checkbox, Input, Modal, Tag, Upload, message } from 'antd';
-import type { UploadFile } from 'antd/es/upload/interface';
+import { Button, Card, Checkbox, Input, Modal, Tag, Upload, message } from '@/components/ui';
+import type { UploadFile } from '@/components/ui';
 import { Download, UploadCloud, Layers, Shield, FileJson, KeyRound, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '@/services/api';

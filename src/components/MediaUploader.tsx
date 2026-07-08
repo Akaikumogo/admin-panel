@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Button, message, Progress, Tag } from 'antd';
+import { Button, message, Progress, Tag } from '@/components/ui';
 import { UploadCloud, X } from 'lucide-react';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import WaveformBars from './WaveformBars';

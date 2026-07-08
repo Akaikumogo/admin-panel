@@ -11,7 +11,7 @@ import {
   Popconfirm,
   message,
   Radio,
-} from 'antd';
+} from '@/components/ui';
 import {
   Plus,
   Pencil,

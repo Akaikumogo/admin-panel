@@ -12,7 +12,7 @@ import {
   message,
   Popconfirm,
   Spin
-} from 'antd';
+} from '@/components/ui';
 import {
   Plus,
   Pencil,

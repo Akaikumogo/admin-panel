@@ -14,8 +14,8 @@ import {
   Tag,
   Tabs,
   message,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from '@/components/ui';
+import type { ColumnsType } from '@/components/ui';
 import {
   ArrowLeft,
   BarChart3,

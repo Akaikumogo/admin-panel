@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, Spin, Table, Tag } from 'antd';
+import { Card, Spin, Table, Tag } from '@/components/ui';
 import { BarChart2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

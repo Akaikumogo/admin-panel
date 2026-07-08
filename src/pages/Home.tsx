@@ -20,7 +20,7 @@ import {
   Table,
   Tag,
   Progress
-} from 'antd';
+} from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';

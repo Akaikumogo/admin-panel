@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Form, Input, InputNumber, Modal, Select, Spin, Table, Tag, message, Popconfirm } from 'antd';
+import { Button, Card, Form, Input, InputNumber, Modal, Select, Spin, Table, Tag, message, Popconfirm } from '@/components/ui';
 import { FolderTree, Plus, Pencil, Trash2, List } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

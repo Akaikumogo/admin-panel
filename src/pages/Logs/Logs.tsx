@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, Segmented, Select, Spin, Table, Tag, Typography } from 'antd';
+import { Card, Segmented, Select, Spin, Table, Tag, Typography } from '@/components/ui';
 import { ScrollText } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

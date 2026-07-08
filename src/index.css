@@ -1,9 +1,94 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
-@tailwind utilities;
+@import 'tw-animate-css';
+@import 'react-day-picker/style.css';
+
 @custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #eff6ff;
+  --accent-foreground: #1d4ed8;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+  --radius: 0.75rem;
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-color: #e2e8f0;
+  --primary-hover: #0a36ad;
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #f1f5f9;
+  --card: #0f172a;
+  --card-foreground: #f1f5f9;
+  --popover: #0f172a;
+  --popover-foreground: #f1f5f9;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #172554;
+  --accent-foreground: #93c5fd;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #3b82f6;
+  --bg-main: #020617;
+  --bg-card: #0f172a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #1e293b;
+  --primary-hover: #60a5fa;
+}
+
 .glass {
-  /* From https://css.glass */
   background: rgba(255, 255, 255, 0.24);
   border-radius: 16px;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
@@ -11,25 +96,7 @@
   -webkit-backdrop-filter: blur(2.7px);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
-:root {
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --border-color: #e2e8f0;
-  --primary: #2563eb;
-  --primary-hover: #0a36ad;
-}
 
-.dark {
-  --bg-main: #020617;
-  --bg-card: #0f172a;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --border-color: #1e293b;
-  --primary: #3b82f6;
-  --primary-hover: #60a5fa;
-}
 body {
   font-family:
     Inter,
@@ -44,18 +111,18 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
-
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-main);
-  color: var(--text-primary);
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @layer base {
-  /* Global Mac Style Scrollbar */
   * {
+    @apply border-border;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    scroll-behavior: smooth;
   }
 
   *::-webkit-scrollbar {
@@ -67,13 +134,13 @@ body {
   }
 
   *::-webkit-scrollbar-thumb {
-    @apply bg-black/20 rounded-full transition-all duration-300 ease-in-out;
+    @apply bg-black/20 rounded-full transition-all duration-300 ease-in-out opacity-70;
     border: 2px solid transparent;
     background-clip: content-box;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    @apply bg-black/40;
+    @apply bg-black/40 opacity-100;
     background-clip: content-box;
   }
 
@@ -86,7 +153,10 @@ body {
     @apply bg-transparent;
   }
 
-  /* Dark mode */
+  *:hover::-webkit-scrollbar-thumb {
+    @apply opacity-100;
+  }
+
   .dark * {
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   }
@@ -106,7 +176,6 @@ body {
     background-clip: content-box;
   }
 
-  /* Main scrollbar with theme color */
   html,
   body {
     scrollbar-color: rgba(37, 99, 235, 0.35) transparent;
@@ -131,21 +200,6 @@ body {
     background-clip: content-box;
   }
 
-  /* Smooth scrolling */
-  * {
-    scroll-behavior: smooth;
-  }
-
-  /* Auto-hide effect */
-  *::-webkit-scrollbar-thumb {
-    @apply opacity-70 transition-opacity duration-300;
-  }
-
-  *:hover::-webkit-scrollbar-thumb {
-    @apply opacity-100;
-  }
-
-  /* Mobile responsive */
   @media (max-width: 768px) {
     *::-webkit-scrollbar {
       @apply w-1.5 h-1.5;
@@ -169,74 +223,18 @@ body {
   }
 }
 
-/* ─── NES Select dropdown — uzun nomlar uchun ───────────────────────────── */
-.nes-select-popup {
-  max-width: min(600px, 90vw);
-}
-
-.nes-select-popup .ant-select-item-option-content {
+/* Long option labels in selects */
+.select-long-options [cmdk-item] {
   white-space: normal;
   word-break: break-word;
   line-height: 1.4;
-  padding: 2px 0;
 }
 
-/* Tanlangan qiymat trigger ichida ellipsis bilan */
-.ant-select-selection-item {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Moderatorlar — filial select (yopiq: 1 qator, ochiq: to‘liq nom) */
 .moderators-page .moderator-filial-cell {
   width: 100%;
   max-width: 400px;
 }
 
-.moderators-page .moderator-filial-select {
-  width: 100%;
-}
-
-.moderators-page .moderator-filial-select .ant-select-selector {
-  height: 32px !important;
-  align-items: center;
-  padding-inline: 10px 28px !important;
-}
-
-.moderators-page .moderator-filial-select .ant-select-selection-item,
-.moderators-page .moderator-filial-select .moderator-filial-select-label {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 30px;
-  max-width: 100%;
-}
-
 .moderators-page .moderator-filial-filter {
   min-width: 280px;
-}
-
-.moderator-filial-popup {
-  min-width: 520px !important;
-  max-width: min(680px, 92vw) !important;
-}
-
-.moderator-filial-popup .ant-select-item {
-  min-height: 36px;
-  align-items: flex-start;
-  padding-block: 6px;
-}
-
-.moderator-filial-popup .ant-select-item-option-content,
-.moderator-filial-option {
-  display: block;
-  white-space: normal;
-  word-break: break-word;
-  line-height: 1.4;
-}
-
-.moderators-table .ant-table-cell {
-  vertical-align: middle;
 }

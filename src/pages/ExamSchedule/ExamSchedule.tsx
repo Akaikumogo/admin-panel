@@ -12,7 +12,7 @@ import {
   Table,
   Tag,
   message,
-} from 'antd';
+} from '@/components/ui';
 import { Bell, CalendarClock, QrCode, UserPlus } from 'lucide-react';
 import { io, type Socket } from 'socket.io-client';
 import QRCode from 'qrcode';

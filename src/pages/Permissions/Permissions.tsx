@@ -9,8 +9,8 @@ import {
   Switch,
   Table,
   Tag,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from '@/components/ui';
+import type { ColumnsType } from '@/components/ui';
 import { Filter, Mail, Search, Star } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';

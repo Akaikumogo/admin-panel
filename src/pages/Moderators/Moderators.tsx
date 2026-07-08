@@ -15,8 +15,8 @@ import {
   Divider,
   Switch,
   Table,
-} from 'antd';
-import type { DefaultOptionType } from 'antd/es/select';
+} from '@/components/ui';
+import type { DefaultOptionType } from '@/components/ui';
 import {
   Plus,
   Mail,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Drawer, Tabs, Timeline, Empty, Tag, Spin, List } from 'antd';
+import { Drawer, Tabs, Timeline, Empty, Tag, Spin, List } from '@/components/ui';
 import dayjs from 'dayjs';
 import {
   userActivityApi,

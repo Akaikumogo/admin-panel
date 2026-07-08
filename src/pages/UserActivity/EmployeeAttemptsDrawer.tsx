@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Drawer, DatePicker, Tag, List, Pagination, Spin, Empty } from 'antd';
+import { Drawer, DatePicker, Tag, List, Pagination, Spin, Empty } from '@/components/ui';
 import dayjs, { type Dayjs } from 'dayjs';
 import { CheckCircle2, XCircle, ArrowLeftRight } from 'lucide-react';
 import { apiService, type EmployeeAttemptsResponse } from '@/services/api';

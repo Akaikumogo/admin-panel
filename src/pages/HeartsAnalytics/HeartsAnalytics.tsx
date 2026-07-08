@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Col, Empty, Progress, Row, Select, Spin, Table, Tag } from 'antd';
+import { Card, Col, Empty, Progress, Row, Select, Spin, Table, Tag } from '@/components/ui';
 import { AlertTriangle, HeartPulse, HelpCircle, Users } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';

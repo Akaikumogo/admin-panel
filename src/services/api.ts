@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { notification } from 'antd';
+import { notification } from '@/lib/toast';
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
@@ -268,6 +268,117 @@ export type BranchComparison = {
   daysInMonth: number;
   dailyGoalCorrect: number;
   branches: BranchComparisonRow[];
+};
+
+export type AnalyticsStatus = 'green' | 'yellow' | 'red';
+
+export type ExecutiveDashboard = {
+  planDate: string;
+  dailyGoalCorrect: number;
+  totalPlan: number;
+  completedTotal: number;
+  remaining: number;
+  completionPercent: number;
+  totalEmployees: number;
+  activeEmployees: number;
+  completedEmployees: number;
+  branchCount: number;
+};
+
+export type BranchRankingRow = {
+  orgId: string;
+  orgName: string;
+  isDefault: boolean;
+  totalEmployees: number;
+  plan: number;
+  completed: number;
+  percent: number;
+  completedEmployees: number;
+  status: AnalyticsStatus;
+  rank: number;
+};
+
+export type BranchRanking = {
+  planDate: string;
+  dailyGoalCorrect: number;
+  branches: BranchRankingRow[];
+};
+
+export type DivisionSummaryRow = {
+  division: string;
+  totalEmployees: number;
+  plan: number;
+  completed: number;
+  percent: number;
+  completedEmployees: number;
+  status: AnalyticsStatus;
+};
+
+export type DivisionSummary = {
+  orgId: string;
+  orgName: string;
+  planDate: string;
+  dailyGoalCorrect: number;
+  totalEmployees: number;
+  plan: number;
+  completed: number;
+  percent: number;
+  divisions: DivisionSummaryRow[];
+};
+
+export type EmployeeRankingRow = {
+  userId: string;
+  fullName: string;
+  correct: number;
+  goal: number;
+  percent: number;
+  completed: boolean;
+  status: AnalyticsStatus;
+  rank: number;
+};
+
+export type EmployeeRanking = {
+  orgId: string;
+  planDate: string;
+  division: string | null;
+  dailyGoalCorrect: number;
+  employees: EmployeeRankingRow[];
+};
+
+export type HourlyProgress = {
+  planDate: string;
+  orgId: string | null;
+  points: Array<{ hour: number; label: string; completedEmployees: number }>;
+  maxCompleted: number;
+};
+
+export type DailyTrend = {
+  dailyGoalCorrect: number;
+  points: Array<{ date: string; percent: number; completed: number; plan: number }>;
+};
+
+export type WeekdayHeatmap = {
+  weekdays: string[];
+  branches: Array<{
+    orgId: string;
+    orgName: string;
+    isDefault: boolean;
+    cells: Array<{ dow: number; label: string; percent: number; status: AnalyticsStatus }>;
+  }>;
+};
+
+export type Underperformers = {
+  planDate: string;
+  threshold: number;
+  branchCount: number;
+  divisionCount: number;
+  employeeCount: number;
+  branches: Array<{
+    orgId: string;
+    orgName: string;
+    percent: number;
+    divisions: Array<{ division: string; percent: number; employees: number }>;
+  }>;
 };
 
 export type EmployeeAttemptRow = {
@@ -1267,6 +1378,90 @@ class ApiService {
   }): Promise<BranchComparison> {
     const response = await this.api.get<BranchComparison>(
       '/admin/branch-analytics/branch-comparison',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getExecutiveDashboard(params?: { date?: string }): Promise<ExecutiveDashboard> {
+    const response = await this.api.get<ExecutiveDashboard>(
+      '/admin/branch-analytics/executive-dashboard',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getBranchRanking(params?: { date?: string }): Promise<BranchRanking> {
+    const response = await this.api.get<BranchRanking>(
+      '/admin/branch-analytics/branch-ranking',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getDivisionSummary(params: {
+    orgId: string;
+    date?: string;
+  }): Promise<DivisionSummary> {
+    const response = await this.api.get<DivisionSummary>(
+      '/admin/branch-analytics/division-summary',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getEmployeeRanking(params: {
+    orgId: string;
+    date?: string;
+    division?: string;
+  }): Promise<EmployeeRanking> {
+    const response = await this.api.get<EmployeeRanking>(
+      '/admin/branch-analytics/employee-ranking',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getHourlyProgress(params?: {
+    date?: string;
+    orgId?: string;
+  }): Promise<HourlyProgress> {
+    const response = await this.api.get<HourlyProgress>(
+      '/admin/branch-analytics/hourly-progress',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getDailyTrend(params?: {
+    from?: string;
+    to?: string;
+    orgId?: string;
+  }): Promise<DailyTrend> {
+    const response = await this.api.get<DailyTrend>(
+      '/admin/branch-analytics/daily-trend',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getWeekdayHeatmap(params?: {
+    from?: string;
+    to?: string;
+  }): Promise<WeekdayHeatmap> {
+    const response = await this.api.get<WeekdayHeatmap>(
+      '/admin/branch-analytics/weekday-heatmap',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getUnderperformers(params?: {
+    date?: string;
+    threshold?: number;
+  }): Promise<Underperformers> {
+    const response = await this.api.get<Underperformers>(
+      '/admin/branch-analytics/underperformers',
       { params },
     );
     return response.data;

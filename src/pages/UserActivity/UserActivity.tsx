@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, Segmented, Select, Tabs, Spin, Table, Tag, DatePicker, Row, Col, Progress, message } from 'antd';
+import { Button, Card, Segmented, Select, Tabs, Spin, Table, Tag, DatePicker, Row, Col, Progress, message } from '@/components/ui';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   Activity,
@@ -91,9 +91,12 @@ const StatCard = ({
   </Card>
 );
 
+type ActivityTab = ActivityGroup | 'branchKpi';
+
 const UserActivity = () => {
   const [searchParams] = useSearchParams();
   const initialOrg = searchParams.get('orgId') ?? 'all';
+  const [activeTab, setActiveTab] = useState<ActivityTab>('employees');
   const [group, setGroup] = useState<ActivityGroup>('employees');
   const [range, setRange] = useState<ActivityRange>('day');
   const [orgFilter, setOrgFilter] = useState<string>(initialOrg);
@@ -444,8 +447,14 @@ const UserActivity = () => {
 
       {/* TABS */}
       <Tabs
-        activeKey={group}
-        onChange={(k) => setGroup(k as ActivityGroup)}
+        activeKey={activeTab}
+        onChange={(k) => {
+          const tab = k as ActivityTab;
+          setActiveTab(tab);
+          if (tab === 'employees' || tab === 'moderators') {
+            setGroup(tab);
+          }
+        }}
         items={[
           {
             key: 'employees',

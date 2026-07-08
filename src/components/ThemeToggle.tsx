@@ -1,6 +1,6 @@
+import * as React from 'react';
 import { useApp } from '@/Providers/Configuration';
-import { Button } from 'antd';
-
+import { Button } from '@/components/ui/button';
 import { Moon, Sun } from 'lucide-react';
 import {
   ThemeAnimationType,
@@ -23,11 +23,12 @@ export const ThemeToggle = () => {
 
   return (
     <Button
-      ref={ref}
-      type="default"
-      size="large"
+      ref={ref as React.Ref<HTMLButtonElement>}
+      variant="outline"
+      size="icon"
       onClick={handleClick}
-      icon={isDark ? <Sun size={16} /> : <Moon size={16} />}
-    />
+    >
+      {isDark ? <Sun size={16} /> : <Moon size={16} />}
+    </Button>
   );
 };

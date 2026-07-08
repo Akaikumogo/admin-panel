@@ -1,18 +1,9 @@
-import type { DefaultOptionType } from 'antd/es/select';
-import { cyrillicToLatinText } from '@/utils/cyrillicToLatin';
+export type DefaultOptionType = { value: string; label: React.ReactNode; disabled?: boolean };
 
-export function normalizeSelectSearch(value: string): string {
-  return cyrillicToLatinText(value.trim().toLowerCase());
+export function filterSelectOption(input: string, option?: DefaultOptionType): boolean {
+  if (!option) return false;
+  const label = String(option.label ?? '').toLowerCase();
+  return label.includes(input.toLowerCase());
 }
 
-/** Select ichida kirill/lotin qidiruv */
-export function filterSelectOption(
-  input: string,
-  option?: DefaultOptionType,
-): boolean {
-  const label = String(option?.label ?? '');
-  const haystack = normalizeSelectSearch(label);
-  const needle = normalizeSelectSearch(input);
-  if (!needle) return true;
-  return haystack.includes(needle);
-}
+import * as React from 'react';

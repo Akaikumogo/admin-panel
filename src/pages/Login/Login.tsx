@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Form, Input, Button, Select, message, Divider } from 'antd';
+import { Form, Input, Button, Select, message, Divider } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
