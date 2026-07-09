@@ -33,7 +33,7 @@ export function RadioGroup({
   if (children) {
     const buttons = React.Children.toArray(children) as React.ReactElement[];
     return (
-      <div className={cn('surface-segmented', className)}>
+      <div className={cn('inline-flex rounded-lg border p-0.5', className)}>
         {buttons.map((child) => {
           const childProps = child.props as { value: string; disabled?: boolean; children?: React.ReactNode };
           const val = childProps.value;
@@ -45,8 +45,8 @@ export function RadioGroup({
               disabled={childProps.disabled}
               onClick={() => onChange?.({ target: { value: val } })}
               className={cn(
-                'rounded-sm px-3 py-1.5 text-sm transition-colors',
-                active ? 'surface-segmented-active' : 'text-muted-foreground hover:text-foreground',
+                'rounded-md px-3 py-1.5 text-sm transition-colors',
+                active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {childProps.children}

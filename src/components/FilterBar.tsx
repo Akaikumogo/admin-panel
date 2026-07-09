@@ -11,7 +11,7 @@ export function FilterBar({ children, className, showIcon = true }: FilterBarPro
   return (
     <div
       className={cn(
-        'surface-panel flex items-center gap-3 flex-wrap px-4 py-3',
+        'flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3',
         className,
       )}
     >
@@ -33,7 +33,7 @@ export function ContentCard({
   return (
     <div
       className={cn(
-        'surface-panel transition-opacity duration-150',
+        'bg-card border border-border rounded-lg transition-opacity duration-150',
         loading && 'opacity-50',
         className,
       )}

@@ -13,16 +13,16 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={cn('surface-segmented', className)}>
+    <div className={cn('inline-flex rounded-lg bg-muted p-1', className)}>
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange?.(opt.value)}
           className={cn(
-            'rounded-sm px-3 py-1.5 text-sm font-medium transition-colors',
+            'rounded-md px-3 py-1.5 text-sm font-medium transition-all',
             value === opt.value
-              ? 'surface-segmented-active'
+              ? 'bg-background text-foreground shadow'
               : 'text-muted-foreground hover:text-foreground',
           )}
         >
