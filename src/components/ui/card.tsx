@@ -6,7 +6,7 @@ const CardBase = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('rounded-md border border-border bg-card text-card-foreground shadow-none', className)}
+      className={cn('rounded-2xl border bg-card text-card-foreground shadow-sm', className)}
       {...props}
     />
   ),
@@ -33,7 +33,7 @@ function Card({
   return (
     <CardBase className={cn('relative', className)} {...props}>
       {loading ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/60">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/60">
           <Spinner size={28} />
         </div>
       ) : null}

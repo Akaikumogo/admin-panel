@@ -31,13 +31,13 @@ export function Tabs({
       className={className}
     >
       <div className="flex items-center justify-between gap-4">
-        <TabsListBase className="surface-segmented h-10 items-center justify-center text-muted-foreground">
+        <TabsListBase className="inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
           {items.map((item) => (
             <TabsTriggerBase
               key={item.key}
               value={item.key}
               disabled={item.disabled}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:surface-segmented-active data-[state=active]:text-foreground"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow"
             >
               {item.label}
             </TabsTriggerBase>
@@ -58,7 +58,7 @@ export const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <TabsListBase ref={ref} className={cn('surface-segmented h-10 items-center justify-center text-muted-foreground', className)} {...props} />
+  <TabsListBase ref={ref} className={cn('inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground', className)} {...props} />
 ));
 TabsList.displayName = 'TabsList';
 
@@ -68,7 +68,7 @@ export const TabsTrigger = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsTriggerBase
     ref={ref}
-    className={cn('inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:surface-segmented-active data-[state=active]:text-foreground', className)}
+    className={cn('inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow', className)}
     {...props}
   />
 ));

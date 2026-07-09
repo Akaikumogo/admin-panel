@@ -304,12 +304,12 @@ export function DataTable<T extends Record<string, unknown>>({
   return (
     <div
       className={cn(
-        'enterprise-table surface-panel relative w-full dark:bg-[#0c0e14]',
+        'enterprise-table relative w-full rounded-xl border border-border bg-card dark:bg-[#0c0e14]',
         className,
       )}
     >
       {loading ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/60">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/60">
           <Spinner size={28} />
         </div>
       ) : null}

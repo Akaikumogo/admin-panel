@@ -48,11 +48,10 @@
   --accent-foreground: #1d4ed8;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #cbd5e1;
-  --input: #cbd5e1;
-  --ring: #64748b;
-  --radius: 0.375rem;
-  --shadow-elevation: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+  --radius: 0.75rem;
   --bg-main: #f8fafc;
   --bg-card: #ffffff;
   --text-primary: #0f172a;
@@ -78,8 +77,8 @@
   --accent-foreground: #e2e8f0;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #3f4f63;
-  --input: #334155;
+  --border: #334155;
+  --input: #1e293b;
   --ring: #64748b;
   --bg-main: #020617;
   --bg-card: #0c0e14;
@@ -260,23 +259,4 @@ body {
 /* Enterprise jadval — dark rejimda ko'k emas, qoramtir fon */
 .dark .enterprise-table input:focus-visible {
   --tw-ring-color: rgb(100 116 139);
-}
-
-/* Enterprise admin — tekis border, minimal shadow (o'yin emas) */
-@layer components {
-  .surface-panel {
-    @apply rounded-md border border-border bg-card;
-  }
-
-  .surface-control {
-    @apply rounded-md border border-input bg-background shadow-none;
-  }
-
-  .surface-segmented {
-    @apply inline-flex rounded-md border border-border bg-background p-0.5;
-  }
-
-  .surface-segmented-active {
-    @apply rounded-sm bg-muted font-medium text-foreground;
-  }
 }
