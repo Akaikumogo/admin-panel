@@ -119,7 +119,7 @@ export default function ExecutiveDashboard() {
 
   const { data: heatmap } = useFetch(
     ['weekday-heatmap', date, orgId],
-    () => apiService.getWeekdayHeatmap({ to: date }),
+    () => apiService.getWeekdayHeatmap({ to: date, orgId: orgId || undefined }),
     { weekdays: [], branches: [], rangeFrom: '', rangeTo: '' },
   );
 
@@ -154,6 +154,9 @@ export default function ExecutiveDashboard() {
       title: t({ uz: 'Filial', en: 'Branch', ru: 'Филиал' }),
       dataIndex: 'orgName',
       key: 'orgName',
+      fixed: 'left' as const,
+      width: 240,
+      ellipsis: true,
       render: (name: string, row: BranchRankingRow) => (
         <button
           type="button"
@@ -168,19 +171,21 @@ export default function ExecutiveDashboard() {
       title: t({ uz: 'Reja', en: 'Plan', ru: 'План' }),
       dataIndex: 'plan',
       key: 'plan',
+      align: 'right' as const,
       render: (v: number) => formatNumber(v),
     },
     {
       title: t({ uz: 'Bajarildi', en: 'Done', ru: 'Выполнено' }),
       dataIndex: 'completed',
       key: 'completed',
+      align: 'right' as const,
       render: (v: number) => formatNumber(v),
     },
     {
       title: '%',
       dataIndex: 'percent',
       key: 'percent',
-      width: 180,
+      width: 220,
       render: (p: number, row: BranchRankingRow) => (
         <div className="space-y-1 min-w-[140px]">
           <StatusBadge status={row.status} percent={p} />
@@ -341,7 +346,8 @@ export default function ExecutiveDashboard() {
                   rowKey="orgId"
                   columns={branchColumns}
                   dataSource={filteredBranches}
-                  pagination={{ pageSize: 10, showSizeChanger: true }}
+                  scroll={{ x: 'max-content' }}
+                  pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: [20, 50, 100] }}
                 />
               </Card>
             </Col>

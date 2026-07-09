@@ -11,6 +11,7 @@ import { StatusBadge } from './components/StatusBadge';
 import {
   encodeDivision,
   formatNumber,
+  statusTextColor,
 } from './analytics-utils';
 
 const { Title, Text } = Typography;

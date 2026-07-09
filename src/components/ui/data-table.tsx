@@ -103,12 +103,46 @@ function getCellFilterText<T extends Record<string, unknown>>(
   return '';
 }
 
+function parseColumnWidth(width?: number | string): number | undefined {
+  if (width == null) return undefined;
+  if (typeof width === 'number') return width;
+  const n = Number.parseInt(String(width), 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function buildFixedOffsets<T>(columns: ColumnType<T>[]) {
+  let left = 0;
+  let right = 0;
+  const leftOffsets = new Map<string, number>();
+  const rightOffsets = new Map<string, number>();
+  const defaultWidth = 160;
+
+  for (const col of columns) {
+    const id = getColumnId(col);
+    const w = parseColumnWidth(col.width) ?? defaultWidth;
+    if (col.fixed === 'left') {
+      leftOffsets.set(id, left);
+      left += w;
+    }
+  }
+  for (let i = columns.length - 1; i >= 0; i--) {
+    const col = columns[i];
+    const id = getColumnId(col);
+    const w = parseColumnWidth(col.width) ?? 120;
+    if (col.fixed === 'right') {
+      rightOffsets.set(id, right);
+      right += w;
+    }
+  }
+  return { leftOffsets, rightOffsets };
+}
+
 export function DataTable<T extends Record<string, unknown>>({
   columns,
   dataSource = [],
   rowKey = 'key',
   loading,
-  pagination = { pageSize: 10 },
+  pagination = { pageSize: 20, showSizeChanger: true },
   size = 'middle',
   scroll,
   onRow,
@@ -120,6 +154,10 @@ export function DataTable<T extends Record<string, unknown>>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [internalFilters, setInternalFilters] = React.useState<Record<string, string>>({});
   const columnFilters = controlledFilters ?? internalFilters;
+  const { leftOffsets, rightOffsets } = React.useMemo(
+    () => buildFixedOffsets(columns),
+    [columns],
+  );
 
   const setColumnFilters = (next: Record<string, string>) => {
     if (onColumnFiltersChange) onColumnFiltersChange(next);
@@ -176,6 +214,7 @@ export function DataTable<T extends Record<string, unknown>>({
             ellipsis: col.ellipsis,
             filterable: isColumnFilterable(col),
             filterPlaceholder: col.filterPlaceholder,
+            fixed: col.fixed,
           },
         };
       }),
@@ -232,10 +271,40 @@ export function DataTable<T extends Record<string, unknown>>({
   const cellPadding = size === 'small' ? 'py-2 px-2' : size === 'large' ? 'py-4 px-4' : 'py-3 px-3';
   const hasColumnFilters = columns.some(isColumnFilterable);
 
+  const stickyCellClass = (fixed?: 'left' | 'right', isHeader?: boolean) =>
+    cn(
+      fixed === 'left' && 'sticky z-20 border-r border-border shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.45)]',
+      fixed === 'right' && 'sticky z-20 border-l border-border shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)]',
+      fixed === 'left' && (isHeader ? 'bg-muted/95 dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
+      fixed === 'right' && (isHeader ? 'bg-muted/95 dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
+    );
+
+  const stickyStyle = (
+    colId: string,
+    fixed?: 'left' | 'right',
+    width?: number | string,
+  ): React.CSSProperties | undefined => {
+    if (fixed === 'left') {
+      return {
+        left: leftOffsets.get(colId) ?? 0,
+        minWidth: width ?? 160,
+        width: width,
+      };
+    }
+    if (fixed === 'right') {
+      return {
+        right: rightOffsets.get(colId) ?? 0,
+        minWidth: width ?? 120,
+        width: width,
+      };
+    }
+    return width != null ? { width, minWidth: width } : undefined;
+  };
+
   return (
     <div
       className={cn(
-        'enterprise-table surface-panel relative dark:bg-[#0c0e14]',
+        'enterprise-table surface-panel relative w-full dark:bg-[#0c0e14]',
         className,
       )}
     >
@@ -245,21 +314,23 @@ export function DataTable<T extends Record<string, unknown>>({
         </div>
       ) : null}
       <div
-        className="overflow-auto"
+        className="w-full overflow-auto"
         style={{
           maxHeight: scroll?.y,
-          maxWidth: scroll?.x === true ? '100%' : typeof scroll?.x === 'number' ? scroll.x : undefined,
         }}
       >
-        <UITable>
+        <UITable className="w-full min-w-full table-fixed">
           <TableHeader className="bg-muted/50 dark:bg-[#111318]">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
                 {headerGroup.headers.map((header) => {
+                  const col = columns.find((c) => getColumnId(c) === header.column.id);
                   const meta = header.column.columnDef.meta as {
                     align?: string;
                     width?: number | string;
+                    fixed?: 'left' | 'right';
                   } | undefined;
+                  const fixed = col?.fixed ?? meta?.fixed;
                   return (
                     <TableHead
                       key={header.id}
@@ -268,8 +339,9 @@ export function DataTable<T extends Record<string, unknown>>({
                         'text-foreground/80 dark:text-slate-300',
                         meta?.align === 'center' && 'text-center',
                         meta?.align === 'right' && 'text-right',
+                        stickyCellClass(fixed, true),
                       )}
-                      style={{ width: meta?.width }}
+                      style={stickyStyle(header.column.id, fixed, meta?.width)}
                     >
                       {header.isPlaceholder ? null : (
                         <button
@@ -300,13 +372,16 @@ export function DataTable<T extends Record<string, unknown>>({
             {hasColumnFilters ? (
               <TableRow className="border-border bg-muted/30 dark:bg-[#0a0c10] hover:bg-muted/30 dark:hover:bg-[#0a0c10]">
                 {table.getHeaderGroups()[0]?.headers.map((header) => {
+                  const col = columns.find((c) => getColumnId(c) === header.column.id);
                   const meta = header.column.columnDef.meta as {
                     align?: string;
                     width?: number | string;
                     filterable?: boolean;
                     filterPlaceholder?: string;
+                    fixed?: 'left' | 'right';
                   } | undefined;
                   const colId = header.column.id;
+                  const fixed = col?.fixed ?? meta?.fixed;
 
                   return (
                     <TableHead
@@ -315,8 +390,9 @@ export function DataTable<T extends Record<string, unknown>>({
                         'py-2 px-2',
                         meta?.align === 'center' && 'text-center',
                         meta?.align === 'right' && 'text-right',
+                        stickyCellClass(fixed, true),
                       )}
-                      style={{ width: meta?.width }}
+                      style={stickyStyle(colId, fixed, meta?.width)}
                     >
                       {meta?.filterable ? (
                         <div className="relative">
@@ -355,10 +431,14 @@ export function DataTable<T extends Record<string, unknown>>({
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {
+                      const col = columns.find((c) => getColumnId(c) === cell.column.id);
                       const meta = cell.column.columnDef.meta as {
                         align?: string;
                         ellipsis?: boolean;
+                        width?: number | string;
+                        fixed?: 'left' | 'right';
                       } | undefined;
+                      const fixed = col?.fixed ?? meta?.fixed;
                       return (
                         <TableCell
                           key={cell.id}
@@ -367,8 +447,10 @@ export function DataTable<T extends Record<string, unknown>>({
                             'dark:text-slate-200',
                             meta?.align === 'center' && 'text-center',
                             meta?.align === 'right' && 'text-right',
-                            meta?.ellipsis && 'max-w-[200px] truncate',
+                            meta?.ellipsis && 'truncate',
+                            stickyCellClass(fixed, false),
                           )}
+                          style={stickyStyle(cell.column.id, fixed, meta?.width)}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
