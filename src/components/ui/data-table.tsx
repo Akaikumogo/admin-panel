@@ -39,6 +39,8 @@ export type ColumnType<T = Record<string, unknown>> = {
   sorter?: boolean | ((a: T, b: T) => number);
   defaultSortOrder?: string;
   render?: (value: any, record: T, index: number) => React.ReactNode;
+  /** Ant Design — guruh ustunlari (masalan Ruxsatlar switchlari) */
+  children?: ColumnType<T>[];
   /** Ustun bo'yicha qidiruv (default: dataIndex yoki getFilterValue bo'lsa true) */
   filterable?: boolean;
   filterPlaceholder?: string;
@@ -103,6 +105,60 @@ function getCellFilterText<T extends Record<string, unknown>>(
   return '';
 }
 
+function flattenLeafColumns<T>(columns: ColumnType<T>[]): ColumnType<T>[] {
+  const out: ColumnType<T>[] = [];
+  for (const col of columns) {
+    if (col.children?.length) {
+      out.push(...flattenLeafColumns(col.children));
+    } else {
+      out.push(col);
+    }
+  }
+  return out;
+}
+
+function hasGroupedColumns<T>(columns: ColumnType<T>[]): boolean {
+  return columns.some((c) => (c.children?.length ?? 0) > 0);
+}
+
+function findLeafColumn<T>(columns: ColumnType<T>[], colId: string): ColumnType<T> | undefined {
+  for (const col of columns) {
+    if (col.children?.length) {
+      const found = findLeafColumn(col.children, colId);
+      if (found) return found;
+    } else if (getColumnId(col) === colId) {
+      return col;
+    }
+  }
+  return undefined;
+}
+
+function colDefFromType<T>(col: ColumnType<T>): ColumnDef<T> {
+  const id = getColumnId(col);
+  return {
+    id,
+    accessorKey: col.dataIndex,
+    header: () => col.title,
+    cell: ({ row }) => {
+      const value = col.dataIndex ? row.original[col.dataIndex] : undefined;
+      return col.render ? col.render(value, row.original, row.index) : (value as React.ReactNode);
+    },
+    enableSorting: !!col.sorter,
+    sortingFn:
+      typeof col.sorter === 'function'
+        ? (a, b) => (col.sorter as (a: T, b: T) => number)(a.original, b.original)
+        : 'alphanumeric',
+    meta: {
+      align: col.align,
+      width: col.width,
+      ellipsis: col.ellipsis,
+      filterable: isColumnFilterable(col),
+      filterPlaceholder: col.filterPlaceholder,
+      fixed: col.fixed,
+    },
+  };
+}
+
 function parseColumnWidth(width?: number | string): number | undefined {
   if (width == null) return undefined;
   if (typeof width === 'number') return width;
@@ -111,13 +167,14 @@ function parseColumnWidth(width?: number | string): number | undefined {
 }
 
 function buildFixedOffsets<T>(columns: ColumnType<T>[]) {
+  const leaf = flattenLeafColumns(columns);
   let left = 0;
   let right = 0;
   const leftOffsets = new Map<string, number>();
   const rightOffsets = new Map<string, number>();
   const defaultWidth = 160;
 
-  for (const col of columns) {
+  for (const col of leaf) {
     const id = getColumnId(col);
     const w = parseColumnWidth(col.width) ?? defaultWidth;
     if (col.fixed === 'left') {
@@ -125,8 +182,8 @@ function buildFixedOffsets<T>(columns: ColumnType<T>[]) {
       left += w;
     }
   }
-  for (let i = columns.length - 1; i >= 0; i--) {
-    const col = columns[i];
+  for (let i = leaf.length - 1; i >= 0; i--) {
+    const col = leaf[i];
     const id = getColumnId(col);
     const w = parseColumnWidth(col.width) ?? 120;
     if (col.fixed === 'right') {
@@ -191,34 +248,12 @@ export function DataTable<T extends Record<string, unknown>>({
     );
   }, [columnFilters, columns, dataSource, onColumnFiltersChange]);
 
+  const leafColumns = React.useMemo(() => flattenLeafColumns(columns), [columns]);
+  const groupedHeaders = hasGroupedColumns(columns);
+
   const tableColumns = React.useMemo<ColumnDef<T>[]>(
-    () =>
-      columns.map((col) => {
-        const id = getColumnId(col);
-        return {
-          id,
-          accessorKey: col.dataIndex,
-          header: () => col.title,
-          cell: ({ row }) => {
-            const value = col.dataIndex ? row.original[col.dataIndex] : undefined;
-            return col.render ? col.render(value, row.original, row.index) : (value as React.ReactNode);
-          },
-          enableSorting: !!col.sorter,
-          sortingFn:
-            typeof col.sorter === 'function'
-              ? (a, b) => (col.sorter as (a: T, b: T) => number)(a.original, b.original)
-              : 'alphanumeric',
-          meta: {
-            align: col.align,
-            width: col.width,
-            ellipsis: col.ellipsis,
-            filterable: isColumnFilterable(col),
-            filterPlaceholder: col.filterPlaceholder,
-            fixed: col.fixed,
-          },
-        };
-      }),
-    [columns],
+    () => leafColumns.map((col) => colDefFromType(col)),
+    [leafColumns],
   );
 
   const table = useReactTable({
@@ -269,7 +304,55 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const cellPadding = size === 'small' ? 'py-2 px-2' : size === 'large' ? 'py-4 px-4' : 'py-3 px-3';
-  const hasColumnFilters = columns.some(isColumnFilterable);
+  const hasColumnFilters = leafColumns.some(isColumnFilterable);
+
+  const renderHeaderCell = (
+    col: ColumnType<T>,
+    colId: string,
+    title: React.ReactNode,
+    canSort: boolean,
+    onSort?: () => void,
+    sortState?: false | 'asc' | 'desc',
+    rowSpan?: number,
+    colSpan?: number,
+  ) => {
+    const meta = col;
+    const fixed = col.fixed;
+    return (
+      <TableHead
+        key={colId}
+        rowSpan={rowSpan}
+        colSpan={colSpan}
+        className={cn(
+          cellPadding,
+          'text-foreground/80 dark:text-slate-300',
+          meta.align === 'center' && 'text-center',
+          meta.align === 'right' && 'text-right',
+          stickyCellClass(fixed, true),
+        )}
+        style={stickyStyle(colId, fixed, meta.width)}
+      >
+        {canSort ? (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 font-semibold cursor-pointer select-none"
+            onClick={onSort}
+          >
+            {title}
+            {sortState === 'asc' ? (
+              <ArrowUp className="h-3.5 w-3.5" />
+            ) : sortState === 'desc' ? (
+              <ArrowDown className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+            )}
+          </button>
+        ) : (
+          <span className="font-semibold">{title}</span>
+        )}
+      </TableHead>
+    );
+  };
 
   const stickyCellClass = (fixed?: 'left' | 'right', isHeader?: boolean) =>
     cn(
@@ -317,62 +400,108 @@ export function DataTable<T extends Record<string, unknown>>({
         className="w-full overflow-auto"
         style={{
           maxHeight: scroll?.y,
+          minWidth: typeof scroll?.x === 'number' ? scroll.x : undefined,
         }}
       >
-        <UITable className="w-full min-w-full table-fixed">
+        <UITable
+          className={cn(
+            'w-full',
+            scroll?.x ? 'min-w-max table-auto' : 'min-w-full table-fixed',
+          )}
+        >
           <TableHeader className="bg-muted/50 dark:bg-[#111318]">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
-                {headerGroup.headers.map((header) => {
-                  const col = columns.find((c) => getColumnId(c) === header.column.id);
-                  const meta = header.column.columnDef.meta as {
-                    align?: string;
-                    width?: number | string;
-                    fixed?: 'left' | 'right';
-                  } | undefined;
-                  const fixed = col?.fixed ?? meta?.fixed;
-                  return (
-                    <TableHead
-                      key={header.id}
-                      className={cn(
-                        cellPadding,
-                        'text-foreground/80 dark:text-slate-300',
-                        meta?.align === 'center' && 'text-center',
-                        meta?.align === 'right' && 'text-right',
-                        stickyCellClass(fixed, true),
-                      )}
-                      style={stickyStyle(header.column.id, fixed, meta?.width)}
-                    >
-                      {header.isPlaceholder ? null : (
-                        <button
-                          type="button"
-                          className={cn(
-                            'inline-flex items-center gap-1 font-semibold',
-                            header.column.getCanSort() && 'cursor-pointer select-none',
-                          )}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getCanSort() ? (
-                            header.column.getIsSorted() === 'asc' ? (
-                              <ArrowUp className="h-3.5 w-3.5" />
-                            ) : header.column.getIsSorted() === 'desc' ? (
-                              <ArrowDown className="h-3.5 w-3.5" />
-                            ) : (
-                              <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
-                            )
-                          ) : null}
-                        </button>
-                      )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-            {hasColumnFilters ? (
+            {groupedHeaders ? (
+              <>
+                <TableRow className="border-border hover:bg-transparent">
+                  {columns.map((col) => {
+                    const colId = getColumnId(col);
+                    if (col.children?.length) {
+                      return renderHeaderCell(
+                        col,
+                        `group-${colId}`,
+                        col.title,
+                        false,
+                        undefined,
+                        undefined,
+                        undefined,
+                        col.children.length,
+                      );
+                    }
+                    return renderHeaderCell(
+                      col,
+                      colId,
+                      col.title,
+                      false,
+                      undefined,
+                      undefined,
+                      2,
+                    );
+                  })}
+                </TableRow>
+                <TableRow className="border-border hover:bg-transparent">
+                  {columns.flatMap((col) => {
+                    if (!col.children?.length) return [];
+                    return col.children.map((child) => {
+                      const childId = getColumnId(child);
+                      return renderHeaderCell(child, childId, child.title, false);
+                    });
+                  })}
+                </TableRow>
+              </>
+            ) : (
+              table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
+                  {headerGroup.headers.map((header) => {
+                    const col = findLeafColumn(columns, header.column.id);
+                    const meta = header.column.columnDef.meta as {
+                      align?: string;
+                      width?: number | string;
+                      fixed?: 'left' | 'right';
+                    } | undefined;
+                    const fixed = col?.fixed ?? meta?.fixed;
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className={cn(
+                          cellPadding,
+                          'text-foreground/80 dark:text-slate-300',
+                          meta?.align === 'center' && 'text-center',
+                          meta?.align === 'right' && 'text-right',
+                          stickyCellClass(fixed, true),
+                        )}
+                        style={stickyStyle(header.column.id, fixed, meta?.width)}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <button
+                            type="button"
+                            className={cn(
+                              'inline-flex items-center gap-1 font-semibold',
+                              header.column.getCanSort() && 'cursor-pointer select-none',
+                            )}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {header.column.getCanSort() ? (
+                              header.column.getIsSorted() === 'asc' ? (
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              ) : header.column.getIsSorted() === 'desc' ? (
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+                              )
+                            ) : null}
+                          </button>
+                        )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))
+            )}
+            {hasColumnFilters && !groupedHeaders ? (
               <TableRow className="border-border bg-muted/30 dark:bg-[#0a0c10] hover:bg-muted/30 dark:hover:bg-[#0a0c10]">
                 {table.getHeaderGroups()[0]?.headers.map((header) => {
-                  const col = columns.find((c) => getColumnId(c) === header.column.id);
+                  const col = findLeafColumn(columns, header.column.id);
                   const meta = header.column.columnDef.meta as {
                     align?: string;
                     width?: number | string;
@@ -431,7 +560,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {
-                      const col = columns.find((c) => getColumnId(c) === cell.column.id);
+                      const col = findLeafColumn(columns, cell.column.id);
                       const meta = cell.column.columnDef.meta as {
                         align?: string;
                         ellipsis?: boolean;
@@ -461,7 +590,7 @@ export function DataTable<T extends Record<string, unknown>>({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={leafColumns.length} className="h-24 text-center text-muted-foreground">
                   {emptyText}
                 </TableCell>
               </TableRow>
