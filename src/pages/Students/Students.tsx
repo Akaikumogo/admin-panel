@@ -1,13 +1,14 @@
-import { useRef, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Button, Input, Select, Spin, Table, Tag, message } from '@/components/ui';
-import { Download, Filter, GraduationCap, Mail, Search, Trophy, Zap } from 'lucide-react';
+import { Avatar, Button, Select, Spin, Table, Tag, message } from '@/components/ui';
+import { Download, GraduationCap, Mail, Trophy, Zap } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
+import { FilterBar, ContentCard } from '@/components/FilterBar';
 import { downloadCsv } from '@/lib/csv';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
@@ -35,28 +36,34 @@ const T = {
 } as const;
 
 const QP_DEFAULTS = {
-  search: undefined,
   orgId: undefined,
   levelId: undefined,
   page: undefined,
+  limit: undefined,
 } as const;
 
 const Students = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [exporting, setExporting] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
+  const pageSize = qp.limit ? parseInt(qp.limit, 10) : 20;
+
+  const columnSearch = useMemo(
+    () => Object.values(columnFilters).map((v) => v.trim()).filter(Boolean).join(' '),
+    [columnFilters],
+  );
 
   const { data: students, total, loading, initialLoading } = usePaginatedFetch<StudentSummary>(
-    ['students', qp.orgId, qp.levelId, qp.search, currentPage],
+    ['students', qp.orgId, qp.levelId, columnSearch, currentPage, pageSize],
     () => apiService.getStudents({
       orgId: qp.orgId,
       levelId: qp.levelId,
-      search: qp.search || undefined,
+      search: columnSearch || undefined,
       page: currentPage,
-      limit: 20,
+      limit: pageSize,
     }),
   );
 
@@ -72,11 +79,9 @@ const Students = () => {
     [],
   );
 
-  const handleSearchChange = (value: string) => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setParams({ search: value || undefined, page: undefined });
-    }, 400);
+  const handleColumnFiltersChange = (filters: Record<string, string>) => {
+    setColumnFilters(filters);
+    setParams({ page: undefined });
   };
 
   const handleExportCsv = async () => {
@@ -85,7 +90,7 @@ const Students = () => {
       const res = await apiService.getStudents({
         orgId: qp.orgId,
         levelId: qp.levelId,
-        search: qp.search || undefined,
+        search: columnSearch || undefined,
         page: 1,
         limit: 10000,
       });
@@ -114,9 +119,10 @@ const Students = () => {
       title: '№',
       key: 'rowNumber',
       width: 64,
+      filterable: false,
       render: (_: unknown, __: StudentSummary, index: number) => (
-        <span className="text-sm font-medium text-slate-500">
-          {(currentPage - 1) * 20 + index + 1}
+        <span className="text-sm font-medium text-muted-foreground">
+          {(currentPage - 1) * pageSize + index + 1}
         </span>
       ),
     },
@@ -124,6 +130,9 @@ const Students = () => {
       title: 'Tabel',
       key: 'personnelNumber',
       width: 120,
+      filterable: true,
+      filterPlaceholder: 'Tabel...',
+      getFilterValue: (record: StudentSummary) => record.personnelNumber ?? '',
       render: (_: unknown, record: StudentSummary) => (
         <Tag>{record.personnelNumber || '—'}</Tag>
       ),
@@ -131,18 +140,22 @@ const Students = () => {
     {
       title: t(T.name),
       key: 'name',
+      filterable: true,
+      filterPlaceholder: 'Ism...',
+      getFilterValue: (record: StudentSummary) =>
+        `${record.firstName ?? ''} ${record.lastName ?? ''}`.trim(),
       render: (_: unknown, record: StudentSummary) => (
         <div className="flex items-center gap-3">
           <Avatar
             size={36}
             src={record.avatarUrl ? `${BACKEND_ORIGIN}${record.avatarUrl}` : undefined}
-            className="bg-gradient-to-br from-blue-500 to-blue-700 flex-shrink-0"
+            className="bg-gradient-to-br from-slate-600 to-slate-800 flex-shrink-0"
           >
             {(record.firstName?.[0] || '') + (record.lastName?.[0] || '')}
           </Avatar>
           <div>
-            <p className="font-medium text-slate-900 dark:text-white">
-              <HighlightText text={`${record.firstName} ${record.lastName}`} highlight={qp.search} />
+            <p className="font-medium text-foreground">
+              <HighlightText text={`${record.firstName} ${record.lastName}`} />
             </p>
             <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
               {'⚡'.repeat(record.badge.bolts)} {record.badge.label}
@@ -154,10 +167,13 @@ const Students = () => {
     {
       title: t(T.email),
       key: 'email',
+      filterable: true,
+      filterPlaceholder: 'Email...',
+      dataIndex: 'email',
       render: (_: unknown, record: StudentSummary) => (
-        <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+        <span className="text-muted-foreground flex items-center gap-1">
           <Mail size={12} />
-          <HighlightText text={record.email} highlight={qp.search} />
+          <HighlightText text={record.email} />
         </span>
       ),
     },
@@ -165,6 +181,9 @@ const Students = () => {
       title: t(T.xp),
       key: 'xp',
       width: 100,
+      filterable: true,
+      filterPlaceholder: 'XP...',
+      getFilterValue: (record: StudentSummary) => String(record.totalXp ?? ''),
       render: (_: unknown, record: StudentSummary) => (
         <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
           <Zap size={14} /> {record.totalXp}
@@ -175,8 +194,9 @@ const Students = () => {
       title: t(T.completed),
       key: 'completed',
       width: 120,
+      filterable: false,
       render: (_: unknown, record: StudentSummary) => (
-        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
           <Trophy size={14} /> {record.completedLevels}
         </span>
       ),
@@ -184,13 +204,20 @@ const Students = () => {
     {
       title: t(T.level),
       key: 'level',
+      filterable: true,
+      filterPlaceholder: 'Daraja...',
+      getFilterValue: (record: StudentSummary) => record.currentLevelTitle ?? '',
       render: (_: unknown, record: StudentSummary) => (
-        <Tag color="blue">{record.currentLevelTitle ?? '—'}</Tag>
+        <Tag color="default">{record.currentLevelTitle ?? '—'}</Tag>
       ),
     },
     {
       title: t(T.org),
       key: 'org',
+      filterable: true,
+      filterPlaceholder: 'Tashkilot...',
+      getFilterValue: (record: StudentSummary) =>
+        record.organizations.map((o) => o.name).join(' '),
       render: (_: unknown, record: StudentSummary) =>
         record.organizations.map((o) => (
           <Tag key={o.id}>{o.name}</Tag>
@@ -212,16 +239,7 @@ const Students = () => {
         }
       />
 
-      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
-        <Filter size={16} className="text-slate-400" />
-        <Input
-          allowClear
-          defaultValue={qp.search}
-          prefix={<Search size={14} className="text-slate-400" />}
-          placeholder={t(T.search)}
-          style={{ width: 220 }}
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
+      <FilterBar showIcon>
         <Select
           allowClear
           placeholder={t(T.allOrgs)}
@@ -241,7 +259,7 @@ const Students = () => {
         <Tag className="text-sm ml-auto">
           {t(T.total)}: {total}
         </Tag>
-      </div>
+      </FilterBar>
 
       {initialLoading ? (
         <div className="flex items-center justify-center h-32">
@@ -250,28 +268,34 @@ const Students = () => {
       ) : students.length === 0 && !loading ? (
         <NoData text={t(T.noData)} />
       ) : (
-        <div
-          className={`bg-card border border-border rounded-lg transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
-        >
+        <ContentCard loading={loading}>
           <Table
             dataSource={students}
             columns={columns}
             rowKey="id"
             loading={false}
+            columnFilters={columnFilters}
+            onColumnFiltersChange={handleColumnFiltersChange}
             onRow={(record) => ({
               onClick: () => navigate(`/dashboard/employees/${record.id}`),
               className: 'cursor-pointer',
             })}
             pagination={{
               current: currentPage,
-              pageSize: 20,
+              pageSize,
               total,
-              onChange: (pg) => setParam('page', pg > 1 ? String(pg) : undefined),
-              showSizeChanger: false,
+              showSizeChanger: true,
+              hideOnSinglePage: false,
+              onChange: (pg, size) => {
+                setParams({
+                  page: pg > 1 ? String(pg) : undefined,
+                  limit: size && size !== 20 ? String(size) : undefined,
+                });
+              },
             }}
             size="middle"
           />
-        </div>
+        </ContentCard>
       )}
     </div>
   );

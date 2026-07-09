@@ -100,7 +100,7 @@ const Lessons = () => {
         </p>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
+      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
         <Select
           className="min-w-[260px]"

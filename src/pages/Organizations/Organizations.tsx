@@ -18,7 +18,6 @@ import {
   Pencil,
   Trash2,
   Building2,
-  Filter,
   Search,
   Star,
   Eye,
@@ -31,6 +30,8 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Organization } from '@/services/api';
+import { PageHeader } from '@/components/PageHeader';
+import { FilterBar } from '@/components/FilterBar';
 import { can } from '@/utils/can';
 
 const T = {
@@ -258,8 +259,27 @@ const Organizations = () => {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
-        <Filter size={16} className="text-slate-400" />
+      <PageHeader
+        icon={Building2}
+        title={t(T.title)}
+        description={t({
+          uz: 'Filiallar va tashkilotlar boshqaruvi',
+          en: 'Manage branches and organizations',
+          ru: 'Управление филиалами и организациями',
+        })}
+        actions={
+          <Button
+            type="primary"
+            icon={<Plus size={16} />}
+            onClick={() => openModal()}
+            disabled={!can('organizations', 'create')}
+          >
+            {t(T.addOrg)}
+          </Button>
+        }
+      />
+
+      <FilterBar>
         <Input
           allowClear
           defaultValue={qp.search}
@@ -276,15 +296,7 @@ const Organizations = () => {
           }}
         />
         <Tag className="text-sm ml-auto">{t(T.total)}: {organizations.length}</Tag>
-        <Button
-          type="primary"
-          icon={<Plus size={16} />}
-          onClick={() => openModal()}
-          disabled={!can('organizations', 'create')}
-        >
-          {t(T.addOrg)}
-        </Button>
-      </div>
+      </FilterBar>
 
       {initialLoading ? (
         <div className="flex items-center justify-center h-32">

@@ -22,7 +22,6 @@ import {
   Mail,
   Shield,
   Filter,
-  Search,
   Settings,
   Star,
   Table2,
@@ -133,10 +132,10 @@ const T = {
 const PAGE_SIZE = 20;
 
 const QP_DEFAULTS = {
-  search: undefined,
   orgId: undefined,
   orgMode: undefined,
   page: undefined,
+  limit: undefined,
 } as const;
 
 type OrgRow = { id: string; name: string };
@@ -229,8 +228,8 @@ const Moderators = () => {
   const navigate = useNavigate();
   const { params: qp, setParam, setParams } =
     useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
+  const pageSize = qp.limit ? parseInt(qp.limit, 10) : PAGE_SIZE;
 
   const { data: organizations } = useFetch(
     ['organizations'],
@@ -255,14 +254,13 @@ const Moderators = () => {
     initialLoading,
     refetch,
   } = usePaginatedFetch(
-    ['moderators', qp.search, qp.orgId, qp.orgMode, currentPage],
+    ['moderators', qp.orgId, qp.orgMode],
     () =>
       apiService.getModerators({
-        search: qp.search || undefined,
         organizationId: qp.orgId || undefined,
         organizationMode: qp.orgMode === 'exclude' ? 'exclude' : 'include',
-        page: currentPage,
-        limit: PAGE_SIZE,
+        page: 1,
+        limit: 500,
       }),
   );
 
@@ -388,13 +386,6 @@ const Moderators = () => {
     }
   };
 
-  const handleSearchChange = (value: string) => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setParams({ search: value || undefined, page: undefined });
-    }, 400);
-  };
-
   const handleOrgChange = (value: string | undefined) => {
     setParams({
       orgId: value || undefined,
@@ -468,15 +459,20 @@ const Moderators = () => {
         title: '№',
         key: 'rowNumber',
         width: 64,
+        filterable: false,
         render: (_: unknown, __: UserProfile, index: number) => (
-          <span className="text-sm font-medium text-slate-500">
-            {(currentPage - 1) * PAGE_SIZE + index + 1}
+          <span className="text-sm font-medium text-muted-foreground">
+            {(currentPage - 1) * pageSize + index + 1}
           </span>
         ),
       },
       {
         title: t(T.name),
         key: 'name',
+        filterable: true,
+        filterPlaceholder: 'Ism...',
+        getFilterValue: (mod: UserProfile) =>
+          `${mod.lastName ?? ''} ${mod.firstName ?? ''}`.trim(),
         render: (_: unknown, mod: UserProfile) => (
           <div className="flex items-center gap-3 min-w-[180px]">
             <Avatar
@@ -484,15 +480,12 @@ const Moderators = () => {
               src={
                 mod.avatarUrl ? `${BACKEND_ORIGIN}${mod.avatarUrl}` : undefined
               }
-              className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
+              className="flex-shrink-0 bg-gradient-to-br from-slate-600 to-slate-800"
             >
               {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
             </Avatar>
-            <span className="font-medium text-slate-900 dark:text-white inline-flex items-center gap-1.5">
-              <HighlightText
-                text={`${mod.lastName} ${mod.firstName}`}
-                highlight={qp.search}
-              />
+            <span className="font-medium text-foreground inline-flex items-center gap-1.5">
+              <HighlightText text={`${mod.lastName} ${mod.firstName}`} />
               {isMainBranchModerator(mod) ? (
                 <Tooltip title={t(T.mainBranchModerator)}>
                   <Star
@@ -508,10 +501,13 @@ const Moderators = () => {
       {
         title: t(T.login),
         key: 'email',
+        filterable: true,
+        filterPlaceholder: 'Login...',
+        dataIndex: 'email',
         render: (_: unknown, mod: UserProfile) => (
-          <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+          <span className="text-muted-foreground flex items-center gap-1">
             <Mail size={12} />
-            <HighlightText text={mod.email} highlight={qp.search} />
+            <HighlightText text={mod.email} />
           </span>
         ),
       },
@@ -520,6 +516,13 @@ const Moderators = () => {
         key: 'organization',
         width: 420,
         ellipsis: false,
+        filterable: true,
+        filterPlaceholder: 'Filial...',
+        getFilterValue: (mod: UserProfile) =>
+          (mod.organizations ?? [])
+            .map((o) => o.name)
+            .filter(Boolean)
+            .join(' '),
         render: (_: unknown, mod: UserProfile) => (
           <div className="moderator-filial-cell">
             <ModeratorOrgSelect
@@ -537,8 +540,9 @@ const Moderators = () => {
         title: t(T.role),
         key: 'role',
         width: 130,
+        filterable: false,
         render: () => (
-          <Tag color="blue">
+          <Tag color="default">
             <span className="inline-flex items-center gap-1">
               <Shield size={13} />
               MODERATOR
@@ -551,6 +555,7 @@ const Moderators = () => {
         key: 'actions',
         width: 88,
         align: 'right' as const,
+        filterable: false,
         render: (_: unknown, mod: UserProfile) => (
           <div className="flex justify-end gap-1">
             <Button
@@ -583,34 +588,23 @@ const Moderators = () => {
     ],
     [
       currentPage,
+      pageSize,
       getModeratorOrgId,
       isMainBranchModerator,
       handleInlineOrgChange,
       orgOptions,
       orgUpdating,
       demotingId,
-      qp.search,
       t,
     ],
   );
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)] moderators-page">
-      <div className="flex items-end gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
-        <Filter size={16} className="text-slate-400 mb-2" />
+      <div className="flex items-end gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
+        <Filter size={16} className="text-muted-foreground mb-2" />
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">{t(T.searchLabel)}</span>
-          <Input
-            allowClear
-            defaultValue={qp.search}
-            prefix={<Search size={14} className="text-slate-400" />}
-            placeholder={t(T.search)}
-            style={{ width: 240 }}
-            onChange={(e) => handleSearchChange(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">{t(T.filialFilter)}</span>
+          <span className="text-xs font-medium text-muted-foreground">{t(T.filialFilter)}</span>
           <Select
             allowClear
             showSearch
@@ -677,13 +671,19 @@ const Moderators = () => {
           loading={loading}
           pagination={{
             current: currentPage,
-            pageSize: PAGE_SIZE,
-            total,
-            showSizeChanger: false,
-            onChange: (page) => setParam('page', page === 1 ? undefined : String(page)),
+            pageSize,
+            showSizeChanger: true,
+            hideOnSinglePage: false,
+            pageSizeOptions: [20, 50, 100],
+            onChange: (page, size) => {
+              setParams({
+                page: page > 1 ? String(page) : undefined,
+                limit: size && size !== PAGE_SIZE ? String(size) : undefined,
+              });
+            },
           }}
           scroll={{ x: 1280 }}
-          className="bg-white dark:bg-[#141414] rounded-lg border border-slate-200 dark:border-slate-700/60 moderators-table"
+          className="moderators-table"
         />
       )}
 

@@ -244,7 +244,7 @@ export default function LogsPage() {
         </div>
 
         {view === 'text' ? (
-          <div className="rounded-lg border border-slate-200 dark:border-slate-700/60 p-3 bg-white dark:bg-slate-900">
+          <div className="surface-panel p-3">
             <Text code style={{ whiteSpace: 'pre-wrap', display: 'block' }}>
               {loading ? '...' : logs.data.map(formatLine).join('\n') || '—'}
             </Text>

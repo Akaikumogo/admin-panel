@@ -254,7 +254,7 @@ const Questions = () => {
   return (
     <div ref={scrollRef} className="p-6 space-y-4 overflow-y-auto h-[calc(100vh-100px)]">
       {/* Filter toolbar */}
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-xl px-4 py-3">
         <Filter size={16} className="text-slate-400 flex-shrink-0" />
         <Input
           allowClear
@@ -311,7 +311,7 @@ const Questions = () => {
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.18 }}
               >
-                <div className="group rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#141414] px-4 py-3 hover:border-blue-300 dark:hover:border-blue-600/60 transition-colors">
+                <div className="group rounded-xl border border-slate-200 dark:border-slate-700/60 bg-card px-4 py-3 hover:border-blue-300 dark:hover:border-blue-600/60 transition-colors">
                   {/* Top row: number + type + actions */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2 flex-1 min-w-0">

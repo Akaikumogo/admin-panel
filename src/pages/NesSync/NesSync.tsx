@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from '@/components/ui';
 import type { ColumnsType } from '@/components/ui';
-import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles, AlertCircle } from 'lucide-react';
+import { Trash2, RefreshCw, Search, IdCard, AlertCircle } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
+import { FilterBar } from '@/components/FilterBar';
 import NoData from '@/components/NoData';
 import {
   mapSyncStatusToProgress,
@@ -299,80 +301,26 @@ export default function NesSync() {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <div
-        className="relative overflow-hidden rounded-2xl border border-black/30 shadow-2xl"
-        style={{
-          background:
-            'linear-gradient(135deg, #000000 0%, #0a0a0a 35%, #1a1a2e 70%, #16213e 100%)',
-        }}
-      >
-        <div
-          className="absolute -top-24 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -bottom-20 -left-16 w-72 h-72 rounded-full opacity-10 blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.06] pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }}
-        />
-
-        <div className="relative flex items-center justify-between gap-4 px-6 py-6 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center border border-white/20 shadow-lg"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%)',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-              <IdCard size={26} className="text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1
-                  className="text-2xl font-bold tracking-tight text-white"
-                  style={{
-                    background:
-                      'linear-gradient(90deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  ENERGO ID
-                </h1>
-                <Sparkles size={16} className="text-blue-300/70" />
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Xodimlar ma'lumotlar bazasi — markazlashgan sinxronizatsiya
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 text-xs flex-wrap">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
+      <PageHeader
+        icon={IdCard}
+        title="ENERGO ID"
+        description="Xodimlar ma'lumotlar bazasi — markazlashgan sinxronizatsiya"
+        actions={
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Tag className="gap-1.5">
               <span
-                className={`w-2 h-2 rounded-full ${syncing ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}
+                className={`inline-block w-2 h-2 rounded-full ${syncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}
+                aria-hidden
               />
               {syncStatusLabel}
-            </div>
-            <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
-              Jami: <strong className="text-white">{total}</strong>
-            </div>
-            {latestSync?.finishedAt && !syncing && (
-              <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300">
-                Oxirgi: {new Date(latestSync.finishedAt).toLocaleString()}
-              </div>
-            )}
+            </Tag>
+            <Tag>Jami: {total.toLocaleString('uz-UZ')}</Tag>
+            {latestSync?.finishedAt && !syncing ? (
+              <Tag>Oxirgi: {new Date(latestSync.finishedAt).toLocaleString()}</Tag>
+            ) : null}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {(syncing || syncProgress.status === 'RUNNING') && (
         <Card className="!border-blue-200 dark:!border-blue-800 !bg-blue-50/50 dark:!bg-blue-950/20">
@@ -427,9 +375,7 @@ export default function NesSync() {
         </Card>
       )}
 
-      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
-        <Filter size={16} className="text-slate-400" />
-
+      <FilterBar>
         <Input
           allowClear
           defaultValue={qp.search}
@@ -491,7 +437,7 @@ export default function NesSync() {
         </Button>
 
         <Tag className="text-sm ml-auto">Jami: {total}</Tag>
-      </div>
+      </FilterBar>
 
       {employees.length === 0 && !initialLoading && !loading ? (
         <NoData text="ENERGO ID xodimlari hali sinxron qilinmagan" />
