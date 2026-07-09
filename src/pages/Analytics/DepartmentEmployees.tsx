@@ -8,7 +8,8 @@ import type { EmployeeRankingRow } from '@/services/api';
 import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { PercentBar } from './components/PercentBar';
-import { decodeDivision, statusEmoji, statusTextColor } from './analytics-utils';
+import { StatusBadge } from './components/StatusBadge';
+import { decodeDivision, formatNumber } from './analytics-utils';
 
 const { Title, Text } = Typography;
 
@@ -91,9 +92,7 @@ export default function DepartmentEmployees() {
       width: 160,
       render: (p: number, row: EmployeeRankingRow) => (
         <div className="space-y-1">
-          <span className={statusTextColor(row.status)}>
-            {statusEmoji(row.status)} {p}%
-          </span>
+          <StatusBadge status={row.status} percent={p} />
           <PercentBar percent={p} status={row.status} height="sm" />
         </div>
       ),

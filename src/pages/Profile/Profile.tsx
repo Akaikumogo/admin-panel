@@ -184,10 +184,10 @@ const AvatarCard = memo(function AvatarCard({
   );
 
   return (
-    <Card className="bg-white/95 dark:bg-[#101010]/95 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-xl">
+    <Card className="bg-white/95 dark:bg-card/95 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-xl">
       <div className="flex flex-col items-center">
         <div className="relative group">
-          <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-white dark:ring-[#101010] shadow-lg">
+          <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-white dark:ring-card shadow-lg">
             {avatarSrc ? (
               <img
                 src={avatarSrc}
@@ -605,7 +605,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="w-full">
-          <div className="p-6 rounded-2xl bg-white/95 dark:bg-[#101010]/95 backdrop-blur-sm border border-slate-200 dark:border-slate-800 shadow-xl">
+          <div className="p-6 rounded-2xl bg-white/95 dark:bg-card/95 backdrop-blur-sm border border-slate-200 dark:border-slate-800 shadow-xl">
             <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700/60 pb-3 mb-6">
               {TAB_ITEMS.map(({ key, icon: Icon, labelKey }) => (
                 <button
@@ -653,7 +653,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl mt-6 border border-red-200 dark:border-red-900/50 bg-white/95 dark:bg-[#101010]/95 backdrop-blur-sm shadow-xl">
+          <div className="p-6 rounded-2xl mt-6 border border-red-200 dark:border-red-900/50 bg-white/95 dark:bg-card/95 backdrop-blur-sm shadow-xl">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h4 className="text-red-600 dark:text-red-400 font-semibold flex items-center gap-2">

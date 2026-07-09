@@ -16,6 +16,7 @@ export function statusTextColor(status: AnalyticsStatus): string {
   return 'text-red-600 dark:text-red-400';
 }
 
+/** @deprecated Use StatusBadge component */
 export function statusEmoji(status: AnalyticsStatus): string {
   if (status === 'green') return '🟢';
   if (status === 'yellow') return '🟡';

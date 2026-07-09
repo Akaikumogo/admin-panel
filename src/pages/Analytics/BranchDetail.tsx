@@ -7,11 +7,10 @@ import apiService from '@/services/api';
 import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { PercentBar } from './components/PercentBar';
+import { StatusBadge } from './components/StatusBadge';
 import {
   encodeDivision,
   formatNumber,
-  statusEmoji,
-  statusTextColor,
 } from './analytics-utils';
 
 const { Title, Text } = Typography;
@@ -114,9 +113,7 @@ export default function BranchDetail() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-medium truncate">{d.division}</span>
-                        <span className={`shrink-0 ${statusTextColor(d.status)}`}>
-                          {statusEmoji(d.status)} {d.percent}%
-                        </span>
+                        <StatusBadge status={d.status} percent={d.percent} />
                       </div>
                       <PercentBar percent={d.percent} status={d.status} height="sm" />
                       <div className="text-xs text-muted-foreground mt-1">

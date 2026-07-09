@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from '@/components/ui';
 import type { ColumnsType } from '@/components/ui';
-import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles } from 'lucide-react';
+import { Trash2, Filter, RefreshCw, Search, IdCard, Sparkles, AlertCircle } from 'lucide-react';
 import NoData from '@/components/NoData';
 import {
   mapSyncStatusToProgress,
@@ -71,6 +71,7 @@ export default function NesSync() {
 
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const [filterOptions, setFilterOptions] = useState<{ organizations: string[]; divisions: string[] }>({
     organizations: [],
@@ -127,14 +128,20 @@ export default function NesSync() {
         wasSyncingRef.current = false;
         lastNotifiedFinishedAtRef.current = latest.finishedAt;
         if (latest.status === 'SUCCESS') {
+          setSyncError(null);
           message.success(
             `Sync tugadi: ${latest.total} ta, yangilandi ${latest.upserted}, yashirildi ${latest.hidden}`,
           );
           apiService.getNesEmployeesFilterOptions().then(setFilterOptions).catch(() => {});
           refetch?.();
         } else if (latest.status === 'FAILED' && latest.errorMessage) {
+          setSyncError(latest.errorMessage);
           message.error(`Sync xatosi: ${latest.errorMessage}`);
         }
+      } else if (latest?.status === 'FAILED' && latest.errorMessage) {
+        setSyncError(latest.errorMessage);
+      } else if (latest?.status === 'SUCCESS') {
+        setSyncError(null);
       }
     },
     [refetch],
@@ -179,6 +186,7 @@ export default function NesSync() {
     onError: (msg) => {
       setSyncing(false);
       setSyncProgress(EMPTY_PROGRESS);
+      setSyncError(msg);
       message.error(`Sync xatosi: ${msg}`);
       pollSyncHealth();
     },
@@ -194,6 +202,7 @@ export default function NesSync() {
   const handleSync = async () => {
     wasSyncingRef.current = true;
     setSyncing(true);
+    setSyncError(null);
     setSyncProgress({ ...EMPTY_PROGRESS, status: 'RUNNING' });
     try {
       const res = await apiService.syncNesEmployees();
@@ -396,7 +405,29 @@ export default function NesSync() {
         </Card>
       )}
 
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
+      {syncError && !syncing && (
+        <Card className="border-destructive/40 bg-destructive/5 dark:bg-destructive/10">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" aria-hidden />
+              <div>
+                <p className="font-semibold text-destructive">Sinxronizatsiya xatosi</p>
+                <p className="text-sm text-muted-foreground mt-1 break-words">{syncError}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Bir filialda bir xil tabel raqam bo‘lsa, backend avtomatik noyoblashtiradi.
+                  Xato davom etsa, backend yangi versiyasi deploy qilinganini tekshiring.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" onClick={handleSync} className="shrink-0">
+              <RefreshCw size={14} className="mr-2" />
+              Qayta urinish
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
 
         <Input

@@ -1,12 +1,14 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Input, Select, Spin, Table, Tag } from '@/components/ui';
-import { Filter, Mail, Search, Trophy, Zap } from 'lucide-react';
+import { Avatar, Button, Input, Select, Spin, Table, Tag, message } from '@/components/ui';
+import { Download, Filter, GraduationCap, Mail, Search, Trophy, Zap } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
+import { PageHeader } from '@/components/PageHeader';
+import { downloadCsv } from '@/lib/csv';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
 
@@ -23,6 +25,13 @@ const T = {
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
   noData: { uz: 'Xodimlar yo`q', en: 'No employees', ru: 'Нет сотрудников' },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
+  export: { uz: 'Eksport CSV', en: 'Export CSV', ru: 'Экспорт CSV' },
+  exporting: { uz: 'Eksport...', en: 'Exporting...', ru: 'Экспорт...' },
+  subtitle: {
+    uz: 'Energo ID orqali sinxronlangan xodimlar',
+    en: 'Employees synced from Energo ID',
+    ru: 'Сотрудники из Energo ID',
+  },
 } as const;
 
 const QP_DEFAULTS = {
@@ -37,6 +46,7 @@ const Students = () => {
   const navigate = useNavigate();
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [exporting, setExporting] = useState(false);
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
 
   const { data: students, total, loading, initialLoading } = usePaginatedFetch<StudentSummary>(
@@ -67,6 +77,36 @@ const Students = () => {
     searchTimerRef.current = setTimeout(() => {
       setParams({ search: value || undefined, page: undefined });
     }, 400);
+  };
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const res = await apiService.getStudents({
+        orgId: qp.orgId,
+        levelId: qp.levelId,
+        search: qp.search || undefined,
+        page: 1,
+        limit: 10000,
+      });
+      const rows = res.data ?? [];
+      downloadCsv(`xodimlar-${new Date().toISOString().slice(0, 10)}.csv`, [
+        ['Tabel', 'Ism', 'Email', 'XP', 'Daraja', 'Tashkilot'],
+        ...rows.map((row) => [
+          row.personnelNumber ?? '',
+          `${row.firstName ?? ''} ${row.lastName ?? ''}`.trim(),
+          row.email ?? '',
+          row.totalXp ?? 0,
+          row.currentLevelTitle ?? '',
+          row.organizations?.map((o) => o.name).join('; ') ?? '',
+        ]),
+      ]);
+      message.success(t({ uz: 'CSV yuklandi', en: 'CSV downloaded', ru: 'CSV загружен' }));
+    } catch {
+      message.error(t({ uz: 'Eksport xatosi', en: 'Export failed', ru: 'Ошибка экспорта' }));
+    } finally {
+      setExporting(false);
+    }
   };
 
   const columns = [
@@ -160,7 +200,19 @@ const Students = () => {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
+      <PageHeader
+        icon={GraduationCap}
+        title={t(T.title)}
+        description={t(T.subtitle)}
+        actions={
+          <Button variant="outline" onClick={handleExportCsv} disabled={exporting}>
+            <Download size={16} className="mr-2" />
+            {exporting ? t(T.exporting) : t(T.export)}
+          </Button>
+        }
+      />
+
+      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
         <Input
           allowClear
@@ -199,7 +251,7 @@ const Students = () => {
         <NoData text={t(T.noData)} />
       ) : (
         <div
-          className={`bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
+          className={`bg-card border border-border rounded-lg transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
         >
           <Table
             dataSource={students}

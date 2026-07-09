@@ -1,101 +1,106 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NavLink, useLocation } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 
-/**
- * A sidebar component that renders a list of navigation items.
- *
- * @param {{ path: string; label: string; icon: React.ComponentType<any>; }[]} navItems
- * List of navigation items.
- * @param {boolean} [isCollapsed = false]
- * Whether the sidebar is collapsed or not.
- * @returns {React.ReactElement}
- */
+export type NavItem = {
+  path: string;
+  label: { uz: string; en: string; ru: string };
+  icon: React.ComponentType<any>;
+};
+
+export type NavGroup = {
+  label: { uz: string; en: string; ru: string };
+  items: NavItem[];
+};
+
+function isNavActive(path: string, pathname: string) {
+  return pathname === path || pathname.startsWith(path + '/');
+}
+
 export const Sidebar: React.FC<{
-  navItems: {
-    path: string;
-    label: { uz: string; en: string; ru: string };
-    icon: React.ComponentType<any>;
-  }[];
+  navGroups: NavGroup[];
   isCollapsed?: boolean;
-  themeColors?: { colorFrom: string; colorTo: string };
-}> = ({
-  navItems,
-  isCollapsed = false,
-  themeColors = { colorFrom: '#3B82F6', colorTo: '#0a36ad' }
-}) => {
+}> = ({ navGroups, isCollapsed = false }) => {
   const location = useLocation();
   const indicatorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const { t } = useTranslation();
+
+  const flatItems = useMemo(
+    () => navGroups.flatMap((group) => group.items),
+    [navGroups],
+  );
 
   useEffect(() => {
-    const activeIndex = navItems.findIndex((item) => {
-      if (item.path === location.pathname) return true;
-      // nested routelar (masalan: /dashboard/employees/:id)
-      return location.pathname.startsWith(item.path + '/');
-    });
+    const activeIndex = flatItems.findIndex((item) =>
+      isNavActive(item.path, location.pathname),
+    );
     const activeEl = itemRefs.current[activeIndex];
     const containerEl = containerRef.current;
 
     if (activeEl && containerEl && indicatorRef.current) {
       const activeRect = activeEl.getBoundingClientRect();
       const containerRect = containerEl.getBoundingClientRect();
-      const offsetTop = activeRect.top - containerRect.top;
-
-      indicatorRef.current.style.top = `${offsetTop}px`;
+      indicatorRef.current.style.top = `${activeRect.top - containerRect.top}px`;
       indicatorRef.current.style.height = `${activeRect.height}px`;
     }
-  }, [location.pathname, navItems]);
-  const { t } = useTranslation();
+  }, [location.pathname, flatItems]);
+
+  let itemIndex = 0;
+
   return (
-    <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-6">
-      <div className="relative space-y-2" ref={containerRef}>
-        {/* Dinamik Background (lekin ref orqali boshqariladi) */}
+    <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4">
+      <div className="relative space-y-4" ref={containerRef}>
         <div
           ref={indicatorRef}
-          className="absolute left-0 w-full rounded-lg z-0 transition-all duration-300 bg-gradient-to-br from-[#3B82F6] to-[#0a36ad] dark:from-slate-700 dark:to-slate-800 dark:border dark:border-slate-600/50"
-          style={{
-            top: 0,
-            height: 0,
-          }}
+          className="absolute left-0 w-full rounded-lg z-0 transition-all duration-300 bg-primary dark:bg-slate-700 dark:border dark:border-slate-600/50"
+          style={{ top: 0, height: 0 }}
         />
 
-        {navItems.map((item, index) => {
-          const Icon = item.icon;
-          const isActive =
-            location.pathname === item.path ||
-            location.pathname.startsWith(item.path + '/');
+        {navGroups.map((group) => (
+          <div key={group.label.uz} className="space-y-1">
+            {!isCollapsed && (
+              <p className="px-3 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {t(group.label)}
+              </p>
+            )}
+            {group.items.map((item) => {
+              const currentIndex = itemIndex;
+              itemIndex += 1;
+              const Icon = item.icon;
+              const isActive = isNavActive(item.path, location.pathname);
 
-          return (
-            <div
-              key={index}
-              className="relative z-10"
-              ref={(el) =>
-                (itemRefs.current[index] =
-                  el as HTMLDivElement) as unknown as undefined
-              }
-            >
-              <NavLink to={item.path}>
+              return (
                 <div
-                  className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isActive
-                      ? 'text-white'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                  key={item.path}
+                  className="relative z-10"
+                  ref={(el) => {
+                    itemRefs.current[currentIndex] = el;
+                  }}
                 >
-                  <Icon size={24} className="flex-shrink-0 ml-1" />
-                  {!isCollapsed && (
-                    <span className="font-medium whitespace-nowrap">
-                      {t(item.label)}
-                    </span>
-                  )}
+                  <NavLink to={item.path}>
+                    <div
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                        isActive
+                          ? 'text-primary-foreground dark:text-white'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <Icon size={20} className="flex-shrink-0" />
+                      {!isCollapsed && (
+                        <span className="text-sm font-medium whitespace-nowrap">
+                          {t(item.label)}
+                        </span>
+                      )}
+                    </div>
+                  </NavLink>
                 </div>
-              </NavLink>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
       </div>
     </nav>
   );
