@@ -5,7 +5,7 @@ import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
 import type { EmployeeRankingRow } from '@/services/api';
-import { AnalyticsFilters, useAnalyticsDate } from './components/AnalyticsFilters';
+import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { PercentBar } from './components/PercentBar';
 import { decodeDivision, statusEmoji, statusTextColor } from './analytics-utils';
@@ -14,7 +14,7 @@ const { Title, Text } = Typography;
 
 export default function DepartmentEmployees() {
   const { orgId = '', division: divisionParam } = useParams();
-  const date = useAnalyticsDate();
+  const { date, userId: userIdFilter } = useAnalyticsFilters();
   const { t } = useTranslation();
   const division = divisionParam ? decodeDivision(divisionParam) : undefined;
 
@@ -52,6 +52,10 @@ export default function DepartmentEmployees() {
     },
     { enabled: !!orgId },
   );
+
+  const filteredEmployees = userIdFilter
+    ? data.employees.filter((e) => e.userId === userIdFilter)
+    : data.employees;
 
   const columns = [
     {
@@ -116,7 +120,7 @@ export default function DepartmentEmployees() {
   return (
     <div className="space-y-6">
       <BreadcrumbNav items={crumbs} />
-      <AnalyticsFilters />
+      <AnalyticsFilters lockOrgId />
 
       <div>
         <Title level={4} className="!mb-1">
@@ -138,7 +142,7 @@ export default function DepartmentEmployees() {
           <Table
             rowKey="userId"
             columns={columns}
-            dataSource={data.employees}
+            dataSource={filteredEmployees}
             pagination={{ pageSize: 20, showSizeChanger: true }}
           />
         </Card>

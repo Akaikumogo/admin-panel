@@ -28,6 +28,8 @@ TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 function Tooltip({
   title,
   children,
+  placement,
+  mouseEnterDelay,
   ...props
 }: {
   title?: React.ReactNode;

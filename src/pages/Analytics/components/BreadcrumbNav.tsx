@@ -1,14 +1,13 @@
 import { ChevronRight, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAnalyticsDate } from './AnalyticsFilters';
+import { useAnalyticsQueryString } from './AnalyticsFilters';
 
 type Crumb = { label: string; to?: string };
 
 type Props = { items: Crumb[] };
 
 export function BreadcrumbNav({ items }: Props) {
-  const date = useAnalyticsDate();
-  const qs = `?date=${date}`;
+  const qs = useAnalyticsQueryString();
 
   return (
     <nav className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground mb-4">

@@ -357,14 +357,27 @@ export type DailyTrend = {
   points: Array<{ date: string; percent: number; completed: number; plan: number }>;
 };
 
+export type WeekdayHeatmapCell = {
+  dow: number;
+  label: string;
+  percent: number;
+  sampleDays: number;
+  totalEmployees: number;
+  status: AnalyticsStatus;
+};
+
 export type WeekdayHeatmap = {
   weekdays: string[];
   branches: Array<{
     orgId: string;
     orgName: string;
     isDefault: boolean;
-    cells: Array<{ dow: number; label: string; percent: number; status: AnalyticsStatus }>;
+    totalEmployees: number;
+    cells: WeekdayHeatmapCell[];
   }>;
+  rangeFrom?: string;
+  rangeTo?: string;
+  dailyGoalCorrect?: number;
 };
 
 export type Underperformers = {

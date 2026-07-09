@@ -17,9 +17,9 @@ const T = {
   role: { uz: 'Rol', en: 'Role', ru: 'Роль' },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
   noData: {
-    uz: 'Foydalanuvchilar yo`q',
-    en: 'No users',
-    ru: 'Нет пользователей'
+    uz: 'Energo ID xodimlari yo`q — avval ENERGO ID dan sinxron qiling',
+    en: 'No Energo ID employees — sync from ENERGO ID first',
+    ru: 'Нет сотрудников Energo ID — сначала синхронизируйте'
   },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' }
 } as const;
@@ -39,8 +39,8 @@ const Users = () => {
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
 
   const { data: users, total, loading, initialLoading, refetch } = usePaginatedFetch(
-    ['users', 'MODERATOR', qp.search, currentPage],
-    () => apiService.getUsers({ role: 'MODERATOR', search: qp.search || undefined, page: currentPage, limit: 20 }),
+    ['users', 'USER', qp.search, currentPage],
+    () => apiService.getUsers({ role: 'USER', search: qp.search || undefined, page: currentPage, limit: 20 }),
   );
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -134,7 +134,7 @@ const Users = () => {
                 ? `${BACKEND_ORIGIN}${record.avatarUrl}`
                 : undefined
             }
-            className="bg-gradient-to-br from-blue-500 to-blue-700 flex-shrink-0"
+            className="bg-gradient-to-br from-slate-500 to-slate-700 dark:from-slate-600 dark:to-slate-800 flex-shrink-0"
           >
             {(record.firstName?.[0] || '') + (record.lastName?.[0] || '')}
           </Avatar>
@@ -205,13 +205,12 @@ const Users = () => {
           style={{ width: 220 }}
           onChange={(e) => handleSearchChange(e.target.value)}
         />
-        <Tag color="blue">Faqat moderatorlar</Tag>
+        <Tag color="default">
+          {t({ uz: 'Energo ID xodimlari', en: 'Energo ID employees', ru: 'Сотрудники Energo ID' })}
+        </Tag>
         <Tag className="text-sm ml-auto">
           {t(T.total)}: {total}
         </Tag>
-        <Button type="primary" onClick={() => openModal()} disabled={!can('users', 'create')}>
-          Add
-        </Button>
       </div>
 
       {initialLoading ? (
