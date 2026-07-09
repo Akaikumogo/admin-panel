@@ -482,7 +482,7 @@ const Levels = () => {
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
       {/* Filter Bar */}
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg px-4 py-3">
+      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
         <Input
           allowClear

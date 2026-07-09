@@ -73,7 +73,7 @@ export function Collapse({
       : [];
 
   return (
-    <Accordion type="multiple" defaultValue={defaultValue} className={cn('rounded-xl border px-4', className)}>
+    <Accordion type="multiple" defaultValue={defaultValue} className={cn('surface-panel px-4', className)}>
       {items.map((item) => (
         <AccordionItem key={item.key} value={item.key}>
           <AccordionTrigger>{item.label}</AccordionTrigger>

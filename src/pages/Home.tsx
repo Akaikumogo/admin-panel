@@ -32,6 +32,8 @@ import type {
   UserProfile
 } from '@/services/api';
 import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
+import { PageHeader } from '@/components/PageHeader';
+import { Home as HomeIcon } from 'lucide-react';
 
 const { Title, Text } = Typography;
 
@@ -160,6 +162,20 @@ export default function HomePage() {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+      <PageHeader
+        icon={HomeIcon}
+        title={t({
+          uz: `Xush kelibsiz${me?.firstName ? `, ${me.firstName}` : ''}`,
+          en: `Welcome${me?.firstName ? `, ${me.firstName}` : ''}`,
+          ru: `Добро пожаловать${me?.firstName ? `, ${me.firstName}` : ''}`,
+        })}
+        description={t({
+          uz: 'Elektrolearn boshqaruv paneli — KPI va faollik ko‘rinishi',
+          en: 'Elektrolearn admin dashboard — KPIs and activity',
+          ru: 'Панель Elektrolearn — KPI и активность',
+        })}
+      />
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {KPI_ICONS.map(({ key, icon: Icon, color }) => (

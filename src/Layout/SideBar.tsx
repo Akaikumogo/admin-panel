@@ -55,7 +55,7 @@ export const Sidebar: React.FC<{
       <div className="relative space-y-4" ref={containerRef}>
         <div
           ref={indicatorRef}
-          className="absolute left-0 w-full rounded-lg z-0 transition-all duration-300 bg-primary dark:bg-slate-700 dark:border dark:border-slate-600/50"
+          className="absolute left-0 w-full rounded-lg z-0 transition-all duration-300 bg-slate-800 dark:bg-slate-700 dark:border dark:border-slate-600/50"
           style={{ top: 0, height: 0 }}
         />
 
@@ -84,7 +84,7 @@ export const Sidebar: React.FC<{
                     <div
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                         isActive
-                          ? 'text-primary-foreground dark:text-white'
+                          ? 'text-white'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-muted hover:text-foreground'
                       }`}
                     >

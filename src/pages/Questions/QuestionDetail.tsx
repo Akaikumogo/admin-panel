@@ -257,7 +257,7 @@ export default function QuestionDetail() {
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.prompt)}</p>
-              <div className="mt-1 whitespace-pre-wrap rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700/60 dark:bg-[#141414] dark:text-slate-200">
+              <div className="mt-1 whitespace-pre-wrap rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700/60 dark:bg-card dark:text-slate-200">
                 {question?.prompt || '—'}
               </div>
             </div>
@@ -417,7 +417,7 @@ function SelectQuestionType(props: {
   const { t } = useTranslation();
   return (
     <select
-      className="w-full h-10 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#141414] px-3 text-sm text-slate-900 dark:text-white"
+      className="w-full h-10 rounded-md border border-slate-200 dark:border-slate-700 bg-card px-3 text-sm text-slate-900 dark:text-white"
       value={props.value}
       disabled={props.disabled}
       onChange={(e) => props.onChange(e.target.value as QuestionType)}

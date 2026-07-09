@@ -90,7 +90,7 @@ export function Dragger({
     <Upload
       {...props}
       className={cn(
-        'rounded-xl border-2 border-dashed border-border p-8 text-center transition-colors hover:border-primary/50 hover:bg-accent/30',
+        'rounded-md border-2 border-dashed border-border p-8 text-center transition-colors hover:border-primary/50 hover:bg-accent/30',
         className,
       )}
     >

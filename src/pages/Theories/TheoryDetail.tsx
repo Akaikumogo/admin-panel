@@ -252,7 +252,7 @@ export default function TheoryDetail() {
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">{t(T.content)}</p>
-              <div className="mt-1 whitespace-pre-wrap rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700/60 dark:bg-[#141414] dark:text-slate-200">
+              <div className="mt-1 whitespace-pre-wrap rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700/60 dark:bg-card dark:text-slate-200">
                 {theory?.content || '—'}
               </div>
             </div>
@@ -266,7 +266,7 @@ export default function TheoryDetail() {
                     (theory?.slides ?? []).map((s, idx) => (
                       <div
                         key={idx}
-                        className="rounded-lg border border-slate-200/70 bg-white px-3 py-2 dark:border-slate-700/60 dark:bg-[#141414]"
+                        className="rounded-lg border border-slate-200/70 bg-white px-3 py-2 dark:border-slate-700/60 dark:bg-card"
                       >
                         <div className="text-sm font-semibold text-slate-900 dark:text-white">
                           #{idx + 1} — {s.head}

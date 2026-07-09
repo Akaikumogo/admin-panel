@@ -205,7 +205,7 @@ const StudentDetailPage = () => {
       </Button>
 
       {/* Profile card */}
-      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <div className="flex items-start gap-5">
           <Avatar
             size={72}
@@ -264,7 +264,7 @@ const StudentDetailPage = () => {
       </div>
 
       {/* Level progress */}
-      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t(T.progress)}</h3>
         <div className="space-y-3">
           {student.levelProgress.map((lp) => (
@@ -287,7 +287,7 @@ const StudentDetailPage = () => {
       </div>
 
       {/* Activity heatmap */}
-      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t(T.activity)}</h3>
         {actLoading ? (
           <div className="flex items-center justify-center h-16"><Spin /></div>
@@ -307,7 +307,7 @@ const StudentDetailPage = () => {
       </div>
 
       {/* Lost questions */}
-      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t(T.lostQuestions)}</h3>
         {lqLoading ? (
           <div className="flex items-center justify-center h-16"><Spin /></div>
@@ -325,7 +325,7 @@ const StudentDetailPage = () => {
       </div>
 
       {/* Employee certificate */}
-      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6 space-y-4">
+      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white">
           Elektron guvohnoma
         </h3>
@@ -380,7 +380,7 @@ const StudentDetailPage = () => {
       </div>
 
       {/* Employee checks */}
-      <div className="bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-lg p-6 space-y-4">
+      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <h3 className="text-base font-semibold text-slate-900 dark:text-white">
             Tekshiruvlar

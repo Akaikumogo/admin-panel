@@ -36,7 +36,7 @@ export function Spin({
   return (
     <div className={cn('relative', className)}>
       {spinning && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/60 backdrop-blur-[1px]">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/60 backdrop-blur-[1px]">
           <Spinner size={spinnerSize} />
         </div>
       )}

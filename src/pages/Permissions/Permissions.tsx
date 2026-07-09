@@ -386,7 +386,7 @@ const PermissionsPage = () => {
         <p className="text-sm text-slate-500 dark:text-slate-400">{t(T.subtitle)}</p>
       </div>
 
-      <div className="flex flex-shrink-0 flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/60 dark:bg-[#141414]">
+      <div className="flex flex-shrink-0 flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/60 dark:bg-card">
         <Filter size={16} className="text-slate-400" />
         <Input
           allowClear
@@ -426,7 +426,7 @@ const PermissionsPage = () => {
 
       <div
         ref={tableWrapRef}
-        className="min-h-0 flex-1 rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-[#141414]"
+        className="min-h-0 flex-1 rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-card"
       >
         {initialLoading ? (
           <div className="flex h-48 items-center justify-center">

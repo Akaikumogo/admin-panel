@@ -201,7 +201,7 @@ const Theories = () => {
       )}
 
       {/* Filter toolbar */}
-      <div className="flex items-center gap-3 flex-wrap bg-white dark:bg-[#141414] border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-xl px-4 py-3">
         <Filter size={16} className="text-slate-400 flex-shrink-0" />
         <Input
           allowClear
@@ -268,7 +268,7 @@ const Theories = () => {
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.18 }}
               >
-                <div className="group flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#141414] px-4 py-3 hover:border-blue-300 dark:hover:border-blue-600/60 transition-colors">
+                <div className="group flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-card px-4 py-3 hover:border-blue-300 dark:hover:border-blue-600/60 transition-colors">
                   {/* Number badge */}
                   <div className="flex-shrink-0 mt-0.5">
                     <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
