@@ -1,7 +1,8 @@
 import type { AnalyticsStatus } from '@/services/api';
+import { tashkentToday } from '@/lib/tashkent-time';
 
 export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return tashkentToday();
 }
 
 export function statusColor(status: AnalyticsStatus): string {

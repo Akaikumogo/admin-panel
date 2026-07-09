@@ -63,12 +63,17 @@ export default function DepartmentEmployees() {
       title: '#',
       dataIndex: 'rank',
       key: 'rank',
-      width: 50,
+      fixed: 'left' as const,
+      width: 56,
+      align: 'center' as const,
     },
     {
       title: t({ uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' }),
       dataIndex: 'fullName',
       key: 'fullName',
+      fixed: 'left' as const,
+      width: 260,
+      ellipsis: true,
       render: (name: string) => (
         <span className="inline-flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
@@ -142,7 +147,8 @@ export default function DepartmentEmployees() {
             rowKey="userId"
             columns={columns}
             dataSource={filteredEmployees}
-            pagination={{ pageSize: 20, showSizeChanger: true }}
+            scroll={{ x: 'max-content' }}
+            pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: [20, 50, 100] }}
           />
         </Card>
       )}

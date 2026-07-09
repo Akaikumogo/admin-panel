@@ -1461,6 +1461,7 @@ class ApiService {
   async getWeekdayHeatmap(params?: {
     from?: string;
     to?: string;
+    orgId?: string;
   }): Promise<WeekdayHeatmap> {
     const response = await this.api.get<WeekdayHeatmap>(
       '/admin/branch-analytics/weekday-heatmap',
