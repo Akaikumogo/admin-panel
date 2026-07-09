@@ -12,7 +12,6 @@ import {
   BookOpen,
   HelpCircle,
   Building2,
-  Users,
   GraduationCap,
   Languages,
   Maximize2,
@@ -20,14 +19,7 @@ import {
   HeartPulse,
   Trophy,
   Activity,
-  // QrCode,
-  // ClipboardList,
-  // CalendarClock,
-  // BriefcaseBusiness,
-  // Trash2,
   KeyRound,
-  // BarChart2,
-  // FolderTree,
   Library,
   LibraryBig,
   Bot,
@@ -38,109 +30,151 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
 import { fmtHeaderDate } from '@/lib/format';
 import { Button, Select, Spin } from '@/components/ui';
-import { Sidebar } from './SideBar';
+import { Sidebar, type NavGroup, type NavItem } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
 import { cacheModeratorPermissions } from '@/utils/permissions';
 import { can } from '@/utils/can';
 import { userActivitySocket } from '@/services/userActivitySocket';
 
-const navItems = [
+const G = {
+  main: { uz: 'Asosiy', en: 'Main', ru: 'Основное' },
+  admin: { uz: 'Boshqaruv', en: 'Administration', ru: 'Администрирование' },
+  content: { uz: "O'quv kontenti", en: 'Learning', ru: 'Обучение' },
+  people: { uz: 'Xodimlar', en: 'People', ru: 'Персонал' },
+  analytics: { uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' },
+  account: { uz: 'Hisob', en: 'Account', ru: 'Аккаунт' },
+} as const;
+
+const navGroups: NavGroup[] = [
   {
-    path: '/dashboard/home',
-    label: { uz: 'Bosh sahifa', en: 'Dashboard', ru: 'Главная' },
-    icon: Home
+    label: G.main,
+    items: [
+      {
+        path: '/dashboard/home',
+        label: { uz: 'Bosh sahifa', en: 'Dashboard', ru: 'Главная' },
+        icon: Home,
+      },
+    ],
   },
   {
-    path: '/dashboard/moderators',
-    label: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
-    icon: Shield
+    label: G.admin,
+    items: [
+      {
+        path: '/dashboard/moderators',
+        label: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
+        icon: Shield,
+      },
+      {
+        path: '/dashboard/permissions',
+        label: { uz: 'Ruxsatlar', en: 'Permissions', ru: 'Права доступа' },
+        icon: KeyRound,
+      },
+      {
+        path: '/dashboard/organizations',
+        label: { uz: 'Tashkilotlar', en: 'Organizations', ru: 'Организации' },
+        icon: Building2,
+      },
+      {
+        path: '/dashboard/violations',
+        label: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
+        icon: Shield,
+      },
+      {
+        path: '/dashboard/logs',
+        label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' },
+        icon: ScrollText,
+      },
+    ],
   },
   {
-    path: '/dashboard/permissions',
-    label: { uz: 'Ruxsatlar', en: 'Permissions', ru: 'Права доступа' },
-    icon: KeyRound
+    label: G.content,
+    items: [
+      {
+        path: '/dashboard/levels',
+        label: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
+        icon: Layers,
+      },
+      {
+        path: '/dashboard/lessons',
+        label: { uz: 'Darslar', en: 'Lessons', ru: 'Уроки' },
+        icon: Library,
+      },
+      {
+        path: '/dashboard/audio-library',
+        label: { uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' },
+        icon: LibraryBig,
+      },
+      {
+        path: '/dashboard/theories',
+        label: { uz: 'Nazariyalar', en: 'Theories', ru: 'Теории' },
+        icon: BookOpen,
+      },
+      {
+        path: '/dashboard/questions',
+        label: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
+        icon: HelpCircle,
+      },
+    ],
   },
   {
-    path: '/dashboard/levels',
-    label: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
-    icon: Layers
+    label: G.people,
+    items: [
+      {
+        path: '/dashboard/employees',
+        label: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
+        icon: GraduationCap,
+      },
+      {
+        path: '/dashboard/nes-sync',
+        label: { uz: 'ENERGO ID', en: 'ENERGO ID', ru: 'ENERGO ID' },
+        icon: IdCard,
+      },
+    ],
   },
   {
-    path: '/dashboard/lessons',
-    label: { uz: 'Darslar', en: 'Lessons', ru: 'Уроки' },
-    icon: Library
+    label: G.analytics,
+    items: [
+      {
+        path: '/dashboard/analytics',
+        label: { uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' },
+        icon: Activity,
+      },
+      {
+        path: '/dashboard/hearts-analytics',
+        label: { uz: 'Xato javoblar', en: 'Wrong answers', ru: 'Ошибочные ответы' },
+        icon: HeartPulse,
+      },
+      {
+        path: '/dashboard/leaderboard',
+        label: { uz: 'Reyting', en: 'Leaderboard', ru: 'Рейтинг' },
+        icon: Trophy,
+      },
+    ],
   },
   {
-    path: '/dashboard/audio-library',
-    label: { uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' },
-    icon: LibraryBig
+    label: G.account,
+    items: [
+      {
+        path: '/dashboard/profile',
+        label: { uz: 'Profil', en: 'Profile', ru: 'Профиль' },
+        icon: User,
+      },
+      {
+        path: '/dashboard/ai-assistant',
+        label: { uz: 'AI yordamchi', en: 'AI assistant', ru: 'AI помощник' },
+        icon: Bot,
+      },
+    ],
   },
-  {
-    path: '/dashboard/theories',
-    label: { uz: 'Nazariyalar', en: 'Theories', ru: 'Теории' },
-    icon: BookOpen
-  },
-  {
-    path: '/dashboard/questions',
-    label: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
-    icon: HelpCircle
-  },
-  {
-    path: '/dashboard/organizations',
-    label: { uz: 'Tashkilotlar', en: 'Organizations', ru: 'Организации' },
-    icon: Building2
-  },
-  {
-    path: '/dashboard/employees',
-    label: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
-    icon: GraduationCap
-  },
-  {
-    path: '/dashboard/users',
-    label: { uz: 'Foydalanuvchilar', en: 'Users', ru: 'Пользователи' },
-    icon: Users
-  },
-  {
-    path: '/dashboard/profile',
-    label: { uz: 'Profil', en: 'Profile', ru: 'Профиль' },
-    icon: User
-  },
-  {
-    path: '/dashboard/ai-assistant',
-    label: { uz: 'AI yordamchi', en: 'AI assistant', ru: 'AI помощник' },
-    icon: Bot
-  },
-  {
-    path: '/dashboard/nes-sync',
-    label: { uz: 'ENERGO ID', en: 'ENERGO ID', ru: 'ENERGO ID' },
-    icon: IdCard
-  },
-  {
-    path: '/dashboard/analytics',
-    label: { uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' },
-    icon: Activity
-  },
-  {
-    path: '/dashboard/hearts-analytics',
-    label: { uz: 'Xato javoblar', en: 'Wrong answers', ru: 'Ошибочные ответы' },
-    icon: HeartPulse
-  },
-  {
-    path: '/dashboard/leaderboard',
-    label: { uz: 'Reyting', en: 'Leaderboard', ru: 'Рейтинг' },
-    icon: Trophy
-  },
-  {
-    path: '/dashboard/violations',
-    label: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
-    icon: Shield
-  },
-  {
-    path: '/dashboard/logs',
-    label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' },
-    icon: ScrollText
-  }
 ];
+
+const allNavItems: NavItem[] = navGroups.flatMap((group) => group.items);
+
+const importExportNavItem: NavItem = {
+  path: '/dashboard/import-export',
+  label: { uz: 'Import / Export', en: 'Import / Export', ru: 'Import / Export' },
+  icon: ArrowDownUp,
+};
 
 const Layout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -148,8 +182,6 @@ const Layout = () => {
     () => typeof document !== 'undefined' && !!document.fullscreenElement
   );
   const { t, lang, setLang } = useTranslation();
-  const colorFrom = '#3B82F6';
-  const colorTo = '#0a36ad';
   const location = useLocation();
   const navigate = useNavigate();
   const [me, setMe] = useState<UserProfile | null>(null);
@@ -170,7 +202,7 @@ const Layout = () => {
   };
 
   const getCurrentPageTitle = () => {
-    const currentItem = navItems.find((item) => {
+    const currentItem = allNavItems.find((item) => {
       if (item.path === location.pathname) return true;
       return location.pathname.startsWith(item.path + '/');
     });
@@ -232,46 +264,44 @@ const Layout = () => {
     }
   }, [me, meLoading, navigate]);
 
-  const visibleNavItems = useMemo(() => {
+  const visibleNavGroups = useMemo((): NavGroup[] => {
     if (!me) return [];
-    if (me.role === 'SUPERADMIN') {
-      return [
-        ...navItems,
-        {
-          path: '/dashboard/import-export',
-          label: {
-            uz: 'Import / Export',
-            en: 'Import / Export',
-            ru: 'Import / Export',
-          },
-          icon: ArrowDownUp,
-        },
-      ];
-    }
-    if (me.role === 'MODERATOR') {
+
+    const filterItems = (items: NavItem[]) => {
+      if (me.role === 'SUPERADMIN') return items;
+      if (me.role !== 'MODERATOR') return [];
+
       const hasAudioPerm =
         can('audioLibrary', 'create') ||
         can('audioLibrary', 'update') ||
         can('audioLibrary', 'delete');
       const hasNesSyncPerm = can('nesSync', 'view');
-      return navItems.filter(
+
+      return items.filter(
         (item) =>
           item.path !== '/dashboard/moderators' &&
-          item.path !== '/dashboard/users' &&
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
           item.path !== '/dashboard/exam-analysis' &&
           (hasNesSyncPerm || item.path !== '/dashboard/nes-sync') &&
-          (hasAudioPerm || item.path !== '/dashboard/audio-library')
+          (hasAudioPerm || item.path !== '/dashboard/audio-library'),
       );
-    }
-    return [];
+    };
+
+    return navGroups
+      .map((group) => {
+        let items = filterItems(group.items);
+        if (me.role === 'SUPERADMIN' && group.label.uz === G.admin.uz) {
+          items = [...items, importExportNavItem];
+        }
+        return { ...group, items };
+      })
+      .filter((group) => group.items.length > 0);
   }, [me]);
 
   const isModeratorForbiddenRoute =
     me?.role === 'MODERATOR' &&
     (location.pathname === '/dashboard/moderators' ||
-      location.pathname === '/dashboard/users' ||
       location.pathname === '/dashboard/permissions' ||
       location.pathname === '/dashboard/import-export' ||
       (location.pathname === '/dashboard/nes-sync' && !can('nesSync', 'view')) ||
@@ -301,7 +331,7 @@ const Layout = () => {
 
   if (meLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFCF9] dark:bg-[#1B1C1D]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Spin size="large" />
       </div>
     );
@@ -309,16 +339,16 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="min-h-screen bg-[#FDFCF9] dark:bg-[#1B1C1D] transition-colors duration-300">
+      <div className="min-h-screen bg-background transition-colors duration-300">
         <div className="flex min-h-screen w-screen">
           {/* Sidebar */}
           <aside
             style={{ width: isCollapsed ? 100 : 340 }}
-            className="row-span-2 w-full h-screen max-h-screen shrink-0 flex flex-col overflow-hidden bg-white/80 dark:bg-[#121314]/80 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/60 transition-all duration-300"
+            className="row-span-2 w-full h-screen max-h-screen shrink-0 flex flex-col overflow-hidden bg-card/80 backdrop-blur-sm border-r border-border transition-all duration-300"
           >
             <div className="flex flex-col h-full min-h-0 w-full">
               {/* Logo */}
-              <div className="h-18 w-full shrink-0 flex items-center justify-center px-6 border-b border-slate-200/80 dark:border-slate-700/60">
+              <div className="h-18 w-full shrink-0 flex items-center justify-center px-6 border-b border-border">
                 <AnimatePresence mode="popLayout">
                   <div className="w-full flex items-center justify-start">
                     <motion.div
@@ -333,7 +363,7 @@ const Layout = () => {
                     >
                       <motion.div
                         layoutId="c"
-                        className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#3B82F6] to-[#0a36ad] dark:from-slate-700 dark:to-slate-800 dark:border dark:border-slate-600/50"
+                        className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary dark:bg-slate-700 dark:border dark:border-slate-600/50"
                       >
                         <motion.span className="text-white dark:text-slate-200 font-bold text-lg">
                           <Zap
@@ -363,11 +393,7 @@ const Layout = () => {
               </div>
 
               {/* Navigation */}
-              <Sidebar
-                navItems={visibleNavItems}
-                isCollapsed={isCollapsed}
-                themeColors={{ colorFrom, colorTo }}
-              />
+              <Sidebar navGroups={visibleNavGroups} isCollapsed={isCollapsed} />
 
               {/* Logout */}
               <div className="p-4 min-h-[50px] shrink-0">
@@ -494,12 +520,7 @@ const Layout = () => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div
-                          style={{
-                            background: `linear-gradient(135deg, ${colorFrom} 0%, ${colorTo} 100%)`
-                          }}
-                          className="w-full h-full flex items-center justify-center rounded-full"
-                        >
+                        <div className="w-full h-full flex items-center justify-center rounded-full bg-primary">
                           <span className="text-white font-bold text-xs tracking-wide select-none">
                             {initials}
                           </span>
@@ -511,7 +532,7 @@ const Layout = () => {
               </div>
             </header>
             {/* Main Content */}
-            <main className="overflow-y-auto bg-[#FDFCF9] dark:bg-[#1B1C1D]">
+            <main className="overflow-y-auto bg-background">
               <div className="p-2 grid grid-cols-1 grid-row-1">
                 <div className="col-span-1 row-span-1 rounded-lg w-full h-[calc(100vh-100px)]">
                   <AnimatePresence mode="sync">

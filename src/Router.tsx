@@ -6,7 +6,6 @@ import NotFoundPage from './pages/NotFounds/NotFoundPage';
 import DashboardLayout from './Layout/Layout';
 
 import AnimateWrapper from './components/AnimateWrapper';
-import ElektroLearn from './components/qwerttyu';
 
 const LoginPage = lazy(() => import('./pages/Login/Login'));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallback/OAuthCallback'));
@@ -28,7 +27,6 @@ const OrganizationsPage = lazy(
 const OrganizationDetailPage = lazy(
   () => import('./pages/Organizations/OrganizationDetail')
 );
-const UsersPage = lazy(() => import('./pages/Users/Users'));
 const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
 const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
@@ -139,7 +137,7 @@ export const routes: RouteObject[] = [
           },
           {
             path: 'users',
-            element: withSuspense(UsersPage)
+            element: <Navigate to="/dashboard/employees" replace />
           },
           {
             path: 'profile',
@@ -210,7 +208,6 @@ export const routes: RouteObject[] = [
     path: 'oauth/callback',
     element: withSuspense(OAuthCallbackPage)
   },
-  { path: 'qwerttyu', element: <ElektroLearn /> },
 
   {
     path: '*',

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  Activity,
   Building2,
   CheckCircle2,
   Target,
@@ -33,12 +34,13 @@ import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
 import type { BranchRankingRow, AnalyticsStatus } from '@/services/api';
+import { PageHeader } from '@/components/PageHeader';
 import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
 import { BranchWeekdayHeatmap } from './components/BranchWeekdayHeatmap';
 import { PercentBar } from './components/PercentBar';
+import { StatusBadge } from './components/StatusBadge';
 import {
   formatNumber,
-  statusEmoji,
   statusTextColor,
   todayStr,
 } from './analytics-utils';
@@ -181,11 +183,7 @@ export default function ExecutiveDashboard() {
       width: 180,
       render: (p: number, row: BranchRankingRow) => (
         <div className="space-y-1 min-w-[140px]">
-          <div className="flex items-center justify-between text-sm">
-            <span className={statusTextColor(row.status)}>
-              {statusEmoji(row.status)} {p}%
-            </span>
-          </div>
+          <StatusBadge status={row.status} percent={p} />
           <PercentBar percent={p} status={row.status} height="sm" />
         </div>
       ),
@@ -209,18 +207,15 @@ export default function ExecutiveDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Title level={3} className="!mb-1">
-          {t({ uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' })}
-        </Title>
-        <Text type="secondary">
-          {t({
-            uz: 'Kunlik reja — filial → bo\'lim → xodim',
-            en: 'Daily plan — branch → department → employee',
-            ru: 'Дневной план — филиал → отдел → сотрудник',
-          })}
-        </Text>
-      </div>
+      <PageHeader
+        icon={Activity}
+        title={t({ uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' })}
+        description={t({
+          uz: 'Kunlik reja — filial → bo\'lim → xodim',
+          en: 'Daily plan — branch → department → employee',
+          ru: 'Дневной план — филиал → отдел → сотрудник',
+        })}
+      />
 
       <AnalyticsFilters />
 
