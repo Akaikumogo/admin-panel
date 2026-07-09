@@ -333,15 +333,11 @@ const Layout = () => {
                     >
                       <motion.div
                         layoutId="c"
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{
-                          background: `linear-gradient(135deg, ${colorFrom}, ${colorTo})`
-                        }}
+                        className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#3B82F6] to-[#0a36ad] dark:from-slate-700 dark:to-slate-800 dark:border dark:border-slate-600/50"
                       >
-                        <motion.span className="text-white dark:text-slate-900 font-bold text-lg">
+                        <motion.span className="text-white dark:text-slate-200 font-bold text-lg">
                           <Zap
-                            color="#DBEAFE"
-                            className="font-extrabold text-2xl "
+                            className="font-extrabold text-2xl text-blue-100 dark:text-slate-300"
                           />
                         </motion.span>
                       </motion.div>

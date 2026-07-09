@@ -55,11 +55,10 @@ export const Sidebar: React.FC<{
         {/* Dinamik Background (lekin ref orqali boshqariladi) */}
         <div
           ref={indicatorRef}
-          className="absolute left-0 w-full rounded-lg z-0 transition-all duration-300"
+          className="absolute left-0 w-full rounded-lg z-0 transition-all duration-300 bg-gradient-to-br from-[#3B82F6] to-[#0a36ad] dark:from-slate-700 dark:to-slate-800 dark:border dark:border-slate-600/50"
           style={{
             top: 0,
             height: 0,
-            background: `linear-gradient(135deg, ${themeColors.colorFrom}, ${themeColors.colorTo})`
           }}
         />
 

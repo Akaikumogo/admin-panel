@@ -67,25 +67,25 @@
   --card-foreground: #f1f5f9;
   --popover: #0f172a;
   --popover-foreground: #f1f5f9;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
+  --primary: #e2e8f0;
+  --primary-foreground: #0f172a;
   --secondary: #1e293b;
   --secondary-foreground: #f1f5f9;
   --muted: #1e293b;
   --muted-foreground: #94a3b8;
-  --accent: #172554;
-  --accent-foreground: #93c5fd;
+  --accent: #1e293b;
+  --accent-foreground: #e2e8f0;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #1e293b;
+  --border: #334155;
   --input: #1e293b;
-  --ring: #3b82f6;
+  --ring: #64748b;
   --bg-main: #020617;
   --bg-card: #0f172a;
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --border-color: #1e293b;
-  --primary-hover: #60a5fa;
+  --border-color: #334155;
+  --primary-hover: #f8fafc;
 }
 
 .glass {
@@ -181,6 +181,11 @@ body {
     scrollbar-color: rgba(37, 99, 235, 0.35) transparent;
   }
 
+  .dark html,
+  .dark body {
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  }
+
   html::-webkit-scrollbar,
   body::-webkit-scrollbar {
     @apply w-2.5 h-2.5;
@@ -194,9 +199,21 @@ body {
     background-clip: content-box;
   }
 
+  .dark html::-webkit-scrollbar-thumb,
+  .dark body::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    background-clip: content-box;
+  }
+
   html::-webkit-scrollbar-thumb:hover,
   body::-webkit-scrollbar-thumb:hover {
     background: rgba(37, 99, 235, 0.55);
+    background-clip: content-box;
+  }
+
+  .dark html::-webkit-scrollbar-thumb:hover,
+  .dark body::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.55);
     background-clip: content-box;
   }
 

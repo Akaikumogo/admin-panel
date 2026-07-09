@@ -4,14 +4,14 @@ import { Card, Skeleton, Typography } from '@/components/ui';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
-import { AnalyticsFilters, useAnalyticsDate } from './components/AnalyticsFilters';
+import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { encodeDivision, formatNumber } from './analytics-utils';
 
 const { Title, Text } = Typography;
 
 export default function UnderperformersPage() {
-  const date = useAnalyticsDate();
+  const { date } = useAnalyticsFilters();
   const navigate = useNavigate();
   const { t } = useTranslation();
 

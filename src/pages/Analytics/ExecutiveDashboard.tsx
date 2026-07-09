@@ -16,7 +16,7 @@ import {
   BarChart,
   CartesianGrid,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as ChartTooltip,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -32,8 +32,9 @@ import {
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
-import type { BranchRankingRow } from '@/services/api';
-import { AnalyticsFilters, useAnalyticsDate } from './components/AnalyticsFilters';
+import type { BranchRankingRow, AnalyticsStatus } from '@/services/api';
+import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
+import { BranchWeekdayHeatmap } from './components/BranchWeekdayHeatmap';
 import { PercentBar } from './components/PercentBar';
 import {
   formatNumber,
@@ -60,40 +61,68 @@ const emptyDashboard = {
 export default function ExecutiveDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const date = useAnalyticsDate();
+  const { date, orgId, planType } = useAnalyticsFilters();
 
   const { data: dashboard, initialLoading: dashLoading } = useFetch(
-    ['executive-dashboard', date],
+    ['executive-dashboard', date, planType],
     () => apiService.getExecutiveDashboard({ date }),
     emptyDashboard,
+    { enabled: planType === 'daily' },
+  );
+
+  const { data: monthlyComparison, initialLoading: monthlyLoading } = useFetch(
+    ['branch-comparison', date.slice(0, 7), planType],
+    () => apiService.getBranchComparison({ month: date.slice(0, 7) }),
+    { month: date.slice(0, 7), daysInMonth: 30, dailyGoalCorrect: 10, branches: [] },
+    { enabled: planType === 'monthly' },
   );
 
   const { data: ranking, initialLoading: rankLoading } = useFetch(
-    ['branch-ranking', date],
-    () => apiService.getBranchRanking({ date }),
+    ['branch-ranking', date, planType],
+    () =>
+      planType === 'monthly'
+        ? apiService.getBranchComparison({ month: date.slice(0, 7) }).then((m) => ({
+            planDate: date,
+            dailyGoalCorrect: m.dailyGoalCorrect,
+            branches: m.branches.map((b) => ({
+              orgId: b.orgId,
+              orgName: b.orgName,
+              isDefault: b.isDefault,
+              totalEmployees: b.totalEmployees,
+              plan: b.totalEmployees * m.dailyGoalCorrect * m.daysInMonth,
+              completed: b.completedDays * m.dailyGoalCorrect,
+              percent: b.averageMonthlyPercent,
+              completedEmployees: 0,
+              status: (b.averageMonthlyPercent >= 90 ? 'green' : b.averageMonthlyPercent >= 70 ? 'yellow' : 'red') as AnalyticsStatus,
+              rank: b.rank,
+            })),
+          }))
+        : apiService.getBranchRanking({ date }),
     { planDate: date, dailyGoalCorrect: 10, branches: [] },
   );
 
   const { data: hourly } = useFetch(
-    ['hourly-progress', date],
-    () => apiService.getHourlyProgress({ date }),
+    ['hourly-progress', date, orgId, planType],
+    () => apiService.getHourlyProgress({ date, orgId: orgId || undefined }),
     { planDate: date, orgId: null, points: [], maxCompleted: 1 },
+    { enabled: planType === 'daily' },
   );
 
   const { data: trend } = useFetch(
-    ['daily-trend', date],
-    () => apiService.getDailyTrend({ to: date }),
+    ['daily-trend', date, orgId, planType],
+    () => apiService.getDailyTrend({ to: date, orgId: orgId || undefined }),
     { dailyGoalCorrect: 10, points: [] },
+    { enabled: planType === 'daily' },
   );
 
   const { data: heatmap } = useFetch(
-    ['weekday-heatmap', date],
+    ['weekday-heatmap', date, orgId],
     () => apiService.getWeekdayHeatmap({ to: date }),
-    { weekdays: [], branches: [] },
+    { weekdays: [], branches: [], rangeFrom: '', rangeTo: '' },
   );
 
   const { data: under } = useFetch(
-    ['underperformers', date],
+    ['underperformers', date, planType],
     () => apiService.getUnderperformers({ date, threshold: 70 }),
     {
       planDate: date,
@@ -103,12 +132,19 @@ export default function ExecutiveDashboard() {
       employeeCount: 0,
       branches: [],
     },
+    { enabled: planType === 'daily' },
   );
 
-  const top10 = useMemo(() => ranking.branches.slice(0, 10), [ranking.branches]);
+  const filteredBranches = useMemo(() => {
+    let list = ranking.branches;
+    if (orgId) list = list.filter((b) => b.orgId === orgId);
+    return list;
+  }, [ranking.branches, orgId]);
+
+  const top10 = useMemo(() => filteredBranches.slice(0, 10), [filteredBranches]);
   const bottom5 = useMemo(
-    () => [...ranking.branches].sort((a, b) => a.percent - b.percent).slice(0, 5),
-    [ranking.branches],
+    () => [...filteredBranches].sort((a, b) => a.percent - b.percent).slice(0, 5),
+    [filteredBranches],
   );
 
   const branchColumns = [
@@ -156,7 +192,20 @@ export default function ExecutiveDashboard() {
     },
   ];
 
-  const loading = dashLoading || rankLoading;
+  const loading = planType === 'monthly' ? monthlyLoading || rankLoading : dashLoading || rankLoading;
+
+  const monthlyKpi = monthlyComparison.branches.length
+    ? {
+        totalEmployees: monthlyComparison.branches.reduce((s, b) => s + b.totalEmployees, 0),
+        completionPercent:
+          Math.round(
+            (monthlyComparison.branches.reduce((s, b) => s + b.averageMonthlyPercent, 0) /
+              monthlyComparison.branches.length) *
+              10,
+          ) / 10,
+        branchCount: monthlyComparison.branches.length,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -183,14 +232,17 @@ export default function ExecutiveDashboard() {
             <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <Target className="h-4 w-4" />
               {t({ uz: 'Bugungi reja', en: "Today's plan", ru: 'План на сегодня' })} — {dashboard.planDate}
+              {planType === 'monthly' && ` · ${date.slice(0, 7)}`}
             </div>
+            {planType === 'daily' ? (
+            <>
             <Row gutter={[16, 16]}>
               {[
                 {
                   icon: Target,
                   label: t({ uz: 'Umumiy reja', en: 'Total plan', ru: 'Общий план' }),
                   value: formatNumber(dashboard.totalPlan),
-                  color: 'text-blue-600',
+                  color: 'text-slate-600 dark:text-slate-300',
                 },
                 {
                   icon: CheckCircle2,
@@ -240,8 +292,32 @@ export default function ExecutiveDashboard() {
               </div>
               <PercentBar percent={dashboard.completionPercent} height="lg" />
             </div>
+            </>
+            ) : monthlyKpi ? (
+              <Row gutter={[16, 16]} className="mt-2">
+                <Col xs={24} sm={8}>
+                  <div className="rounded-xl border bg-background p-4">
+                    <div className="text-2xl font-bold">{formatNumber(monthlyKpi.totalEmployees)}</div>
+                    <div className="text-xs text-muted-foreground">{t({ uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' })}</div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <div className="rounded-xl border bg-background p-4">
+                    <div className="text-2xl font-bold">{monthlyKpi.completionPercent}%</div>
+                    <div className="text-xs text-muted-foreground">{t({ uz: 'O\'rtacha oylik', en: 'Avg monthly', ru: 'Средний за месяц' })}</div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <div className="rounded-xl border bg-background p-4">
+                    <div className="text-2xl font-bold">{monthlyKpi.branchCount}</div>
+                    <div className="text-xs text-muted-foreground">{t({ uz: 'Filiallar', en: 'Branches', ru: 'Филиалы' })}</div>
+                  </div>
+                </Col>
+              </Row>
+            ) : null}
           </Card>
 
+          {planType === 'daily' && (
           <button
             type="button"
             onClick={() => navigate(`/dashboard/analytics/underperformers?date=${date}`)}
@@ -257,6 +333,7 @@ export default function ExecutiveDashboard() {
               <span>{formatNumber(under.employeeCount)} {t({ uz: 'ta xodim', en: 'employees', ru: 'сотрудников' })}</span>
             </div>
           </button>
+          )}
 
           <Row gutter={[16, 16]}>
             <Col xs={24} xl={14}>
@@ -268,7 +345,7 @@ export default function ExecutiveDashboard() {
                   size="small"
                   rowKey="orgId"
                   columns={branchColumns}
-                  dataSource={ranking.branches}
+                  dataSource={filteredBranches}
                   pagination={{ pageSize: 10, showSizeChanger: true }}
                 />
               </Card>
@@ -319,6 +396,7 @@ export default function ExecutiveDashboard() {
             </Col>
           </Row>
 
+          {planType === 'daily' && (
           <Row gutter={[16, 16]}>
             <Col xs={24} lg={12}>
               <Card
@@ -330,7 +408,7 @@ export default function ExecutiveDashboard() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
+                    <ChartTooltip />
                     <Bar dataKey="completedEmployees" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -350,7 +428,7 @@ export default function ExecutiveDashboard() {
                       tickFormatter={(v) => v.slice(5)}
                     />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: number) => [`${v}%`, '']} />
+                    <ChartTooltip formatter={(v: number) => [`${v}%`, '']} />
                     <Area
                       type="monotone"
                       dataKey="percent"
@@ -363,50 +441,9 @@ export default function ExecutiveDashboard() {
               </Card>
             </Col>
           </Row>
+          )}
 
-          <Card
-            title={t({ uz: 'HeatMap — filial × hafta kuni', en: 'Heatmap — branch × weekday', ru: 'Тепловая карта' })}
-            className="shadow-sm overflow-x-auto"
-          >
-            {heatmap.branches.length === 0 ? (
-              <Text type="secondary">{t({ uz: 'Ma\'lumot yo\'q', en: 'No data', ru: 'Нет данных' })}</Text>
-            ) : (
-              <table className="w-full text-sm min-w-[600px]">
-                <thead>
-                  <tr>
-                    <th className="text-left p-2 font-medium">
-                      {t({ uz: 'Filial', en: 'Branch', ru: 'Филиал' })}
-                    </th>
-                    {heatmap.weekdays.map((w) => (
-                      <th key={w} className="p-2 text-center font-medium">{w}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {heatmap.branches.slice(0, 20).map((b) => (
-                    <tr key={b.orgId} className="border-t">
-                      <td className="p-2">
-                        <button
-                          type="button"
-                          className="hover:text-primary text-left"
-                          onClick={() => navigate(`/dashboard/analytics/branches/${b.orgId}?date=${date}`)}
-                        >
-                          {b.orgName}
-                        </button>
-                      </td>
-                      {b.cells.map((c) => (
-                        <td key={c.dow} className="p-2 text-center">
-                          <Tag color={c.status === 'green' ? 'success' : c.status === 'yellow' ? 'warning' : 'error'}>
-                            {statusEmoji(c.status)} {c.percent}%
-                          </Tag>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Card>
+          {planType === 'daily' && <BranchWeekdayHeatmap data={heatmap} />}
         </>
       )}
     </div>

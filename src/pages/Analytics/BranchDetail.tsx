@@ -4,7 +4,7 @@ import { Card, Col, Row, Skeleton, Typography } from '@/components/ui';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
-import { AnalyticsFilters, useAnalyticsDate } from './components/AnalyticsFilters';
+import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { PercentBar } from './components/PercentBar';
 import {
@@ -19,7 +19,7 @@ const { Title, Text } = Typography;
 export default function BranchDetail() {
   const { orgId = '' } = useParams();
   const navigate = useNavigate();
-  const date = useAnalyticsDate();
+  const { date } = useAnalyticsFilters();
   const { t } = useTranslation();
 
   const { data, initialLoading } = useFetch(
@@ -44,7 +44,7 @@ export default function BranchDetail() {
   return (
     <div className="space-y-6">
       <BreadcrumbNav items={[{ label: data.orgName || '...' }]} />
-      <AnalyticsFilters />
+      <AnalyticsFilters lockOrgId showEmployeeFilter={false} />
 
       {initialLoading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
