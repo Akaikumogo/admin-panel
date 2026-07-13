@@ -25,6 +25,7 @@ import {
   Bot,
   IdCard,
   ArrowDownUp,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -138,6 +139,11 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/analytics',
         label: { uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' },
         icon: Activity,
+      },
+      {
+        path: '/dashboard/reports',
+        label: { uz: 'Hisobotlar', en: 'Reports', ru: 'Отчёты' },
+        icon: FileSpreadsheet,
       },
       {
         path: '/dashboard/hearts-analytics',

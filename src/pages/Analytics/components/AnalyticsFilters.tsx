@@ -129,6 +129,11 @@ export function AnalyticsFilters({ showEmployeeFilter = true, lockOrgId = false 
     [divisionData.divisions],
   );
 
+  const orgOptions = useMemo(
+    () => organizations.map((o) => ({ value: o.id, label: o.name })),
+    [organizations],
+  );
+
   const employeeOptions = useMemo(
     () =>
       employeeData.employees.map((e) => ({
@@ -217,7 +222,7 @@ export function AnalyticsFilters({ showEmployeeFilter = true, lockOrgId = false 
               value={filters.orgId || undefined}
               onChange={onOrgChange}
               className="min-w-[200px]"
-              options={organizations.map((o) => ({ value: o.id, label: o.name }))}
+              options={orgOptions}
             />
           </div>
         )}

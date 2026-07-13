@@ -211,6 +211,19 @@ export function DataTable<T extends Record<string, unknown>>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [internalFilters, setInternalFilters] = React.useState<Record<string, string>>({});
   const columnFilters = controlledFilters ?? internalFilters;
+  const [draftFilters, setDraftFilters] = React.useState<Record<string, string>>(columnFilters);
+  const filterDebounceRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  React.useEffect(() => {
+    setDraftFilters(columnFilters);
+  }, [columnFilters]);
+
+  React.useEffect(
+    () => () => {
+      if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+    },
+    [],
+  );
   const { leftOffsets, rightOffsets } = React.useMemo(
     () => buildFixedOffsets(columns),
     [columns],
@@ -296,6 +309,19 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   const updateColumnFilter = (colId: string, value: string) => {
+    const nextDraft = { ...draftFilters, [colId]: value };
+    if (!value.trim()) delete nextDraft[colId];
+    setDraftFilters(nextDraft);
+
+    if (onColumnFiltersChange) {
+      if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+      filterDebounceRef.current = setTimeout(() => {
+        onColumnFiltersChange(nextDraft);
+        if (pagination !== false) pagination.onChange?.(1, pageSize);
+      }, 400);
+      return;
+    }
+
     const next = { ...columnFilters, [colId]: value };
     if (!value.trim()) delete next[colId];
     setColumnFilters(next);
@@ -530,7 +556,7 @@ export function DataTable<T extends Record<string, unknown>>({
                             aria-hidden
                           />
                           <Input
-                            value={columnFilters[colId] ?? ''}
+                            value={draftFilters[colId] ?? ''}
                             onChange={(e) => updateColumnFilter(colId, e.target.value)}
                             placeholder={meta.filterPlaceholder ?? 'Qidirish...'}
                             className="h-8 pl-7 text-xs bg-background dark:bg-[#151820] dark:border-slate-700 dark:placeholder:text-slate-500"
