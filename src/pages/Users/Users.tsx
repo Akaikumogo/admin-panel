@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Avatar, Button, Card, Form, Input, Modal, Popconfirm, Spin, Table, Tag, message } from '@/components/ui';
 import { Filter, Mail, Search } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
@@ -35,7 +36,9 @@ const QP_DEFAULTS = { search: undefined, page: undefined } as const;
 const Users = () => {
   const { t } = useTranslation();
   const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const search = useDebouncedSearch(qp.search, (val) =>
+    setParams({ search: val || undefined, page: undefined }),
+  );
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
 
   const { data: users, total, loading, initialLoading, refetch } = usePaginatedFetch(
@@ -102,13 +105,6 @@ const Users = () => {
     await apiService.deleteUser(id);
     message.success(t({ uz: 'O`chirildi', en: 'Deleted', ru: 'Удалено' }));
     refetch?.();
-  };
-
-  const handleSearchChange = (value: string) => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setParams({ search: value || undefined, page: undefined });
-    }, 400);
   };
 
   const columns = [
@@ -199,11 +195,11 @@ const Users = () => {
         <Filter size={16} className="text-slate-400" />
         <Input
           allowClear
-          defaultValue={qp.search}
+          value={search.value}
           prefix={<Search size={14} className="text-slate-400" />}
           placeholder={t(T.search)}
           style={{ width: 220 }}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => search.onChange(e.target.value)}
         />
         <Tag color="default">
           {t({ uz: 'Energo ID xodimlari', en: 'Energo ID employees', ru: 'Сотрудники Energo ID' })}

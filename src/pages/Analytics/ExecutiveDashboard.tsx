@@ -52,6 +52,7 @@ const emptyDashboard = {
   dailyGoalCorrect: 10,
   totalPlan: 0,
   completedTotal: 0,
+  extraCorrectTotal: 0,
   remaining: 0,
   completionPercent: 0,
   totalEmployees: 0,

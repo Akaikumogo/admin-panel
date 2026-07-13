@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { useFetch } from '@/hooks/useFetch';
 import { useNavigate } from 'react-router-dom';
 import HighlightText from '@/components/HighlightText';
@@ -88,7 +89,9 @@ const Organizations = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { params: qp, setParam } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const search = useDebouncedSearch(qp.search, (val) =>
+    setParam('search', val || undefined),
+  );
 
   const {
     data: organizations,
@@ -282,18 +285,11 @@ const Organizations = () => {
       <FilterBar>
         <Input
           allowClear
-          defaultValue={qp.search}
+          value={search.value}
           prefix={<Search size={14} className="text-slate-400" />}
           placeholder={t(T.search)}
           style={{ width: 220 }}
-          onChange={(e) => {
-            if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-            const val = e.target.value;
-            searchTimerRef.current = setTimeout(
-              () => setParam('search', val || undefined),
-              400,
-            );
-          }}
+          onChange={(e) => search.onChange(e.target.value)}
         />
         <Tag className="text-sm ml-auto">{t(T.total)}: {organizations.length}</Tag>
       </FilterBar>

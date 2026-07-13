@@ -91,6 +91,17 @@ export default function DepartmentEmployees() {
       ),
     },
     {
+      title: t({ uz: 'Plandan tashqari', en: 'Beyond plan', ru: 'Сверх плана' }),
+      key: 'extraCorrect',
+      width: 130,
+      render: (_: unknown, row: EmployeeRankingRow) =>
+        (row.extraCorrect ?? 0) > 0 ? (
+          <Tag color="purple">+{row.extraCorrect}</Tag>
+        ) : (
+          '—'
+        ),
+    },
+    {
       title: '%',
       dataIndex: 'percent',
       key: 'percent',

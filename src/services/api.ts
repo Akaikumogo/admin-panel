@@ -225,6 +225,8 @@ export type BranchDailyPlanResult = {
     fullName: string;
     answeredCount: number;
     correctCount: number;
+    planCorrectCount: number;
+    extraCorrectCount: number;
     completed: boolean;
     completionPercent: number;
   }>;
@@ -238,6 +240,7 @@ export type BranchMonthlyProgressEmployee = {
   monthlyPercent: number;
   correctTotal: number;
   wrongTotal: number;
+  extraCorrectTotal?: number;
   lastActiveAt: string | null;
 };
 
@@ -277,6 +280,7 @@ export type ExecutiveDashboard = {
   dailyGoalCorrect: number;
   totalPlan: number;
   completedTotal: number;
+  extraCorrectTotal: number;
   remaining: number;
   completionPercent: number;
   totalEmployees: number;
@@ -292,6 +296,7 @@ export type BranchRankingRow = {
   totalEmployees: number;
   plan: number;
   completed: number;
+  extraCorrect?: number;
   percent: number;
   completedEmployees: number;
   status: AnalyticsStatus;
@@ -326,10 +331,55 @@ export type DivisionSummary = {
   divisions: DivisionSummaryRow[];
 };
 
+export type DailyReport = ExecutiveDashboard & {
+  branches: BranchRankingRow[];
+  employees: Array<{
+    orgId: string;
+    orgName: string;
+    userId: string;
+    fullName: string;
+    answeredCount: number;
+    planCorrect: number;
+    extraCorrect: number;
+    percent: number;
+    completed: boolean;
+    status: AnalyticsStatus;
+  }>;
+};
+
+export type MonthlyReport = {
+  month: string;
+  daysInMonth: number;
+  dailyGoalCorrect: number;
+  branches: Array<{
+    orgId: string;
+    orgName: string;
+    totalEmployees: number;
+    averageMonthlyPercent: number;
+    extraCorrectTotal: number;
+    rank: number;
+  }>;
+  trend: DailyTrend['points'];
+  employees: Array<{
+    orgId: string;
+    orgName: string;
+    userId: string;
+    fullName: string;
+    email: string;
+    daysCompleted: number;
+    monthlyPercent: number;
+    extraCorrectTotal: number;
+    correctTotal: number;
+    wrongTotal: number;
+  }>;
+};
+
 export type EmployeeRankingRow = {
   userId: string;
   fullName: string;
   correct: number;
+  planCorrect?: number;
+  extraCorrect?: number;
   goal: number;
   percent: number;
   completed: boolean;
@@ -1479,6 +1529,58 @@ class ApiService {
       { params },
     );
     return response.data;
+  }
+
+  async getDailyReport(params?: { date?: string }): Promise<DailyReport> {
+    const response = await this.api.get<DailyReport>(
+      '/admin/branch-analytics/daily-report',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getMonthlyReport(params?: { month?: string }): Promise<MonthlyReport> {
+    const response = await this.api.get<MonthlyReport>(
+      '/admin/branch-analytics/monthly-report',
+      { params },
+    );
+    return response.data;
+  }
+
+  async downloadDailyReportExcel(params: { date?: string; filename?: string }) {
+    const response = await this.api.get(
+      '/admin/branch-analytics/export/daily-report',
+      { params: { date: params.date }, responseType: 'blob' },
+    );
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = params.filename ?? `kunlik-${params.date ?? 'report'}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async downloadMonthlyReportExcel(params: { month?: string; filename?: string }) {
+    const response = await this.api.get(
+      '/admin/branch-analytics/export/monthly-report',
+      { params: { month: params.month }, responseType: 'blob' },
+    );
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = params.filename ?? `oylik-${params.month ?? 'report'}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   async downloadBranchMonthlyProgressExcel(params: {

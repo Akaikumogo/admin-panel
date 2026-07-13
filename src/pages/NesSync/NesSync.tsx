@@ -11,6 +11,7 @@ import {
 } from '@/hooks/useNesSyncSocket';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useQueryParams } from '@/hooks/useQueryParams';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import apiService, {
   type NesEmployee,
   type NesEmployeesSyncStatus,
@@ -63,7 +64,9 @@ export default function NesSync() {
   const { params: qp, setParam, setParams } =
     useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const search = useDebouncedSearch(qp.search, (val) =>
+    setParams({ search: val || undefined, page: undefined }),
+  );
 
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress>(EMPTY_PROGRESS);
@@ -193,13 +196,6 @@ export default function NesSync() {
       pollSyncHealth();
     },
   });
-
-  const handleSearchChange = (value: string) => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setParams({ search: value || undefined, page: undefined });
-    }, 400);
-  };
 
   const handleSync = async () => {
     wasSyncingRef.current = true;
@@ -378,11 +374,11 @@ export default function NesSync() {
       <FilterBar>
         <Input
           allowClear
-          defaultValue={qp.search}
+          value={search.value}
           prefix={<Search size={14} className="text-slate-400" />}
           placeholder="Xodim, login yoki tabelnomer"
           style={{ width: 220 }}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => search.onChange(e.target.value)}
         />
 
         <Select

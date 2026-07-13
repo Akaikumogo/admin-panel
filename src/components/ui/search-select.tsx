@@ -4,10 +4,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { filterSelectOption } from '@/utils/selectSearch.util';
 
 export type SelectOption = { value: string | number; label: React.ReactNode; disabled?: boolean };
 
-export function SearchSelect({
+function optionSearchText(opt: SelectOption): string {
+  return String(opt.label ?? opt.value ?? '');
+}
+
+function SearchSelectInner({
   value,
   onChange,
   options = [],
@@ -35,10 +40,25 @@ export function SearchSelect({
   prefix?: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
-  const selected = options.find((o) => String(o.value) === String(value));
+  const [search, setSearch] = React.useState('');
+
+  const selected = React.useMemo(
+    () => options.find((o) => String(o.value) === String(value)),
+    [options, value],
+  );
+
+  const filteredOptions = React.useMemo(() => {
+    if (!showSearch || !search.trim()) return options;
+    return options.filter((opt) => filterSelectOption(search, opt));
+  }, [options, search, showSearch]);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setSearch('');
+  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -55,28 +75,51 @@ export function SearchSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn('w-[var(--radix-popover-trigger-width)] p-0', popupClassName)} align="start">
-        <Command className="select-long-options">
-          {showSearch ? <CommandInput placeholder={searchPlaceholder} /> : null}
+      <PopoverContent
+        className={cn('w-[var(--radix-popover-trigger-width)] p-0', popupClassName)}
+        align="start"
+        onOpenAutoFocus={(e) => {
+          if (showSearch) e.preventDefault();
+        }}
+      >
+        <Command shouldFilter={false} className="select-long-options">
+          {showSearch ? (
+            <CommandInput
+              placeholder={searchPlaceholder}
+              value={search}
+              onValueChange={setSearch}
+            />
+          ) : null}
           <CommandList>
             <CommandEmpty>Topilmadi</CommandEmpty>
             <CommandGroup>
               {allowClear && value ? (
-                <CommandItem value="__clear__" onSelect={() => { onChange?.(''); setOpen(false); }}>
+                <CommandItem
+                  value="__clear__"
+                  onSelect={() => {
+                    onChange?.('');
+                    setOpen(false);
+                  }}
+                >
                   Tozalash
                 </CommandItem>
               ) : null}
-              {options.map((opt) => (
+              {filteredOptions.map((opt) => (
                 <CommandItem
-                  key={opt.value}
-                  value={String(opt.label)}
+                  key={String(opt.value)}
+                  value={`${String(opt.value)}-${optionSearchText(opt)}`}
                   disabled={opt.disabled}
                   onSelect={() => {
                     onChange?.(String(opt.value));
                     setOpen(false);
                   }}
                 >
-                  <Check className={cn('mr-2 h-4 w-4', value === opt.value ? 'opacity-100' : 'opacity-0')} />
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      String(value) === String(opt.value) ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
                   {opt.label}
                 </CommandItem>
               ))}
@@ -87,6 +130,8 @@ export function SearchSelect({
     </Popover>
   );
 }
+
+export const SearchSelect = React.memo(SearchSelectInner);
 
 export function Select(props: Record<string, unknown>) {
   const {
@@ -102,7 +147,6 @@ export function Select(props: Record<string, unknown>) {
     size,
     allowClear,
     prefix,
-    loading,
   } = props as {
     value?: string | string[] | number | null;
     onChange?: (value: string | string[]) => void;
@@ -117,6 +161,9 @@ export function Select(props: Record<string, unknown>) {
     allowClear?: boolean;
     prefix?: React.ReactNode;
     loading?: boolean;
+    optionFilterProp?: string;
+    filterOption?: boolean | ((input: string, option?: SelectOption) => boolean);
+    onSearch?: (value: string) => void;
   };
 
   void props;

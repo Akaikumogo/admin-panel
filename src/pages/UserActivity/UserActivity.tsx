@@ -116,6 +116,26 @@ const UserActivity = () => {
     [] as Organization[],
   );
 
+  const orgSelectOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Barcha filiallar' },
+      ...organizations.map((o) => ({
+        value: o.id,
+        label: o.isDefault ? `★ ${o.name}` : o.name,
+      })),
+    ],
+    [organizations],
+  );
+
+  const branchOrgSelectOptions = useMemo(
+    () =>
+      organizations.map((o) => ({
+        value: o.id,
+        label: o.isDefault ? `★ ${o.name}` : o.name,
+      })),
+    [organizations],
+  );
+
   const { data: stats, refetch: refetchStats } = useFetch<ActivityStats | null>(
     ['ua-stats', group, range, orgFilter],
     () =>
@@ -390,14 +410,9 @@ const UserActivity = () => {
           <Select
             value={orgFilter}
             onChange={setOrgFilter}
+            showSearch
             className="!min-w-[200px]"
-            options={[
-              { value: 'all', label: 'Barcha filiallar' },
-              ...organizations.map((o) => ({
-                value: o.id,
-                label: o.isDefault ? `★ ${o.name}` : o.name,
-              })),
-            ]}
+            options={orgSelectOptions}
           />
           <Select
             value={onlineFilter}
@@ -511,10 +526,7 @@ const UserActivity = () => {
                       showSearch
                       optionFilterProp="label"
                       className="!min-w-[240px]"
-                      options={organizations.map((o) => ({
-                        value: o.id,
-                        label: o.isDefault ? `★ ${o.name}` : o.name,
-                      }))}
+                      options={branchOrgSelectOptions}
                     />
                   </div>
                   <DatePicker.RangePicker
@@ -597,6 +609,13 @@ const UserActivity = () => {
                       { title: 'Xodim', dataIndex: 'fullName' },
                       { title: 'Javoblar', dataIndex: 'answeredCount', width: 90 },
                       { title: 'To`g`ri', dataIndex: 'correctCount', width: 80 },
+                      {
+                        title: 'Plandan tashqari',
+                        dataIndex: 'extraCorrectCount',
+                        width: 110,
+                        render: (v: number) =>
+                          v > 0 ? <Tag color="purple">+{v}</Tag> : '—',
+                      },
                       {
                         title: 'Progress',
                         dataIndex: 'completionPercent',
