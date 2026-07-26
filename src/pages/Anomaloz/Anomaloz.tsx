@@ -305,6 +305,18 @@ export default function AnomalozPage() {
             : '—',
       },
       {
+        title: 'IP',
+        dataIndex: 'lastIpAddress',
+        key: 'lastIpAddress',
+        width: 140,
+        render: (v: string | null | undefined) =>
+          v ? (
+            <span className="font-mono text-xs">{v}</span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+      },
+      {
         title: t({ uz: 'Session', en: 'Sessions', ru: 'Сессии' }),
         dataIndex: 'sessionCount',
         key: 'sessionCount',
@@ -385,6 +397,7 @@ export default function AnomalozPage() {
             <Tag>Jami: {blockedEmails.total}</Tag>
             <Tag color="red">Blok: {blockedEmails.blocked}</Tag>
             <Tag color="blue">Kirgan: {blockedEmails.withLoginHistory}</Tag>
+            <Tag color="purple">IP bor: {blockedEmails.withIp ?? 0}</Tag>
             <Tag>Hech qachon kirmagan: {blockedEmails.neverLoggedIn}</Tag>
           </div>
         ) : null}
