@@ -34,6 +34,7 @@ const LogsPage = lazy(() => import('./pages/Logs/Logs'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
 const ReportsPage = lazy(() => import('./pages/Reports/ReportsPage'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
+const AnomalozPage = lazy(() => import('./pages/Anomaloz/Anomaloz'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
 const DepartmentsPage = lazy(() => import('./pages/Departments/Departments'));
@@ -163,6 +164,10 @@ export const routes: RouteObject[] = [
           {
             path: 'leaderboard',
             element: withSuspense(LeaderboardPage)
+          },
+          {
+            path: 'anomaloz',
+            element: withSuspense(AnomalozPage)
           },
           {
             path: 'ai-assistant',

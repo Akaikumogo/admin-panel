@@ -29,6 +29,7 @@ import {
   Building,
   BriefcaseBusiness,
   Archive,
+  AlertTriangle,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -173,6 +174,11 @@ const navGroups: NavGroup[] = [
         label: { uz: 'Reyting', en: 'Leaderboard', ru: 'Рейтинг' },
         icon: Trophy,
       },
+      {
+        path: '/dashboard/anomaloz',
+        label: { uz: 'Anomaloz', en: 'Anomalies', ru: 'Аномалии' },
+        icon: AlertTriangle,
+      },
     ],
   },
   {
@@ -307,6 +313,7 @@ const Layout = () => {
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
           item.path !== '/dashboard/exam-analysis' &&
+          item.path !== '/dashboard/anomaloz' &&
           (hasNesSyncPerm || item.path !== '/dashboard/nes-sync') &&
           (hasAudioPerm || item.path !== '/dashboard/audio-library'),
       );
@@ -328,6 +335,7 @@ const Layout = () => {
     (location.pathname === '/dashboard/moderators' ||
       location.pathname === '/dashboard/permissions' ||
       location.pathname === '/dashboard/import-export' ||
+      location.pathname === '/dashboard/anomaloz' ||
       (location.pathname === '/dashboard/nes-sync' && !can('nesSync', 'view')) ||
       location.pathname === '/dashboard/exam-analysis' ||
       (location.pathname === '/dashboard/audio-library' &&

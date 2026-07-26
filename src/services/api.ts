@@ -663,6 +663,61 @@ export type StudentXpHistoryResponse = {
   correctAnswers: number;
 };
 
+export type XpAnomalyUserRow = {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  storedCorrect: number;
+  expectedCorrect: number;
+  storedXp: number;
+  expectedXp: number;
+  mismatchCount: number;
+};
+
+export type XpAnomalySample = {
+  attemptId: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  questionId: string;
+  prompt: string;
+  questionType: string;
+  selectedOptionId: string | null;
+  storedCorrect: boolean;
+  expectedCorrect: boolean | null;
+  heartLost: boolean;
+  expectedHeartLost: boolean | null;
+  reason: string;
+  answeredAt: string;
+};
+
+export type XpAnomalyAudit = {
+  scannedAttempts: number;
+  gradeableAttempts: number;
+  mismatchAttempts: number;
+  heartLostOnlyMismatches: number;
+  orphanAttempts: number;
+  matchingSkipped: number;
+  affectedUsers: number;
+  totalStoredXp: number;
+  totalExpectedXp: number;
+  xpDelta: number;
+  users: XpAnomalyUserRow[];
+  samples: XpAnomalySample[];
+};
+
+export type XpAnomalyReconcileResult = {
+  fixedGradeAttempts: number;
+  fixedHeartLostAttempts: number;
+  affectedUsers: number;
+  beforeStoredXp: number;
+  afterExpectedXp: number;
+  xpDelta: number;
+  users: XpAnomalyUserRow[];
+};
+
 export type LostQuestion = {
   questionId: string;
   prompt: string;
@@ -2602,6 +2657,20 @@ class ApiService {
     const response = await this.api.get<StudentXpHistoryResponse>(
       `/admin/employees/${id}/xp-history`,
       { params: filters },
+    );
+    return response.data;
+  }
+
+  async getXpAnomalyAudit(limit = 50): Promise<XpAnomalyAudit> {
+    const response = await this.api.get<XpAnomalyAudit>('/admin/xp-anomalies/audit', {
+      params: { limit },
+    });
+    return response.data;
+  }
+
+  async reconcileXpAnomalies(): Promise<XpAnomalyReconcileResult> {
+    const response = await this.api.post<XpAnomalyReconcileResult>(
+      '/admin/xp-anomalies/reconcile',
     );
     return response.data;
   }
