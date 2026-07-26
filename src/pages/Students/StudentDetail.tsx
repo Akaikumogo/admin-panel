@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Form, Input, Progress, Select, Spin, Table, Tag, Tooltip } from '@/components/ui';
-import { ArrowLeft, Pencil, X, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Pencil, X, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import NoData from '@/components/NoData';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type {
   StudentDetail as StudentDetailType,
+  StudentXpHistoryResponse,
   LostQuestion,
   ActivityDay,
   EmployeeCertificate,
@@ -22,14 +23,25 @@ const T = {
   lostQuestions: { uz: 'Ko`p xato qilingan savollar', en: 'Most failed questions', ru: 'Часто ошибаемые вопросы' },
   activity: { uz: 'Faollik (28 kun)', en: 'Activity (28 days)', ru: 'Активность (28 дней)' },
   totalXp: { uz: 'Jami XP', en: 'Total XP', ru: 'Всего XP' },
+  correctAnswers: { uz: 'To‘g‘ri javoblar', en: 'Correct answers', ru: 'Верные ответы' },
+  uniqueQuestions: { uz: 'Noyob savollar', en: 'Unique questions', ru: 'Уникальные вопросы' },
   completedLevels: { uz: 'Tugallangan darajalar', en: 'Completed levels', ru: 'Завершённые уровни' },
   totalErrors: { uz: 'Jami xatolar', en: 'Total errors', ru: 'Всего ошибок' },
+  xpHistory: { uz: 'XP tarixi', en: 'XP history', ru: 'История XP' },
+  xpHistoryHint: {
+    uz: 'Qachon, qaysi savoldan necha ball olgani (har bir to‘g‘ri javob = +10 XP).',
+    en: 'When and which question earned points (each correct answer = +10 XP).',
+    ru: 'Когда и за какой вопрос начислены баллы (каждый верный ответ = +10 XP).',
+  },
+  when: { uz: 'Vaqt', en: 'When', ru: 'Когда' },
+  xp: { uz: 'Ball', en: 'XP', ru: 'Баллы' },
   question: { uz: 'Savol', en: 'Question', ru: 'Вопрос' },
   level: { uz: 'Daraja', en: 'Level', ru: 'Уровень' },
   theory: { uz: 'Nazariya', en: 'Theory', ru: 'Теория' },
   wrongCount: { uz: 'Xatolar', en: 'Errors', ru: 'Ошибки' },
   attempts: { uz: 'Urinishlar', en: 'Attempts', ru: 'Попытки' },
   noLostQuestions: { uz: 'Xato qilingan savollar yo`q', en: 'No failed questions', ru: 'Нет ошибочных вопросов' },
+  noXpHistory: { uz: 'Hali XP tarixi yo‘q', en: 'No XP history yet', ru: 'Истории XP пока нет' },
   organizations: { uz: 'Tashkilotlar', en: 'Organizations', ru: 'Организации' },
   joined: { uz: 'Qo`shilgan', en: 'Joined', ru: 'Зарегистрирован' },
 } as const;
@@ -76,10 +88,17 @@ const StudentDetailPage = () => {
   const [checksType, setChecksType] = useState<EmployeeCheckType | 'all'>('all');
   const [editCert, setEditCert] = useState(false);
   const [editCheck, setEditCheck] = useState(false);
+  const [xpPage, setXpPage] = useState(1);
 
   const { data: student, initialLoading } = useFetch<StudentDetailType | null>(
     ['student-detail', id],
     () => apiService.getStudent(id!),
+    null,
+  );
+
+  const { data: xpHistory, initialLoading: xpLoading } = useFetch<StudentXpHistoryResponse | null>(
+    ['student-xp-history', id, xpPage],
+    () => apiService.getStudentXpHistory(id!, { page: xpPage, limit: 30 }),
     null,
   );
 
@@ -110,6 +129,7 @@ const StudentDetailPage = () => {
   useEffect(() => {
     setEditCert(false);
     setEditCheck(false);
+    setXpPage(1);
   }, [id]);
 
   useEffect(() => {
@@ -193,12 +213,54 @@ const StudentDetailPage = () => {
     },
   ];
 
+  const xpColumns = [
+    {
+      title: t(T.when),
+      dataIndex: 'answeredAt',
+      key: 'answeredAt',
+      width: 160,
+      render: (v: string) =>
+        new Date(v).toLocaleString(undefined, {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+    },
+    {
+      title: t(T.question),
+      dataIndex: 'prompt',
+      key: 'prompt',
+      ellipsis: true,
+    },
+    {
+      title: t(T.level),
+      dataIndex: 'levelTitle',
+      key: 'levelTitle',
+      width: 140,
+    },
+    {
+      title: t(T.theory),
+      dataIndex: 'theoryTitle',
+      key: 'theoryTitle',
+      width: 140,
+    },
+    {
+      title: t(T.xp),
+      dataIndex: 'xpEarned',
+      key: 'xpEarned',
+      width: 90,
+      render: (v: number) => <Tag color="green">+{v}</Tag>,
+    },
+  ];
+
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
       <Button
         type="text"
         icon={<ArrowLeft size={16} />}
-        onClick={() => navigate('/dashboard/employees')}
+        onClick={() => navigate(-1)}
         className="!px-2"
       >
         {t(T.back)}
@@ -240,12 +302,24 @@ const StudentDetailPage = () => {
             )}
           </div>
 
-          <div className="flex gap-6 flex-shrink-0">
+          <div className="flex flex-wrap gap-6 flex-shrink-0 justify-end">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
                 <Zap size={20} /> {student.totalXp}
               </div>
               <p className="text-xs text-slate-400 mt-1">{t(T.totalXp)}</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 size={20} /> {student.correctAnswers ?? Math.floor(student.totalXp / 10)}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">{t(T.correctAnswers)}</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {student.uniqueCorrectQuestions ?? '—'}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">{t(T.uniqueQuestions)}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-2xl font-bold text-green-600 dark:text-green-400">
@@ -261,6 +335,34 @@ const StudentDetailPage = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* XP history — qachon / qaysi savol / necha ball */}
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t(T.xpHistory)}</h3>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t(T.xpHistoryHint)}</p>
+        </div>
+        {xpLoading && !xpHistory ? (
+          <div className="flex items-center justify-center h-16"><Spin /></div>
+        ) : !xpHistory || xpHistory.data.length === 0 ? (
+          <NoData text={t(T.noXpHistory)} />
+        ) : (
+          <Table
+            dataSource={xpHistory.data}
+            columns={xpColumns}
+            rowKey="id"
+            size="small"
+            loading={xpLoading}
+            pagination={{
+              current: xpHistory.page,
+              pageSize: xpHistory.limit,
+              total: xpHistory.total,
+              showSizeChanger: false,
+              onChange: (page) => setXpPage(page),
+            }}
+          />
+        )}
       </div>
 
       {/* Level progress */}
