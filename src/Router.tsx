@@ -38,6 +38,8 @@ const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
 const DepartmentsPage = lazy(() => import('./pages/Departments/Departments'));
 const PositionsPage = lazy(() => import('./pages/Positions/Positions'));
+const ArchivePage = lazy(() => import('./pages/Archive/Archive'));
+const ArchiveEmployeesPage = lazy(() => import('./pages/Archive/ArchiveEmployees'));
 const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
 const ImportExportPage = lazy(() => import('./pages/ImportExport/ImportExport'));
 const AnalyticsLayout = lazy(() => import('./pages/Analytics'));
@@ -177,6 +179,14 @@ export const routes: RouteObject[] = [
           {
             path: 'positions',
             element: withSuspense(PositionsPage)
+          },
+          {
+            path: 'archive',
+            element: withSuspense(ArchivePage)
+          },
+          {
+            path: 'archive/employees',
+            element: withSuspense(ArchiveEmployeesPage)
           },
           {
             path: 'user-activity',

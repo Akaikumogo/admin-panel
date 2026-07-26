@@ -833,6 +833,21 @@ export type NesDepartment = {
   updatedAt: string;
 };
 
+export type TerminatedEmployee = {
+  id: string;
+  userId: string;
+  energoId: string | null;
+  personnelNumber: string | null;
+  login: string;
+  firstName: string;
+  lastName: string;
+  organizationName: string | null;
+  division: string;
+  post: string;
+  terminatedAt: string;
+  createdAt: string;
+};
+
 export type ExamType = 'SCHEDULED' | 'EXTRA';
 
 export type Exam = {
@@ -2780,6 +2795,40 @@ class ApiService {
       '/admin/nes-employees/departments',
       { params: filters },
     );
+    return response.data;
+  }
+
+  async getArchiveSummary(): Promise<{
+    employees: number;
+    questions: number;
+    modules: number;
+    theories: number;
+  }> {
+    const response = await this.api.get<{
+      employees: number;
+      questions: number;
+      modules: number;
+      theories: number;
+    }>('/admin/nes-employees/archive-summary');
+    return response.data;
+  }
+
+  async getTerminatedEmployees(filters?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: TerminatedEmployee[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const response = await this.api.get<{
+      data: TerminatedEmployee[];
+      total: number;
+      page: number;
+      limit: number;
+    }>('/admin/nes-employees/terminated', { params: filters });
     return response.data;
   }
 

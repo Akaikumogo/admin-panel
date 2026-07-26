@@ -28,6 +28,7 @@ import {
   FileSpreadsheet,
   Building,
   BriefcaseBusiness,
+  Archive,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -141,6 +142,11 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/nes-sync',
         label: { uz: 'ENERGO ID', en: 'ENERGO ID', ru: 'ENERGO ID' },
         icon: IdCard,
+      },
+      {
+        path: '/dashboard/archive',
+        label: { uz: 'Arxiv', en: 'Archive', ru: 'Архив' },
+        icon: Archive,
       },
     ],
   },
