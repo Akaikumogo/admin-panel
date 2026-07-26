@@ -256,6 +256,38 @@ export type BranchMonthlyProgress = {
   employees: BranchMonthlyProgressEmployee[];
 };
 
+export type MonthlyPlanMatrixDayCell = {
+  date: string;
+  day: number;
+  rawCorrect: number;
+  planCorrect: number;
+  completed: boolean;
+  label: string;
+};
+
+export type MonthlyPlanMatrixEmployee = {
+  userId: string;
+  fullName: string;
+  email: string;
+  daysCompleted: number;
+  monthlyPercent: number;
+  extraCorrectTotal: number;
+  dayResults: MonthlyPlanMatrixDayCell[];
+};
+
+export type MonthlyPlanMatrix = {
+  orgId: string;
+  orgName: string;
+  month: string;
+  daysInMonth: number;
+  dailyGoalCorrect: number;
+  days: string[];
+  totalEmployees: number;
+  averageMonthlyPercent: number;
+  fullCompletedEmployees: number;
+  employees: MonthlyPlanMatrixEmployee[];
+};
+
 export type BranchComparisonRow = {
   orgId: string;
   orgName: string;
@@ -1553,6 +1585,17 @@ class ApiService {
     return response.data;
   }
 
+  async getMonthlyPlanMatrix(params: {
+    orgId: string;
+    month?: string;
+  }): Promise<MonthlyPlanMatrix> {
+    const response = await this.api.get<MonthlyPlanMatrix>(
+      '/admin/branch-analytics/monthly-plan-matrix',
+      { params },
+    );
+    return response.data;
+  }
+
   async getBranchComparison(params: {
     month?: string;
   }): Promise<BranchComparison> {
@@ -1719,6 +1762,32 @@ class ApiService {
     const link = document.createElement('a');
     link.href = url;
     link.download = params.filename ?? `${params.month ?? 'monthly'}-progress.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async downloadMonthlyPlanMatrixExcel(params: {
+    orgId: string;
+    month?: string;
+    filename?: string;
+  }) {
+    const response = await this.api.get(
+      '/admin/branch-analytics/export/monthly-plan-matrix',
+      {
+        params: { orgId: params.orgId, month: params.month },
+        responseType: 'blob',
+      },
+    );
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download =
+      params.filename ?? `${params.month ?? 'month'}-oylik-reja.xlsx`;
     document.body.appendChild(link);
     link.click();
     link.remove();

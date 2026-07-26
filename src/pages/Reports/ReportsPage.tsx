@@ -39,14 +39,20 @@ import { PageHeader } from '@/components/PageHeader';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
-import type { AnalyticsStatus, DailyReport, MonthlyReport } from '@/services/api';
+import type {
+  AnalyticsStatus,
+  DailyReport,
+  MonthlyPlanMatrix,
+  MonthlyPlanMatrixEmployee,
+  MonthlyReport,
+} from '@/services/api';
 import { StatusBadge } from '@/pages/Analytics/components/StatusBadge';
 import { PercentBar } from '@/pages/Analytics/components/PercentBar';
 import { formatNumber, todayStr } from '@/pages/Analytics/analytics-utils';
 
 const { Text, Title } = Typography;
 
-type PlanMode = 'daily' | 'monthly';
+type PlanMode = 'daily' | 'monthly' | 'branch';
 type EmployeeFilter = 'all' | 'inactive' | 'completed' | 'extra';
 
 const PIE_COLORS = ['#22c55e', '#f59e0b', '#ef4444', '#6366f1'];
@@ -64,6 +70,19 @@ const emptyDaily: DailyReport = {
   completedEmployees: 0,
   branchCount: 0,
   branches: [],
+  employees: [],
+};
+
+const emptyMatrix: MonthlyPlanMatrix = {
+  orgId: '',
+  orgName: '',
+  month: '',
+  daysInMonth: 30,
+  dailyGoalCorrect: 10,
+  days: [],
+  totalEmployees: 0,
+  averageMonthlyPercent: 0,
+  fullCompletedEmployees: 0,
   employees: [],
 };
 
@@ -104,7 +123,19 @@ export default function ReportsPage() {
     { enabled: planMode === 'monthly' },
   );
 
-  const loading = planMode === 'daily' ? dailyLoading : monthlyLoading;
+  const { data: planMatrix, initialLoading: matrixLoading } = useFetch(
+    ['monthly-plan-matrix', orgFilter, month],
+    () => apiService.getMonthlyPlanMatrix({ orgId: orgFilter, month }),
+    emptyMatrix,
+    { enabled: planMode === 'branch' && !!orgFilter },
+  );
+
+  const loading =
+    planMode === 'daily'
+      ? dailyLoading
+      : planMode === 'monthly'
+        ? monthlyLoading
+        : matrixLoading;
 
   const orgOptions = useMemo(
     () => organizations.map((o) => ({ value: o.id, label: o.name })),
@@ -213,16 +244,91 @@ export default function ReportsPage() {
           date,
           filename: `kunlik-${date}.xlsx`,
         });
-      } else {
+      } else if (planMode === 'monthly') {
         await apiService.downloadMonthlyReportExcel({
           month,
           filename: `oylik-${month}.xlsx`,
+        });
+      } else if (orgFilter) {
+        const safe = (planMatrix.orgName || 'filial').replace(/[^\w\-]+/g, '_');
+        await apiService.downloadMonthlyPlanMatrixExcel({
+          orgId: orgFilter,
+          month,
+          filename: `${month}_${safe}_oylik_reja.xlsx`,
         });
       }
     } finally {
       setDownloading(false);
     }
   };
+
+  const matrixColumns = useMemo(() => {
+    const dayCols = (planMatrix.days ?? []).map((d, idx) => ({
+      title: String(Number(d.slice(8, 10))),
+      key: d,
+      width: 56,
+      align: 'center' as const,
+      render: (_: unknown, row: MonthlyPlanMatrixEmployee) => {
+        const cell = row.dayResults[idx];
+        if (!cell) return '—';
+        const cls = cell.completed
+          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
+          : cell.planCorrect > 0
+            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+        return (
+          <span
+            className={`inline-block min-w-[2.5rem] rounded px-1 py-0.5 text-[11px] font-semibold tabular-nums ${cls}`}
+          >
+            {cell.label}
+          </span>
+        );
+      },
+    }));
+
+    return [
+      {
+        title: '№',
+        key: 'idx',
+        width: 50,
+        fixed: 'left' as const,
+        render: (_: unknown, __: MonthlyPlanMatrixEmployee, i: number) => i + 1,
+      },
+      {
+        title: t({ uz: 'F.I.O', en: 'Name', ru: 'Ф.И.О' }),
+        dataIndex: 'fullName',
+        key: 'fullName',
+        width: 180,
+        fixed: 'left' as const,
+        ellipsis: true,
+      },
+      ...dayCols,
+      {
+        title: t({
+          uz: `Bajarilgan / ${planMatrix.daysInMonth}`,
+          en: `Done / ${planMatrix.daysInMonth}`,
+          ru: `Выполнено / ${planMatrix.daysInMonth}`,
+        }),
+        dataIndex: 'daysCompleted',
+        key: 'daysCompleted',
+        width: 110,
+        fixed: 'right' as const,
+        render: (v: number) => (
+          <span className="font-semibold tabular-nums">
+            {v}/{planMatrix.daysInMonth}
+          </span>
+        ),
+      },
+      {
+        title: t({ uz: 'Oylik %', en: 'Monthly %', ru: 'Мес. %' }),
+        dataIndex: 'monthlyPercent',
+        key: 'monthlyPercent',
+        width: 140,
+        fixed: 'right' as const,
+        render: (p: number) => <PercentBar percent={p} />,
+      },
+    ];
+  }, [planMatrix.days, planMatrix.daysInMonth, t]);
 
   const dailyColumns = [
     {
@@ -423,37 +529,147 @@ export default function ReportsPage() {
           )}
           <Select
             value={planMode}
-            onChange={(v) => setPlanMode(v as PlanMode)}
-            className="min-w-[140px]"
+            onChange={(v) => {
+              setPlanMode(v as PlanMode);
+              if (v === 'branch' && !orgFilter && organizations[0]) {
+                setOrgFilter(organizations[0].id);
+              }
+            }}
+            className="min-w-[180px]"
             options={[
               { value: 'daily', label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }) },
-              { value: 'monthly', label: t({ uz: 'Oylik', en: 'Monthly', ru: 'Месяц' }) },
+              { value: 'monthly', label: t({ uz: 'Oylik (jami)', en: 'Monthly (all)', ru: 'Месяц (все)' }) },
+              {
+                value: 'branch',
+                label: t({
+                  uz: 'Filial oylik jadval',
+                  en: 'Branch monthly grid',
+                  ru: 'Филиал — месяц',
+                }),
+              },
             ]}
           />
           <Building2 className="h-4 w-4 text-muted-foreground" />
           <Select
-            allowClear
+            allowClear={planMode !== 'branch'}
             showSearch
-            placeholder={t({ uz: 'Barcha filiallar', en: 'All branches', ru: 'Все филиалы' })}
+            placeholder={
+              planMode === 'branch'
+                ? t({ uz: 'Filialni tanlang', en: 'Select branch', ru: 'Выберите филиал' })
+                : t({ uz: 'Barcha filiallar', en: 'All branches', ru: 'Все филиалы' })
+            }
             value={orgFilter || undefined}
             onChange={(v) => setOrgFilter(v ?? '')}
-            className="min-w-[200px]"
+            className="min-w-[220px]"
             options={orgOptions}
           />
           <Button
             type="primary"
             icon={<Download className="h-4 w-4" />}
             loading={downloading}
+            disabled={planMode === 'branch' && !orgFilter}
             onClick={handleDownload}
           >
             {planMode === 'daily'
               ? t({ uz: 'Kunlik Excel', en: 'Daily Excel', ru: 'День Excel' })
-              : t({ uz: 'Oylik Excel', en: 'Monthly Excel', ru: 'Месяц Excel' })}
+              : planMode === 'monthly'
+                ? t({ uz: 'Oylik Excel', en: 'Monthly Excel', ru: 'Месяц Excel' })
+                : t({
+                    uz: 'Filial Excel yuklash',
+                    en: 'Download branch Excel',
+                    ru: 'Скачать Excel филиала',
+                  })}
           </Button>
         </div>
+        {planMode === 'branch' && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t({
+              uz: 'Har bir kun: bajarilgan savollar / 10. Oxirida oylik plan foizi (bajarilgan kunlar ÷ oy kunlari).',
+              en: 'Each day: done questions / 10. End column: monthly plan % (completed days ÷ days in month).',
+              ru: 'Каждый день: выполнено / 10. В конце — % месячного плана.',
+            })}
+          </p>
+        )}
       </Card>
 
-      {loading ? (
+      {planMode === 'branch' ? (
+        !orgFilter ? (
+          <Card className="!rounded-xl">
+            <Text type="secondary">
+              {t({
+                uz: 'Filialni tanlang — xodimlarning kunlik reja jadvali chiqadi.',
+                en: 'Select a branch to see the employee daily-plan grid.',
+                ru: 'Выберите филиал, чтобы увидеть таблицу.',
+              })}
+            </Text>
+          </Card>
+        ) : loading ? (
+          <Skeleton active paragraph={{ rows: 8 }} />
+        ) : (
+          <>
+            <Row gutter={[16, 16]} className="mb-6">
+              <Col xs={24} sm={8}>
+                <Card className="!rounded-xl border-l-4 border-l-blue-500">
+                  <Text type="secondary" className="text-xs">
+                    {t({ uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' })}
+                  </Text>
+                  <Title level={3} className="!mb-0">
+                    {formatNumber(planMatrix.totalEmployees)}
+                  </Title>
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card className="!rounded-xl border-l-4 border-l-emerald-500">
+                  <Text type="secondary" className="text-xs">
+                    {t({ uz: 'O‘rtacha oylik %', en: 'Avg monthly %', ru: 'Средний %' })}
+                  </Text>
+                  <Title level={3} className="!mb-0">
+                    {planMatrix.averageMonthlyPercent}%
+                  </Title>
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card className="!rounded-xl border-l-4 border-l-violet-500">
+                  <Text type="secondary" className="text-xs">
+                    {planMatrix.orgName || '—'}
+                  </Text>
+                  <Title level={4} className="!mb-0 !mt-1">
+                    {planMatrix.month} · {planMatrix.daysInMonth}{' '}
+                    {t({ uz: 'kun', en: 'days', ru: 'дней' })}
+                  </Title>
+                </Card>
+              </Col>
+            </Row>
+
+            <Card
+              title={t({
+                uz: 'Xodimlar — kunlik reja (oy)',
+                en: 'Employees — daily plan (month)',
+                ru: 'Сотрудники — дневной план (месяц)',
+              })}
+              className="!rounded-xl"
+              extra={
+                <span className="flex flex-wrap gap-2 text-xs">
+                  <Tag color="success">10/10</Tag>
+                  <Tag color="warning">1–9/10</Tag>
+                  <Tag>0/10</Tag>
+                </span>
+              }
+            >
+              <div className="overflow-x-auto">
+                <Table
+                  rowKey="userId"
+                  dataSource={planMatrix.employees}
+                  columns={matrixColumns}
+                  pagination={{ pageSize: 50, showSizeChanger: true }}
+                  size="small"
+                  scroll={{ x: Math.max(900, 280 + planMatrix.days.length * 56) }}
+                />
+              </div>
+            </Card>
+          </>
+        )
+      ) : loading ? (
         <Skeleton active paragraph={{ rows: 8 }} />
       ) : (
         <>
