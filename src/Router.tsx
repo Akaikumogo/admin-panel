@@ -36,6 +36,8 @@ const ReportsPage = lazy(() => import('./pages/Reports/ReportsPage'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
+const DepartmentsPage = lazy(() => import('./pages/Departments/Departments'));
+const PositionsPage = lazy(() => import('./pages/Positions/Positions'));
 const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
 const ImportExportPage = lazy(() => import('./pages/ImportExport/ImportExport'));
 const AnalyticsLayout = lazy(() => import('./pages/Analytics'));
@@ -167,6 +169,14 @@ export const routes: RouteObject[] = [
           {
             path: 'nes-sync',
             element: withSuspense(NesSyncPage)
+          },
+          {
+            path: 'departments',
+            element: withSuspense(DepartmentsPage)
+          },
+          {
+            path: 'positions',
+            element: withSuspense(PositionsPage)
           },
           {
             path: 'user-activity',

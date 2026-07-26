@@ -824,6 +824,15 @@ export type Position = {
   updatedAt: string;
 };
 
+export type NesDepartment = {
+  id: string;
+  name: string;
+  employeeCount: number;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ExamType = 'SCHEDULED' | 'EXTRA';
 
 export type Exam = {
@@ -2761,6 +2770,16 @@ class ApiService {
       organizations: string[];
       divisions: string[];
     }>('/admin/nes-employees/filter-options');
+    return response.data;
+  }
+
+  async getNesDepartments(filters?: {
+    search?: string;
+  }): Promise<{ data: NesDepartment[]; total: number }> {
+    const response = await this.api.get<{ data: NesDepartment[]; total: number }>(
+      '/admin/nes-employees/departments',
+      { params: filters },
+    );
     return response.data;
   }
 
