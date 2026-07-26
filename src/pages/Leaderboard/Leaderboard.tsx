@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Select, Spin, Table, Tag } from '@/components/ui';
 import { Trophy } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -15,6 +16,7 @@ const T = {
 
 export default function LeaderboardPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [scope, setScope] = useState<'global' | 'organization'>('global');
   const [orgId, setOrgId] = useState<string>('all');
 
@@ -37,6 +39,10 @@ export default function LeaderboardPage() {
     { scope, orgId: null, me: null, top: [] } as any,
   );
 
+  const openProfile = (userId: string) => {
+    navigate(`/dashboard/employees/${userId}`);
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -50,7 +56,14 @@ export default function LeaderboardPage() {
         title: t({ uz: 'User', en: 'User', ru: 'Пользователь' }),
         key: 'user',
         render: (_: unknown, r: LeaderboardRow) => (
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 text-left transition-colors hover:opacity-90"
+            onClick={(e) => {
+              e.stopPropagation();
+              openProfile(r.userId);
+            }}
+          >
             <div className="h-9 w-9 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               {r.avatarUrl ? (
                 <img
@@ -61,12 +74,23 @@ export default function LeaderboardPage() {
               ) : null}
             </div>
             <div className="min-w-0">
-              <div className="truncate font-medium">
+              <div className="truncate font-medium text-blue-600 hover:underline dark:text-blue-400">
                 {r.firstName} {r.lastName}
               </div>
               <div className="truncate text-xs text-slate-500">{r.email}</div>
             </div>
-          </div>
+          </button>
+        ),
+      },
+      {
+        title: t({ uz: 'To‘g‘ri', en: 'Correct', ru: 'Верно' }),
+        dataIndex: 'correctAnswers',
+        key: 'correctAnswers',
+        width: 100,
+        render: (_: unknown, r: LeaderboardRow) => (
+          <span className="tabular-nums text-slate-600 dark:text-slate-300">
+            {r.correctAnswers ?? Math.floor((r.xp || 0) / 10)}
+          </span>
         ),
       },
       {
@@ -82,14 +106,14 @@ export default function LeaderboardPage() {
 
   if (initialLoading || !me) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="h-[calc(100vh-100px)] space-y-6 overflow-y-auto p-6">
       <Card
         className="!border-slate-200 dark:!border-slate-700/60"
         title={
@@ -99,7 +123,7 @@ export default function LeaderboardPage() {
           </span>
         }
       >
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-3">
           <Select
             value={scope}
             style={{ width: 220 }}
@@ -121,6 +145,13 @@ export default function LeaderboardPage() {
             />
           ) : null}
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {t({
+            uz: 'Ism ustiga bosing — profil va XP tarixi ochiladi (qachon, qaysi savol, +10).',
+            en: 'Click a name to open profile and XP history.',
+            ru: 'Нажмите на имя — откроется профиль и история XP.',
+          })}
+        </p>
       </Card>
 
       {data?.me ? (
@@ -145,9 +176,12 @@ export default function LeaderboardPage() {
           columns={columns}
           pagination={false}
           size="small"
+          onRow={(r) => ({
+            onClick: () => openProfile(r.userId),
+            className: 'cursor-pointer',
+          })}
         />
       </Card>
     </div>
   );
 }
-

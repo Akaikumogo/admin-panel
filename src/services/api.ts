@@ -632,11 +632,35 @@ export type StudentDetail = {
   role: string;
   organizations: { id: string; name: string }[];
   totalXp: number;
+  /** To‘g‘ri javob urinishlari soni (XP = correctAnswers * 10) */
+  correctAnswers: number;
+  /** Noyob to‘g‘ri javob berilgan savollar */
+  uniqueCorrectQuestions: number;
   completedLevels: number;
   totalErrors: number;
   badge: StudentBadge;
   levelProgress: LevelProgress[];
   createdAt: string;
+};
+
+export type StudentXpHistoryItem = {
+  id: string;
+  questionId: string;
+  prompt: string;
+  levelTitle: string;
+  theoryTitle: string;
+  isCorrect: boolean;
+  xpEarned: number;
+  answeredAt: string;
+};
+
+export type StudentXpHistoryResponse = {
+  data: StudentXpHistoryItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalXp: number;
+  correctAnswers: number;
 };
 
 export type LostQuestion = {
@@ -1004,6 +1028,7 @@ export type LeaderboardRow = {
   email: string;
   avatarUrl: string | null;
   xp: number;
+  correctAnswers?: number;
   rank: number;
 };
 
@@ -2566,6 +2591,17 @@ class ApiService {
   async getStudentLostQuestions(id: string): Promise<LostQuestion[]> {
     const response = await this.api.get<LostQuestion[]>(
       `/admin/employees/${id}/lost-questions`
+    );
+    return response.data;
+  }
+
+  async getStudentXpHistory(
+    id: string,
+    filters?: { page?: number; limit?: number },
+  ): Promise<StudentXpHistoryResponse> {
+    const response = await this.api.get<StudentXpHistoryResponse>(
+      `/admin/employees/${id}/xp-history`,
+      { params: filters },
     );
     return response.data;
   }
