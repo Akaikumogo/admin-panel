@@ -777,6 +777,8 @@ export type BlockedEmailLoginRow = {
   lastSeenAt: string | null;
   sessionCount: number;
   everLoggedIn: boolean;
+  lastIpAddress?: string | null;
+  lastUserAgent?: string | null;
 };
 
 export type BlockedEmailLoginsResponse = {
@@ -784,6 +786,7 @@ export type BlockedEmailLoginsResponse = {
   blocked: number;
   withLoginHistory: number;
   neverLoggedIn: number;
+  withIp?: number;
   users: BlockedEmailLoginRow[];
 };
 
