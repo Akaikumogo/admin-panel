@@ -1,14 +1,31 @@
 import { useMemo, useState } from 'react';
-import { Button, Card, Form, Input, Modal, Spin, Table, message, Popconfirm } from '@/components/ui';
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Spin,
+  Table,
+  message,
+  Popconfirm,
+  Tag,
+} from '@/components/ui';
 import { BriefcaseBusiness, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { Position, UserProfile } from '@/services/api';
+import { PageHeader } from '@/components/PageHeader';
 import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Lavozimlar', en: 'Positions', ru: 'Должности' },
+  subtitle: {
+    uz: 'Energo ID sync va qo‘lda qo‘shilgan lavozimlar',
+    en: 'Positions from Energo ID sync and manual entries',
+    ru: 'Должности из Energo ID и вручную',
+  },
   add: { uz: 'Qo‘shish', en: 'Add', ru: 'Добавить' },
   edit: { uz: 'Tahrirlash', en: 'Edit', ru: 'Редактировать' },
   name: { uz: 'Lavozim nomi', en: 'Title', ru: 'Название' },
@@ -66,7 +83,13 @@ export default function PositionsPage() {
 
   const columns = useMemo(
     () => [
-      { title: '#', dataIndex: 'idx', key: 'idx', width: 60, render: (_: unknown, __: Position, i: number) => i + 1 },
+      {
+        title: '#',
+        dataIndex: 'idx',
+        key: 'idx',
+        width: 60,
+        render: (_: unknown, __: Position, i: number) => i + 1,
+      },
       { title: t(T.name), dataIndex: 'title', key: 'title' },
       {
         title: t({ uz: 'Amallar', en: 'Actions', ru: 'Действия' }),
@@ -95,7 +118,6 @@ export default function PositionsPage() {
     [t],
   );
 
-  // This page is meaningful only for SuperAdmin / default-org moderators. Backend will enforce anyway.
   if (me && me.role === 'USER') return null;
 
   if (initialLoading) {
@@ -107,32 +129,33 @@ export default function PositionsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <Card
-        className="!border-slate-200 dark:!border-slate-700/60"
-        title={
-          <span className="flex items-center gap-2">
-            <BriefcaseBusiness size={16} />
-            {t(T.title)}
-          </span>
+    <div className="space-y-4 overflow-y-auto p-6 h-[calc(100vh-100px)]">
+      <PageHeader
+        title={t(T.title)}
+        description={t(T.subtitle)}
+        icon={BriefcaseBusiness}
+        actions={
+          <div className="flex items-center gap-2">
+            <Tag>Jami: {rows.length}</Tag>
+            <Button
+              type="primary"
+              icon={<Plus size={16} />}
+              disabled={!can('exams', 'create')}
+              onClick={() => openModal()}
+            >
+              {t(T.add)}
+            </Button>
+          </div>
         }
-        extra={
-          <Button
-            type="primary"
-            icon={<Plus size={16} />}
-            disabled={!can('exams', 'create')}
-            onClick={() => openModal()}
-          >
-            {t(T.add)}
-          </Button>
-        }
-      >
+      />
+
+      <Card className="!border-slate-200 dark:!border-slate-700/60">
         <Table
           rowKey="id"
           loading={loading}
           dataSource={rows}
           columns={columns}
-          pagination={false}
+          pagination={{ pageSize: 50, showSizeChanger: true }}
           size="small"
         />
       </Card>
@@ -153,4 +176,3 @@ export default function PositionsPage() {
     </div>
   );
 }
-

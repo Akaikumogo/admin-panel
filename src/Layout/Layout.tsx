@@ -26,6 +26,8 @@ import {
   IdCard,
   ArrowDownUp,
   FileSpreadsheet,
+  Building,
+  BriefcaseBusiness,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -124,6 +126,16 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/employees',
         label: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
         icon: GraduationCap,
+      },
+      {
+        path: '/dashboard/departments',
+        label: { uz: 'Bo‘limlar', en: 'Departments', ru: 'Отделы' },
+        icon: Building,
+      },
+      {
+        path: '/dashboard/positions',
+        label: { uz: 'Lavozimlar', en: 'Positions', ru: 'Должности' },
+        icon: BriefcaseBusiness,
       },
       {
         path: '/dashboard/nes-sync',
