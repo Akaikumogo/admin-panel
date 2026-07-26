@@ -763,6 +763,30 @@ export type XpAnomalyReconcileResult = {
   users: XpAnomalyUserRow[];
 };
 
+export type BlockedEmailLoginRow = {
+  userId: string;
+  login: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  energoId: string | null;
+  hasEnergoId: boolean;
+  loginBlocked: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+  lastSeenAt: string | null;
+  sessionCount: number;
+  everLoggedIn: boolean;
+};
+
+export type BlockedEmailLoginsResponse = {
+  total: number;
+  blocked: number;
+  withLoginHistory: number;
+  neverLoggedIn: number;
+  users: BlockedEmailLoginRow[];
+};
+
 export type LostQuestion = {
   questionId: string;
   prompt: string;
@@ -2753,6 +2777,13 @@ class ApiService {
   async reconcileXpAnomalies(): Promise<XpAnomalyReconcileResult> {
     const response = await this.api.post<XpAnomalyReconcileResult>(
       '/admin/xp-anomalies/reconcile',
+    );
+    return response.data;
+  }
+
+  async getBlockedEmailLogins(): Promise<BlockedEmailLoginsResponse> {
+    const response = await this.api.get<BlockedEmailLoginsResponse>(
+      '/admin/blocked-email-logins',
     );
     return response.data;
   }

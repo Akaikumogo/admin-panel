@@ -13,6 +13,8 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type {
+  BlockedEmailLoginRow,
+  BlockedEmailLoginsResponse,
   UserProfile,
   XpAnomalyAudit,
   XpAnomalyReconcileResult,
@@ -80,6 +82,14 @@ export default function AnomalozPage() {
     null,
     { enabled: me?.role === 'SUPERADMIN' },
   );
+
+  const { data: blockedEmails, loading: blockedLoading } =
+    useFetch<BlockedEmailLoginsResponse | null>(
+      ['blocked-email-logins', me?.role, refreshKey],
+      () => apiService.getBlockedEmailLogins(),
+      null,
+      { enabled: me?.role === 'SUPERADMIN' },
+    );
 
   const hasIssues = useMemo(() => {
     if (!audit) return false;
@@ -228,6 +238,82 @@ export default function AnomalozPage() {
     [t],
   );
 
+  const blockedColumns = useMemo(
+    () => [
+      {
+        title: t({ uz: 'Login (email)', en: 'Login', ru: 'Логин' }),
+        dataIndex: 'login',
+        key: 'login',
+        ellipsis: true,
+      },
+      {
+        title: t({ uz: 'F.I.O', en: 'Name', ru: 'Ф.И.О' }),
+        key: 'name',
+        render: (_: unknown, r: BlockedEmailLoginRow) =>
+          `${r.lastName} ${r.firstName}`.trim() || '—',
+      },
+      {
+        title: 'Role',
+        dataIndex: 'role',
+        key: 'role',
+        width: 110,
+        render: (v: string) => <Tag>{v}</Tag>,
+      },
+      {
+        title: 'Energo ID',
+        key: 'energo',
+        width: 100,
+        render: (_: unknown, r: BlockedEmailLoginRow) =>
+          r.hasEnergoId ? <Tag color="blue">bor</Tag> : <Tag>yo‘q</Tag>,
+      },
+      {
+        title: t({ uz: 'Blok', en: 'Blocked', ru: 'Блок' }),
+        dataIndex: 'loginBlocked',
+        key: 'loginBlocked',
+        width: 90,
+        render: (v: boolean) =>
+          v ? <Tag color="red">ha</Tag> : <Tag color="orange">yo‘q</Tag>,
+      },
+      {
+        title: t({ uz: 'Yaratilgan', en: 'Created', ru: 'Создан' }),
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        width: 150,
+        render: (v: string) =>
+          new Date(v).toLocaleString(undefined, {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+      },
+      {
+        title: t({ uz: 'Oxirgi kirish', en: 'Last login', ru: 'Последний вход' }),
+        dataIndex: 'lastLoginAt',
+        key: 'lastLoginAt',
+        width: 150,
+        render: (v: string | null) =>
+          v
+            ? new Date(v).toLocaleString(undefined, {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '—',
+      },
+      {
+        title: t({ uz: 'Session', en: 'Sessions', ru: 'Сессии' }),
+        dataIndex: 'sessionCount',
+        key: 'sessionCount',
+        width: 90,
+      },
+    ],
+    [t],
+  );
+
   if (meLoading || !me) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -277,6 +363,39 @@ export default function AnomalozPage() {
             </Button>
           </div>
         </div>
+      </Card>
+
+      <Card
+        className="!border-amber-200 dark:!border-amber-800/50"
+        title={t({
+          uz: 'Email-login (@) akkauntlar — bloklangan',
+          en: 'Email-login (@) accounts — blocked',
+          ru: 'Email-логины (@) — заблокированы',
+        })}
+      >
+        <p className="mb-3 text-xs text-slate-500">
+          {t({
+            uz: 'SUPERADMIN dan tashqari loginida @ borlar. Parol o‘chirilgan, kirish yopilgan. Oxirgi kirish — session tarixidan.',
+            en: 'Non-SUPERADMIN accounts with @ in login. Password cleared, login blocked. Last login from sessions.',
+            ru: 'Не SUPERADMIN с @ в логине. Пароль сброшен, вход закрыт.',
+          })}
+        </p>
+        {blockedEmails ? (
+          <div className="mb-3 flex flex-wrap gap-3 text-sm">
+            <Tag>Jami: {blockedEmails.total}</Tag>
+            <Tag color="red">Blok: {blockedEmails.blocked}</Tag>
+            <Tag color="blue">Kirgan: {blockedEmails.withLoginHistory}</Tag>
+            <Tag>Hech qachon kirmagan: {blockedEmails.neverLoggedIn}</Tag>
+          </div>
+        ) : null}
+        <Table
+          rowKey="userId"
+          loading={blockedLoading}
+          dataSource={blockedEmails?.users ?? []}
+          columns={blockedColumns}
+          size="small"
+          pagination={{ pageSize: 20 }}
+        />
       </Card>
 
       {initialLoading && !audit ? (
