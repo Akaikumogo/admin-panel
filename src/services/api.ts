@@ -650,6 +650,8 @@ export type StudentXpHistoryItem = {
   levelTitle: string;
   theoryTitle: string;
   isCorrect: boolean;
+  countsForXp?: boolean;
+  attemptSource?: string | null;
   xpEarned: number;
   answeredAt: string;
 };
@@ -668,10 +670,12 @@ export type XpAnomalyUserRow = {
   firstName: string;
   lastName: string;
   email: string;
-  storedCorrect: number;
-  expectedCorrect: number;
   storedXp: number;
   expectedXp: number;
+  offPlanCorrect: number;
+  planCorrect: number;
+  storedPlanCorrect: number;
+  offPlanXpInflated: number;
   mismatchCount: number;
 };
 
@@ -687,8 +691,10 @@ export type XpAnomalySample = {
   selectedOptionId: string | null;
   storedCorrect: boolean;
   expectedCorrect: boolean | null;
+  countsForXp: boolean;
+  expectedCountsForXp: boolean;
+  attemptSource: string | null;
   heartLost: boolean;
-  expectedHeartLost: boolean | null;
   reason: string;
   answeredAt: string;
 };
@@ -700,10 +706,15 @@ export type XpAnomalyAudit = {
   heartLostOnlyMismatches: number;
   orphanAttempts: number;
   matchingSkipped: number;
+  planFlagMismatches: number;
   affectedUsers: number;
   totalStoredXp: number;
   totalExpectedXp: number;
   xpDelta: number;
+  totalOffPlanCorrect: number;
+  totalPlanCorrect: number;
+  totalOffPlanXpInflated: number;
+  dailyGoalCorrect: number;
   users: XpAnomalyUserRow[];
   samples: XpAnomalySample[];
 };
@@ -711,10 +722,12 @@ export type XpAnomalyAudit = {
 export type XpAnomalyReconcileResult = {
   fixedGradeAttempts: number;
   fixedHeartLostAttempts: number;
+  fixedPlanFlags: number;
   affectedUsers: number;
   beforeStoredXp: number;
   afterExpectedXp: number;
   xpDelta: number;
+  offPlanXpRemoved: number;
   users: XpAnomalyUserRow[];
 };
 

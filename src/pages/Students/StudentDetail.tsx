@@ -29,9 +29,9 @@ const T = {
   totalErrors: { uz: 'Jami xatolar', en: 'Total errors', ru: 'Всего ошибок' },
   xpHistory: { uz: 'XP tarixi', en: 'XP history', ru: 'История XP' },
   xpHistoryHint: {
-    uz: 'Qachon, qaysi savoldan necha ball olgani (har bir to‘g‘ri javob = +10 XP).',
-    en: 'When and which question earned points (each correct answer = +10 XP).',
-    ru: 'Когда и за какой вопрос начислены баллы (каждый верный ответ = +10 XP).',
+    uz: 'Qachon, qaysi savoldan ball olgani. Ball faqat kunlik majburiyat (plan) uchun; plandan tashqari = +0.',
+    en: 'When and which question earned points. Points only for daily plan; off-plan = +0.',
+    ru: 'Когда и за какой вопрос начислены баллы. Баллы только за дневной план; вне плана = +0.',
   },
   when: { uz: 'Vaqt', en: 'When', ru: 'Когда' },
   xp: { uz: 'Ball', en: 'XP', ru: 'Баллы' },
@@ -251,7 +251,8 @@ const StudentDetailPage = () => {
       dataIndex: 'xpEarned',
       key: 'xpEarned',
       width: 90,
-      render: (v: number) => <Tag color="green">+{v}</Tag>,
+      render: (v: number) =>
+        v > 0 ? <Tag color="green">+{v}</Tag> : <Tag>0</Tag>,
     },
   ];
 

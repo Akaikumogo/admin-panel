@@ -25,20 +25,20 @@ const { Text } = Typography;
 const T = {
   title: { uz: 'Anomaloz', en: 'Anomalies', ru: 'Аномалии' },
   subtitle: {
-    uz: 'Xodimlarning bergan javoblari bilan ball (XP) bir-biriga mos keladimi — tekshirish va tuzatish.',
-    en: 'Check whether answers match awarded points, then fix mismatches.',
-    ru: 'Проверка соответствия ответов и баллов, затем исправление.',
+    uz: 'Plandan tashqari berilgan ballarni topish va reytingdan ayirish. Ball faqat kunlik majburiyat (kuniga 10) uchun.',
+    en: 'Find off-plan XP and remove it from the rating. Points only for daily plan (10/day).',
+    ru: 'Найти внеплановые баллы и убрать из рейтинга. Баллы только за дневной план (10/день).',
   },
   scan: { uz: 'Tekshirish', en: 'Scan', ru: 'Проверить' },
   fix: {
-    uz: 'Hammasini javobiga mos qilish',
-    en: 'Reconcile all to answers',
-    ru: 'Привести всё к ответам',
+    uz: 'Plandan tashqari ballarni ayirish',
+    en: 'Remove off-plan XP',
+    ru: 'Убрать внеплановые баллы',
   },
   fixHint: {
-    uz: 'Tanlangan variantga qarab is_correct va heart_lost ni qayta hisoblaydi. Har bir to‘g‘ri javob = +10 XP.',
-    en: 'Recalculates is_correct and heart_lost from the selected option. Each correct = +10 XP.',
-    ru: 'Пересчитывает is_correct и heart_lost по выбранному варианту. Каждый верный = +10 XP.',
+    uz: 'Har kunning birinchi 10 ta noyob to‘g‘ri javobi qoladi; qolganlari reytingdan ayiriladi. Variant noto‘g‘ri belgilanganlar ham tuzatiladi.',
+    en: 'Keeps first 10 unique correct answers per day; removes the rest from rating.',
+    ru: 'Оставляет первые 10 уникальных верных ответов за день; остальное убирает из рейтинга.',
   },
   onlySuper: {
     uz: 'Faqat SUPERADMIN',
@@ -48,6 +48,8 @@ const T = {
 } as const;
 
 const REASON_LABEL: Record<string, string> = {
+  off_plan_xp: 'Plandan tashqari XP',
+  missing_plan_xp: 'Plan XP yetishmayapti',
   is_correct_mismatch: 'Ball ≠ javob',
   heart_lost_mismatch: 'heart_lost nomuvofiq',
   selected_option_missing: 'Variant yo‘q',
@@ -82,8 +84,9 @@ export default function AnomalozPage() {
   const hasIssues = useMemo(() => {
     if (!audit) return false;
     return (
+      audit.planFlagMismatches > 0 ||
       audit.mismatchAttempts > 0 ||
-      audit.heartLostOnlyMismatches > 0 ||
+      audit.totalOffPlanXpInflated > 0 ||
       audit.affectedUsers > 0
     );
   }, [audit]);
@@ -119,37 +122,44 @@ export default function AnomalozPage() {
         ),
       },
       {
-        title: t({ uz: 'Saqlangan XP', en: 'Stored XP', ru: 'Текущий XP' }),
+        title: t({ uz: 'Plan bo‘yicha', en: 'In plan', ru: 'По плану' }),
+        dataIndex: 'planCorrect',
+        key: 'planCorrect',
+        width: 110,
+      },
+      {
+        title: t({ uz: 'Plandan tashqari', en: 'Off-plan', ru: 'Вне плана' }),
+        dataIndex: 'offPlanCorrect',
+        key: 'offPlanCorrect',
+        width: 130,
+        render: (v: number) => (
+          <span className={v > 0 ? 'font-medium text-amber-600' : ''}>{v}</span>
+        ),
+      },
+      {
+        title: t({ uz: 'Hozirgi XP', en: 'Current XP', ru: 'Текущий XP' }),
         dataIndex: 'storedXp',
         key: 'storedXp',
-        width: 120,
+        width: 110,
         render: (v: number) => <Tag>{v}</Tag>,
       },
       {
-        title: t({ uz: 'Kerakli XP', en: 'Expected XP', ru: 'Ожидаемый XP' }),
+        title: t({ uz: 'Kerakli XP', en: 'Expected XP', ru: 'Нужный XP' }),
         dataIndex: 'expectedXp',
         key: 'expectedXp',
-        width: 120,
+        width: 110,
         render: (v: number) => <Tag color="green">{v}</Tag>,
       },
       {
-        title: 'Δ',
-        key: 'delta',
-        width: 90,
-        render: (_: unknown, r: XpAnomalyUserRow) => {
-          const d = r.expectedXp - r.storedXp;
-          return (
-            <span className={d === 0 ? 'text-slate-400' : d > 0 ? 'text-emerald-600' : 'text-red-500'}>
-              {d > 0 ? `+${d}` : d}
-            </span>
-          );
-        },
-      },
-      {
-        title: t({ uz: 'Nomuvofiqlik', en: 'Mismatches', ru: 'Расхождения' }),
-        dataIndex: 'mismatchCount',
-        key: 'mismatchCount',
-        width: 110,
+        title: t({ uz: 'Ayiriladi', en: 'To remove', ru: 'Снять' }),
+        dataIndex: 'offPlanXpInflated',
+        key: 'offPlanXpInflated',
+        width: 100,
+        render: (v: number) => (
+          <span className={v > 0 ? 'font-semibold text-red-500' : 'text-slate-400'}>
+            {v > 0 ? `−${v}` : 0}
+          </span>
+        ),
       },
     ],
     [navigate, t],
@@ -174,7 +184,7 @@ export default function AnomalozPage() {
       {
         title: t({ uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' }),
         key: 'who',
-        width: 180,
+        width: 160,
         render: (_: unknown, r: XpAnomalySample) => (
           <span>
             {r.firstName} {r.lastName}
@@ -188,25 +198,24 @@ export default function AnomalozPage() {
         ellipsis: true,
       },
       {
-        title: t({ uz: 'Saqlangan', en: 'Stored', ru: 'Сохранено' }),
-        dataIndex: 'storedCorrect',
-        key: 'storedCorrect',
-        width: 100,
-        render: (v: boolean) => (
-          <Tag color={v ? 'green' : 'red'}>{v ? 'To‘g‘ri' : 'Xato'}</Tag>
+        title: 'XP?',
+        key: 'xp',
+        width: 90,
+        render: (_: unknown, r: XpAnomalySample) => (
+          <Tag color={r.countsForXp ? 'green' : 'default'}>
+            {r.countsForXp ? '+10' : '0'}
+          </Tag>
         ),
       },
       {
-        title: t({ uz: 'Variant', en: 'Option', ru: 'Вариант' }),
-        dataIndex: 'expectedCorrect',
-        key: 'expectedCorrect',
-        width: 100,
-        render: (v: boolean | null) =>
-          v === null ? (
-            <Tag>—</Tag>
-          ) : (
-            <Tag color={v ? 'green' : 'red'}>{v ? 'To‘g‘ri' : 'Xato'}</Tag>
-          ),
+        title: t({ uz: 'Kerak', en: 'Should', ru: 'Должно' }),
+        key: 'should',
+        width: 90,
+        render: (_: unknown, r: XpAnomalySample) => (
+          <Tag color={r.expectedCountsForXp ? 'green' : 'default'}>
+            {r.expectedCountsForXp ? '+10' : '0'}
+          </Tag>
+        ),
       },
       {
         title: t({ uz: 'Sabab', en: 'Reason', ru: 'Причина' }),
@@ -276,15 +285,36 @@ export default function AnomalozPage() {
         </div>
       ) : audit ? (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
             <Stat
-              label={t({ uz: 'Urinishlar', en: 'Attempts', ru: 'Попытки' })}
-              value={audit.scannedAttempts}
+              label={t({ uz: 'Plan bo‘yicha', en: 'In plan', ru: 'По плану' })}
+              value={audit.totalPlanCorrect}
             />
             <Stat
-              label={t({ uz: 'Nomuvofiq ball', en: 'Grade mismatches', ru: 'Расхождения' })}
-              value={audit.mismatchAttempts}
-              warn={audit.mismatchAttempts > 0}
+              label={t({
+                uz: 'Plandan tashqari',
+                en: 'Off-plan',
+                ru: 'Вне плана',
+              })}
+              value={audit.totalOffPlanCorrect}
+              warn={audit.totalOffPlanCorrect > 0}
+            />
+            <Stat
+              label={t({ uz: 'Hozirgi XP', en: 'Current XP', ru: 'Текущий XP' })}
+              value={audit.totalStoredXp}
+            />
+            <Stat
+              label={t({ uz: 'Kerakli XP', en: 'Expected XP', ru: 'Нужный XP' })}
+              value={audit.totalExpectedXp}
+            />
+            <Stat
+              label={t({ uz: 'Ayiriladi', en: 'To remove', ru: 'Снять' })}
+              value={
+                audit.totalOffPlanXpInflated > 0
+                  ? `−${audit.totalOffPlanXpInflated}`
+                  : 0
+              }
+              warn={audit.totalOffPlanXpInflated > 0}
             />
             <Stat
               label={t({ uz: 'Xodimlar', en: 'Users', ru: 'Сотрудники' })}
@@ -292,44 +322,17 @@ export default function AnomalozPage() {
               warn={audit.affectedUsers > 0}
             />
             <Stat
-              label={t({ uz: 'Saqlangan XP', en: 'Stored XP', ru: 'Текущий XP' })}
-              value={audit.totalStoredXp}
-            />
-            <Stat
-              label={t({ uz: 'Kerakli XP', en: 'Expected XP', ru: 'Ожидаемый XP' })}
-              value={audit.totalExpectedXp}
-            />
-            <Stat
-              label="Δ XP"
-              value={audit.xpDelta > 0 ? `+${audit.xpDelta}` : audit.xpDelta}
-              warn={audit.xpDelta !== 0}
+              label={t({ uz: 'Kunlik maqsad', en: 'Daily goal', ru: 'Цель дня' })}
+              value={audit.dailyGoalCorrect}
             />
           </div>
 
-          {(audit.orphanAttempts > 0 || audit.matchingSkipped > 0) && (
-            <Card className="!border-slate-200 dark:!border-slate-700/60">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                {audit.orphanAttempts > 0 && (
-                  <span className="mr-4">
-                    Variant topilmagan / o‘chirilgan: <b>{audit.orphanAttempts}</b> (avto-tuzatilmaydi)
-                  </span>
-                )}
-                {audit.matchingSkipped > 0 && (
-                  <span>
-                    MATCHING savollar: <b>{audit.matchingSkipped}</b> (skip)
-                  </span>
-                )}
-              </p>
-            </Card>
-          )}
-
           {lastFix ? (
-            <Card className="!border-emerald-200 dark:!border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20">
+            <Card className="!border-emerald-200 bg-emerald-50/50 dark:!border-emerald-800/50 dark:bg-emerald-950/20">
               <p className="text-sm text-emerald-800 dark:text-emerald-200">
-                Tuzatildi: grade <b>{lastFix.fixedGradeAttempts}</b>, heart_lost{' '}
-                <b>{lastFix.fixedHeartLostAttempts}</b>. XP: {lastFix.beforeStoredXp} →{' '}
-                {lastFix.afterExpectedXp} (Δ {lastFix.xpDelta > 0 ? '+' : ''}
-                {lastFix.xpDelta}).
+                Tuzatildi: plan bayroqlari <b>{lastFix.fixedPlanFlags}</b>, grade{' '}
+                <b>{lastFix.fixedGradeAttempts}</b>. XP: {lastFix.beforeStoredXp} →{' '}
+                {lastFix.afterExpectedXp} (ayirildi −{lastFix.offPlanXpRemoved}).
               </p>
             </Card>
           ) : null}
