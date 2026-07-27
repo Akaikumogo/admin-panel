@@ -23,26 +23,28 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="flex items-start gap-3 min-w-0">
+      <div className="flex min-w-0 items-start gap-3">
         {Icon ? (
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/15"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground"
             aria-hidden
           >
-            <Icon className="h-5 w-5" />
+            <Icon className="h-5 w-5" strokeWidth={1.75} />
           </div>
         ) : null}
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate">
+          <h1 className="truncate text-xl font-semibold tracking-tight text-foreground text-balance sm:text-2xl">
             {title}
           </h1>
           {description ? (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              {description}
+            </p>
           ) : null}
         </div>
       </div>
       {actions ? (
-        <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
       ) : null}
     </div>
   );

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   ShieldCheck,
   Users,
@@ -6,20 +7,19 @@ import {
   Shield,
   Layers,
   HelpCircle,
-  AlertTriangle
+  AlertTriangle,
+  Home as HomeIcon,
 } from 'lucide-react';
 import {
   Card,
   Button,
   Badge,
-  Row,
-  Col,
   Typography,
   Avatar,
   Skeleton,
   Table,
   Tag,
-  Progress
+  Progress,
 } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
@@ -29,56 +29,77 @@ import type {
   HomeOverview,
   LevelFunnelItem,
   QuestionError,
-  UserProfile
+  UserProfile,
 } from '@/services/api';
 import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
 import { PageHeader } from '@/components/PageHeader';
-import { Home as HomeIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const { Title, Text } = Typography;
 
-const KPI_ICONS = [
-  { key: 'totalUsers', icon: Users, color: 'from-blue-500 to-blue-600' },
-  {
-    key: 'activeUsers7d',
-    icon: Activity,
-    color: 'from-emerald-500 to-teal-600'
-  },
-  {
-    key: 'totalOrganizations',
-    icon: Building2,
-    color: 'from-violet-500 to-purple-600'
-  },
-  {
-    key: 'totalModerators',
-    icon: Shield,
-    color: 'from-amber-500 to-orange-600'
-  },
-  { key: 'totalLevels', icon: Layers, color: 'from-rose-500 to-pink-600' },
-  { key: 'totalQuestions', icon: HelpCircle, color: 'from-cyan-500 to-sky-600' }
-] as const;
+const KPI_META = [
+  { key: 'totalUsers' as const, icon: Users },
+  { key: 'activeUsers7d' as const, icon: Activity },
+  { key: 'totalOrganizations' as const, icon: Building2 },
+  { key: 'totalModerators' as const, icon: Shield },
+  { key: 'totalLevels' as const, icon: Layers },
+  { key: 'totalQuestions' as const, icon: HelpCircle },
+];
 
 const KPI_LABELS: Record<string, { uz: string; en: string; ru: string }> = {
   totalUsers: {
     uz: 'Foydalanuvchilar',
-    en: 'Total Users',
-    ru: 'Пользователей'
+    en: 'Total users',
+    ru: 'Пользователей',
   },
   activeUsers7d: { uz: 'Faol (7 kun)', en: 'Active (7d)', ru: 'Активные (7д)' },
   totalOrganizations: {
     uz: 'Tashkilotlar',
     en: 'Organizations',
-    ru: 'Организации'
+    ru: 'Организации',
   },
   totalModerators: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
   totalLevels: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
-  totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' }
+  totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
 };
+
+function KpiCell({
+  label,
+  value,
+  icon: Icon,
+  loading,
+}: {
+  label: string;
+  value: number | string;
+  icon: typeof Users;
+  loading: boolean;
+}) {
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+          {label}
+        </p>
+        <Icon
+          size={15}
+          strokeWidth={1.75}
+          className="shrink-0 text-[var(--shell-rail)] opacity-80"
+        />
+      </div>
+      {loading ? (
+        <Skeleton.Input active size="small" className="mt-2 !w-16" />
+      ) : (
+        <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums text-foreground">
+          {value}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const { t } = useTranslation();
 
-  // Har bir bo'lim alohida useFetch — biri sekin bo'lsa boshqalari blok bo'lmaydi.
   const { data: me, refetch: refetchMe, initialLoading: meLoading } =
     useFetch<UserProfile | null>(['me'], () => apiService.me(), null);
 
@@ -108,60 +129,69 @@ export default function HomePage() {
       { enabled: ready },
     );
 
-  const { data: funnel, initialLoading: funnelLoading } = useFetch<LevelFunnelItem[]>(
+  const { data: funnel, initialLoading: funnelLoading } = useFetch<
+    LevelFunnelItem[]
+  >(
     ['level-funnel', orgIdForAnalytics],
     () => apiService.getLevelFunnel(orgIdForAnalytics),
     [] as LevelFunnelItem[],
     { enabled: ready },
   );
 
-  const { data: errorQuestions, initialLoading: errorsLoading } =
-    useFetch<QuestionError[]>(
-      ['question-errors', orgIdForAnalytics],
-      () => apiService.getQuestionErrors(orgIdForAnalytics),
-      [] as QuestionError[],
-      { enabled: ready },
-    );
+  const { data: errorQuestions, initialLoading: errorsLoading } = useFetch<
+    QuestionError[]
+  >(
+    ['question-errors', orgIdForAnalytics],
+    () => apiService.getQuestionErrors(orgIdForAnalytics),
+    [] as QuestionError[],
+    { enabled: ready },
+  );
 
-  const errorColumns = [
-    {
-      title: t({ uz: 'Savol', en: 'Question', ru: 'Вопрос' }),
-      dataIndex: 'prompt',
-      key: 'prompt',
-      ellipsis: true,
-      width: '35%'
-    },
-    {
-      title: t({ uz: 'Modul', en: 'Module', ru: 'Модуль' }),
-      dataIndex: 'levelTitle',
-      key: 'levelTitle'
-    },
-    {
-      title: t({ uz: 'Nazariya', en: 'Theory', ru: 'Теория' }),
-      dataIndex: 'theoryTitle',
-      key: 'theoryTitle'
-    },
-    {
-      title: t({ uz: 'Urinishlar', en: 'Attempts', ru: 'Попытки' }),
-      dataIndex: 'totalAttempts',
-      key: 'totalAttempts',
-      width: 100
-    },
-    {
-      title: t({ uz: 'Xatolik %', en: 'Error %', ru: 'Ошибки %' }),
-      dataIndex: 'errorRate',
-      key: 'errorRate',
-      width: 120,
-      render: (val: number) => (
-        <Tag color={val > 50 ? 'red' : val > 30 ? 'orange' : 'green'}>
-          {val}%
-        </Tag>
-      )
-    }
-  ];
+  const errorColumns = useMemo(
+    () => [
+      {
+        title: t({ uz: 'Savol', en: 'Question', ru: 'Вопрос' }),
+        dataIndex: 'prompt',
+        key: 'prompt',
+        ellipsis: true,
+        width: '35%',
+      },
+      {
+        title: t({ uz: 'Modul', en: 'Module', ru: 'Модуль' }),
+        dataIndex: 'levelTitle',
+        key: 'levelTitle',
+      },
+      {
+        title: t({ uz: 'Nazariya', en: 'Theory', ru: 'Теория' }),
+        dataIndex: 'theoryTitle',
+        key: 'theoryTitle',
+      },
+      {
+        title: t({ uz: 'Urinishlar', en: 'Attempts', ru: 'Попытки' }),
+        dataIndex: 'totalAttempts',
+        key: 'totalAttempts',
+        width: 100,
+        render: (v: number) => (
+          <span className="tabular-nums">{v}</span>
+        ),
+      },
+      {
+        title: t({ uz: 'Xatolik %', en: 'Error %', ru: 'Ошибки %' }),
+        dataIndex: 'errorRate',
+        key: 'errorRate',
+        width: 120,
+        render: (val: number) => (
+          <Tag color={val > 50 ? 'red' : val > 30 ? 'orange' : 'green'}>
+            <span className="tabular-nums">{val}%</span>
+          </Tag>
+        ),
+      },
+    ],
+    [t],
+  );
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="space-y-6">
       <PageHeader
         icon={HomeIcon}
         title={t({
@@ -170,283 +200,275 @@ export default function HomePage() {
           ru: `Добро пожаловать${me?.firstName ? `, ${me.firstName}` : ''}`,
         })}
         description={t({
-          uz: 'Elektrolearn boshqaruv paneli — KPI va faollik ko‘rinishi',
-          en: 'Elektrolearn admin dashboard — KPIs and activity',
-          ru: 'Панель Elektrolearn — KPI и активность',
+          uz: 'Kunlik operatsion ko‘rinish — KPI, filial faolligi va xatoliklar',
+          en: 'Daily ops view — KPIs, branch activity, and error hotspots',
+          ru: 'Операционный срез — KPI, активность филиалов и ошибки',
         })}
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {KPI_ICONS.map(({ key, icon: Icon, color }) => (
-          <Card
-            key={key}
-            className="!border-slate-200 dark:!border-slate-700/60"
-            bodyStyle={{ padding: '16px' }}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}
-              >
-                <Icon size={18} className="text-white" />
+      {/* KPI strip — no rainbow cards; divide-y grid */}
+      <section
+        aria-label="KPI"
+        className="overflow-hidden rounded-lg border border-border bg-card"
+      >
+        <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-6">
+          {KPI_META.map(({ key, icon }) => (
+            <KpiCell
+              key={key}
+              label={t(KPI_LABELS[key])}
+              icon={icon}
+              loading={summaryLoading}
+              value={summary?.[key] ?? 0}
+            />
+          ))}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <Card
+          className="xl:col-span-8 !border-border !shadow-none"
+          title={
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <Activity size={15} strokeWidth={1.75} className="text-[var(--shell-rail)]" />
+              {t({
+                uz: 'Filial bo‘yicha faollik (12 hafta)',
+                en: 'Branch activity (12 weeks)',
+                ru: 'Активность филиалов (12 недель)',
+              })}
+            </span>
+          }
+          extra={
+            <span className="text-xs text-muted-foreground">
+              {homeOverview?.scopeLabel}
+            </span>
+          }
+        >
+          {homeOverviewLoading ? (
+            <Skeleton active paragraph={{ rows: 6 }} />
+          ) : (
+            <BranchActivityHeatmap rows={homeOverview?.branchHeatmap ?? []} />
+          )}
+        </Card>
+
+        <div className="flex flex-col gap-4 xl:col-span-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
+                <Building2 size={16} strokeWidth={1.75} />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {t(KPI_LABELS[key])}
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  {t({
+                    uz: 'Eng aktiv filial (7 kun)',
+                    en: 'Most active branch (7d)',
+                    ru: 'Самый активный филиал (7д)',
+                  })}
                 </p>
-                {summaryLoading ? (
-                  <Skeleton.Input active size="small" style={{ width: 60 }} />
+                {homeOverviewLoading ? (
+                  <Skeleton.Input active size="small" className="mt-2 !w-40" />
+                ) : homeOverview?.mostActiveBranch ? (
+                  <>
+                    <p className="mt-1 text-sm font-semibold leading-snug text-foreground">
+                      {homeOverview.mostActiveBranch.isDefault ? '★ ' : null}
+                      {homeOverview.mostActiveBranch.orgName}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                      {homeOverview.mostActiveBranch.value} ta login
+                    </p>
+                  </>
                 ) : (
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">
-                    {summary?.[key as keyof AnalyticsSummary] ?? 0}
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t({
+                      uz: 'Maʼlumot yoʻq',
+                      en: 'No data',
+                      ru: 'Нет данных',
+                    })}
                   </p>
                 )}
               </div>
             </div>
-          </Card>
-        ))}
+          </div>
+
+          <div className="flex-1 rounded-lg border border-border bg-card p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <AlertTriangle
+                size={15}
+                strokeWidth={1.75}
+                className="text-destructive"
+              />
+              {t({
+                uz: 'Eng ko‘p xato (30 kun)',
+                en: 'Most errors (30d)',
+                ru: 'Больше всего ошибок (30д)',
+              })}
+            </div>
+            {homeOverviewLoading ? (
+              <Skeleton active paragraph={{ rows: 3 }} />
+            ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
+              <p className="py-2 text-sm text-muted-foreground">
+                {t({
+                  uz: 'Maʼlumot yoʻq',
+                  en: 'No data',
+                  ru: 'Нет данных',
+                })}
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {(homeOverview?.topErrorBranches ?? []).map((row, idx) => (
+                  <li
+                    key={row.orgId}
+                    className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        #{idx + 1}
+                      </span>
+                      <p className="truncate text-sm font-medium">
+                        {row.isDefault ? (
+                          <span className="mr-1 text-amber-600 dark:text-amber-400">
+                            ★
+                          </span>
+                        ) : null}
+                        {row.orgName}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded bg-destructive/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-destructive">
+                      {row.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
-          <Card
-            title={
-              <span className="flex items-center gap-2">
-                <Activity size={16} />
-                {t({
-                  uz: 'Filial bo‘yicha faollik (12 hafta)',
-                  en: 'Branch activity (12 weeks)',
-                  ru: 'Активность филиалов (12 недель)',
-                })}
-              </span>
-            }
-            extra={
-              <span className="text-xs text-slate-500">
-                {homeOverview?.scopeLabel}
-              </span>
-            }
-            className="!border-slate-200 dark:!border-slate-700/60"
-          >
-            {homeOverviewLoading ? (
-              <Skeleton active paragraph={{ rows: 6 }} />
-            ) : (
-              <BranchActivityHeatmap rows={homeOverview?.branchHeatmap ?? []} />
-            )}
-          </Card>
-        </Col>
-
-        <Col xs={24} xl={8}>
-          <div className="space-y-4">
-            <Card
-              className="!border-slate-200 dark:!border-slate-700/60"
-              bodyStyle={{ padding: '18px' }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                  <Building2 size={18} className="text-white" />
-                </div>
-                <div>
-                  <Text className="text-slate-500 text-xs block mb-1">
-                    {t({
-                      uz: 'Eng aktiv filial (7 kun)',
-                      en: 'Most active branch (7d)',
-                      ru: 'Самый активный филиал (7д)',
-                    })}
-                  </Text>
-                  {homeOverviewLoading ? (
-                    <Skeleton.Input active size="small" style={{ width: 180 }} />
-                  ) : homeOverview?.mostActiveBranch ? (
-                    <>
-                      <div className="font-semibold text-slate-900 dark:text-white text-sm leading-snug">
-                        {homeOverview.mostActiveBranch.isDefault && '★ '}
-                        {homeOverview.mostActiveBranch.orgName}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {homeOverview.mostActiveBranch.value} ta login
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-sm text-slate-400">Ma&apos;lumot yo&apos;q</div>
-                  )}
-                </div>
-              </div>
-            </Card>
-
-            <Card
-              title={
-                <span className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                  <AlertTriangle size={15} />
-                  {t({
-                    uz: 'Eng ko‘p xato (30 kun, filial)',
-                    en: 'Most errors by branch (30d)',
-                    ru: 'Больше всего ошибок (30д)',
-                  })}
-                </span>
-              }
-              className="!border-slate-200 dark:!border-slate-700/60"
-              bodyStyle={{ padding: '12px 16px' }}
-            >
-              {homeOverviewLoading ? (
-                <Skeleton active paragraph={{ rows: 3 }} />
-              ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
-                <div className="text-sm text-slate-400 py-2">Ma&apos;lumot yo&apos;q</div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                {t({ uz: 'Profil', ru: 'Профиль', en: 'Profile' })}
+              </p>
+              {meLoading ? (
+                <Skeleton active title={false} paragraph={{ rows: 2 }} />
               ) : (
-                <div className="space-y-3">
-                  {(homeOverview?.topErrorBranches ?? []).map((row, idx) => (
-                    <div
-                      key={row.orgId}
-                      className="flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs text-slate-400">#{idx + 1}</div>
-                        <div className="text-sm font-medium truncate">
-                          {row.isDefault && (
-                            <span className="text-amber-500 mr-1">★</span>
-                          )}
-                          {row.orgName}
-                        </div>
-                      </div>
-                      <Tag color="red">{row.value}</Tag>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <Title level={4} className="!mb-0 !mt-1 !text-base">
+                    {me?.firstName} {me?.lastName}
+                  </Title>
+                  <Text className="text-muted-foreground text-sm">
+                    {me?.email} · {me?.role}
+                  </Text>
+                </>
               )}
-            </Card>
+            </div>
+            <Avatar
+              size={44}
+              className="!rounded-md"
+              style={{ backgroundColor: 'var(--primary)' }}
+              icon={<ShieldCheck size={20} />}
+            />
           </div>
-        </Col>
-      </Row>
+        </div>
 
-      <Row gutter={[16, 16]}>
-        {/* Profile Card */}
-        <Col xs={24} lg={12}>
-          <Card
-            className="!border-slate-200 dark:!border-slate-700/60"
-            bodyStyle={{ padding: '20px' }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <Text className="text-slate-500 dark:text-slate-400 text-sm">
-                  {t({ uz: 'Profil', ru: 'Профиль', en: 'Profile' })}
-                </Text>
-                {meLoading ? (
-                  <Skeleton active title={false} paragraph={{ rows: 2 }} />
-                ) : (
-                  <>
-                    <Title level={4} className="!mb-0 !mt-1">
-                      {me?.firstName} {me?.lastName}
-                    </Title>
-                    <Text className="text-slate-500">
-                      {me?.email} • {me?.role}
-                    </Text>
-                  </>
-                )}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                {t({
+                  uz: 'Ruxsat holati',
+                  ru: 'Права доступа',
+                  en: 'Permissions',
+                })}
+              </p>
+              <div className="mt-2">
+                <Badge
+                  color="green"
+                  text={
+                    me?.role === 'SUPERADMIN'
+                      ? adminPing?.message || 'OK'
+                      : 'Limited'
+                  }
+                />
               </div>
-              <Avatar
-                size={48}
-                style={{ backgroundColor: '#3b82f6' }}
-                icon={<ShieldCheck size={24} />}
-              />
             </div>
-          </Card>
-        </Col>
+            {me?.role === 'SUPERADMIN' ? (
+              <Button type="primary" onClick={() => void refetchMe()}>
+                {t({ uz: 'Yangilash', ru: 'Обновить', en: 'Refresh' })}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
 
-        {/* Permissions Card */}
-        <Col xs={24} lg={12}>
-          <Card
-            className="!border-slate-200 dark:!border-slate-700/60"
-            bodyStyle={{ padding: '20px' }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <Text className="text-slate-500 dark:text-slate-400 text-sm">
-                  {t({
-                    uz: 'Permission holati',
-                    ru: 'Права доступа',
-                    en: 'Permissions'
-                  })}
-                </Text>
-                <div className="mt-2">
-                  <Badge
-                    color="blue"
-                    text={
-                      me?.role === 'SUPERADMIN'
-                        ? adminPing?.message || 'OK'
-                        : 'Limited'
-                    }
-                    className="text-xs"
-                  />
-                </div>
-              </div>
-              {me?.role === 'SUPERADMIN' ? (
-                <Button type="primary" onClick={() => refetchMe()}>
-                  {t({ uz: 'Yangilash', ru: 'Обновить', en: 'Refresh' })}
-                </Button>
-              ) : null}
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Level Funnel */}
       {(funnelLoading || (funnel?.length ?? 0) > 0) && (
         <Card
           title={
-            <span className="flex items-center gap-2">
-              <Layers size={16} />
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <Layers size={15} strokeWidth={1.75} className="text-[var(--shell-rail)]" />
               {t({
                 uz: 'Modul funnel',
-                en: 'Module Funnel',
-                ru: 'Воронка модулей'
+                en: 'Module funnel',
+                ru: 'Воронка модулей',
               })}
             </span>
           }
-          className="!border-slate-200 dark:!border-slate-700/60"
+          className="!border-border !shadow-none"
         >
           {funnelLoading ? (
             <Skeleton active paragraph={{ rows: 4 }} />
           ) : (
-          <div className="space-y-3">
-            {funnel.map((item) => {
-              const pct =
-                item.totalStarted > 0
-                  ? Math.round((item.totalCompleted / item.totalStarted) * 100)
-                  : 0;
-              return (
-                <div key={item.levelId} className="flex items-center gap-4">
-                  <div className="w-48 truncate font-medium text-sm text-slate-700 dark:text-slate-300">
-                    #{item.orderIndex + 1} {item.levelTitle}
+            <div className="space-y-3">
+              {funnel.map((item) => {
+                const pct =
+                  item.totalStarted > 0
+                    ? Math.round(
+                        (item.totalCompleted / item.totalStarted) * 100,
+                      )
+                    : 0;
+                return (
+                  <div
+                    key={item.levelId}
+                    className="flex items-center gap-4"
+                  >
+                    <div className="w-48 truncate text-sm font-medium text-foreground">
+                      #{item.orderIndex + 1} {item.levelTitle}
+                    </div>
+                    <Progress
+                      percent={pct}
+                      size="small"
+                      className="flex-1"
+                      strokeColor="var(--primary)"
+                    />
+                    <div
+                      className={cn(
+                        'w-28 text-right text-xs text-muted-foreground tabular-nums',
+                      )}
+                    >
+                      {item.totalCompleted}/{item.totalStarted} ({pct}%)
+                    </div>
                   </div>
-                  <Progress
-                    percent={pct}
-                    size="small"
-                    className="flex-1"
-                    strokeColor={{ from: '#3b82f6', to: '#06b6d4' }}
-                  />
-                  <div className="text-xs text-slate-500 dark:text-slate-400 w-28 text-right">
-                    {item.totalCompleted}/{item.totalStarted} ({pct}%)
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           )}
         </Card>
       )}
 
-      {/* Error Questions */}
       {(errorsLoading || (errorQuestions?.length ?? 0) > 0) && (
         <Card
           title={
-            <span className="flex items-center gap-2 text-red-600 dark:text-red-400">
-              <AlertTriangle size={16} />
+            <span className="flex items-center gap-2 text-sm font-semibold text-destructive">
+              <AlertTriangle size={15} strokeWidth={1.75} />
               {t({
-                uz: 'Eng ko`p xato qilingan savollar',
-                en: 'Most Error-Prone Questions',
-                ru: 'Вопросы с наибольшим числом ошибок'
+                uz: 'Eng ko‘p xato qilingan savollar',
+                en: 'Most error-prone questions',
+                ru: 'Вопросы с наибольшим числом ошибок',
               })}
             </span>
           }
-          className="!border-slate-200 dark:!border-slate-700/60"
+          className="!border-border !shadow-none"
         >
           {errorsLoading ? (
             <Skeleton active paragraph={{ rows: 4 }} />

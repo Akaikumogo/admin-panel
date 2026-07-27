@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
 import {
   Home,
   LogOut,
-  Zap,
   User,
   Shield,
   ScrollText,
@@ -34,6 +32,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
 import { fmtHeaderDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { Button, Select, Spin } from '@/components/ui';
 import { Sidebar, type NavGroup, type NavItem } from './SideBar';
 import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
@@ -363,220 +362,175 @@ const Layout = () => {
 
   if (meLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex min-h-dvh items-center justify-center bg-background">
         <Spin size="large" />
       </div>
     );
   }
 
+  const clearSessionAndLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('user');
+    userActivitySocket.disconnect();
+    navigate('/login');
+  };
+
   return (
-    <div className="min-h-screen">
-      <div className="min-h-screen bg-background transition-colors duration-300">
-        <div className="flex min-h-screen w-screen">
-          {/* Sidebar */}
-          <aside
-            style={{ width: isCollapsed ? 100 : 340 }}
-            className="row-span-2 w-full h-screen max-h-screen shrink-0 flex flex-col overflow-hidden bg-card/80 backdrop-blur-sm border-r border-border transition-all duration-300"
+    <div className="flex min-h-dvh bg-background">
+      <aside
+        className={cn(
+          'sticky top-0 flex h-dvh shrink-0 flex-col border-r border-border bg-[var(--shell-sidebar)] transition-[width] duration-300 ease-out',
+          isCollapsed ? 'w-[72px]' : 'w-[272px]',
+        )}
+      >
+        <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className={cn(
+              'flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors',
+              'hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              isCollapsed && 'justify-center px-0',
+            )}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <div className="flex flex-col h-full min-h-0 w-full">
-              {/* Logo */}
-              <div className="h-18 w-full shrink-0 flex items-center justify-center px-6 border-b border-border">
-                <AnimatePresence mode="popLayout">
-                  <div className="w-full flex items-center justify-start">
-                    <motion.div
-                      key="expanded-logo"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={toggleSidebar}
-                      layout
-                    >
-                      <motion.div
-                        layoutId="c"
-                        className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary dark:bg-slate-700 dark:border dark:border-slate-600/50"
-                      >
-                        <motion.span className="text-white dark:text-slate-200 font-bold text-lg">
-                          <Zap
-                            className="font-extrabold text-2xl text-blue-100 dark:text-slate-300"
-                          />
-                        </motion.span>
-                      </motion.div>
-                      {!isCollapsed && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.6 }}
-                          className="flex flex-col overflow-auto"
-                        >
-                          <h1 className="min-w-[200px] font-bold text-lg text-slate-900 dark:text-white">
-                            Elektrolearn
-                          </h1>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            Admin Panel
-                          </p>
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  </div>
-                </AnimatePresence>
-              </div>
-
-              {/* Navigation */}
-              <Sidebar navGroups={visibleNavGroups} isCollapsed={isCollapsed} />
-
-              {/* Logout */}
-              <div className="p-4 min-h-[50px] shrink-0">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-black/45">
-                  <button
-                    onClick={() => {
-                      localStorage.removeItem('token');
-                      localStorage.removeItem('isLoggedIn');
-                      localStorage.removeItem('user');
-                      navigate('/login');
-                    }}
-                    style={{
-                      justifyContent: isCollapsed ? 'center' : 'flex-start'
-                    }}
-                    className="flex items-center gap-2 text-sm font-semibold transition-colors duration-200 w-full"
-                  >
-                    <LogOut size={20} className="dark:text-slate-300" />
-                    {!isCollapsed && (
-                      <motion.span
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="font-medium whitespace-nowrap overflow-hidden z-10 dark:text-slate-300 text-slate-600"
-                      >
-                        {t({
-                          uz: 'Chiqish',
-                          en: 'Logout',
-                          ru: 'Выход'
-                        })}
-                      </motion.span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          <div className="w-full">
-            {/* Header */}
-            <header
-              className="h-18 bg-white/80 dark:bg-[#121314]/80 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-700/60"
-              style={{
-                transition: 'margin-left 0.3s ease-in-out'
-              }}
-            >
-              <div className="flex items-center justify-between px-8 h-full">
-                {/* Left Section */}
-                <div className="flex items-center gap-6 min-w-0">
-                  <div className="min-w-0">
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white truncate">
-                      {t(getCurrentPageTitle())}
-                    </h1>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {getCurrentDate()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right Section */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <Button
-                    type="default"
-                    size="large"
-                    onClick={toggleFullscreen}
-                    title={t({
-                      uz: isFullscreen
-                        ? 'To‘liq ekrandan chiqish'
-                        : 'To‘liq ekran',
-                      en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
-                      ru: isFullscreen
-                        ? 'Выйти из полноэкранного режима'
-                        : 'Полный экран'
-                    })}
-                    aria-label={t({
-                      uz: isFullscreen
-                        ? 'To‘liq ekrandan chiqish'
-                        : 'To‘liq ekran',
-                      en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
-                      ru: isFullscreen
-                        ? 'Выйти из полноэкранного режима'
-                        : 'Полный экран'
-                    })}
-                    icon={
-                      isFullscreen ? (
-                        <Minimize2 size={16} strokeWidth={2} />
-                      ) : (
-                        <Maximize2 size={16} strokeWidth={2} />
-                      )
-                    }
-                  />
-                  <ThemeToggle />
-                  <Select
-                    value={lang}
-                    style={{ width: 150 }}
-                    size="large"
-                    prefix={<Languages />}
-                    onChange={(value) => setLang(value as typeof lang)}
-                    options={[
-                      { value: 'en', label: 'English' },
-                      { value: 'ru', label: 'Русский' },
-                      { value: 'uz', label: "O'zbekcha" },
-                      { value: 'uz-cyrl', label: 'Ўзбекча' }
-                    ]}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => navigate('/dashboard/profile')}
-                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-black/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
-                  >
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white leading-tight">
-                        {me ? `${me.firstName} ${me.lastName}` : '---'}
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        {me?.role || ''}
-                      </p>
-                    </div>
-                    <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
-                      {me?.avatarUrl ? (
-                        <img
-                          src={`${BACKEND_ORIGIN}${me.avatarUrl}`}
-                          alt="avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center rounded-full bg-primary">
-                          <span className="text-white font-bold text-xs tracking-wide select-none">
-                            {initials}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </header>
-            {/* Main Content */}
-            <main className="overflow-y-auto bg-background">
-              <div className="p-2 grid grid-cols-1 grid-row-1">
-                <div className="col-span-1 row-span-1 rounded-lg w-full h-[calc(100vh-100px)]">
-                  <AnimatePresence mode="sync">
-                    {me?.role !== 'USER' && !isModeratorForbiddenRoute ? (
-                      <Outlet />
-                    ) : null}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </main>
-          </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold tracking-tight">
+              EL
+            </span>
+            {!isCollapsed && (
+              <span className="min-w-0">
+                <span className="block truncate text-[15px] font-semibold tracking-tight text-foreground">
+                  Elektrolearn
+                </span>
+                <span className="block text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Admin
+                </span>
+              </span>
+            )}
+          </button>
         </div>
+
+        <Sidebar navGroups={visibleNavGroups} isCollapsed={isCollapsed} />
+
+        <div className="shrink-0 border-t border-border p-3">
+          <button
+            type="button"
+            onClick={clearSessionAndLogout}
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors',
+              'hover:bg-muted hover:text-foreground active:scale-[0.98]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              isCollapsed && 'justify-center px-2',
+            )}
+          >
+            <LogOut size={18} strokeWidth={1.75} />
+            {!isCollapsed && (
+              <span>
+                {t({ uz: 'Chiqish', en: 'Logout', ru: 'Выход' })}
+              </span>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-card/90 px-5 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
+              {t(getCurrentPageTitle())}
+            </h1>
+            <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+              {getCurrentDate()}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="default"
+              size="middle"
+              onClick={toggleFullscreen}
+              title={t({
+                uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
+                ru: isFullscreen
+                  ? 'Выйти из полноэкранного режима'
+                  : 'Полный экран',
+              })}
+              aria-label={t({
+                uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
+                ru: isFullscreen
+                  ? 'Выйти из полноэкранного режима'
+                  : 'Полный экран',
+              })}
+              icon={
+                isFullscreen ? (
+                  <Minimize2 size={15} strokeWidth={1.75} />
+                ) : (
+                  <Maximize2 size={15} strokeWidth={1.75} />
+                )
+              }
+            />
+            <ThemeToggle />
+            <Select
+              value={lang}
+              className="w-[132px]"
+              size="middle"
+              prefix={<Languages size={14} />}
+              onChange={(value) => setLang(value as typeof lang)}
+              options={[
+                { value: 'en', label: 'English' },
+                { value: 'ru', label: 'Русский' },
+                { value: 'uz', label: "O'zbekcha" },
+                { value: 'uz-cyrl', label: 'Ўзбекча' },
+              ]}
+            />
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/profile')}
+              className={cn(
+                'flex items-center gap-2.5 rounded-md border border-border bg-background px-2 py-1 transition-colors',
+                'hover:bg-muted/80 active:scale-[0.98]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              )}
+            >
+              <div className="hidden text-right sm:block">
+                <p className="text-sm font-medium leading-tight text-foreground">
+                  {me ? `${me.firstName} ${me.lastName}` : '—'}
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  {me?.role || ''}
+                </p>
+              </div>
+              <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-primary">
+                {me?.avatarUrl ? (
+                  <img
+                    src={`${BACKEND_ORIGIN}${me.avatarUrl}`}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <span className="select-none text-[11px] font-semibold tracking-wide text-primary-foreground">
+                      {initials}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </button>
+          </div>
+        </header>
+
+        <main className="min-h-0 flex-1 overflow-y-auto bg-background">
+          <div className="mx-auto w-full max-w-[1440px] p-4 md:p-6">
+            {me?.role !== 'USER' && !isModeratorForbiddenRoute ? (
+              <Outlet />
+            ) : null}
+          </div>
+        </main>
       </div>
     </div>
   );
