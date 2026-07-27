@@ -13,6 +13,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Trophy,
   Wifi,
   Plus,
   BookOpen,
