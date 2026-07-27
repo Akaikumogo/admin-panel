@@ -14,14 +14,15 @@ import {
 } from '@/components/ui';
 import type { ColumnsType } from '@/components/ui';
 import {
-  Plus,
   Pencil,
   Trash2,
   Building2,
   Search,
   Star,
   Eye,
+  RefreshCw,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
@@ -77,6 +78,16 @@ const T = {
   actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
   view: { uz: 'Batafsil', en: 'Details', ru: 'Подробнее' },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
+  energoSyncHint: {
+    uz: 'Tashkilotlar Energo ID dan keladi. Yangilash uchun ENERGO ID sahifasida sync qiling.',
+    en: 'Organizations come from Energo ID. Run sync on the ENERGO ID page to refresh.',
+    ru: 'Организации из Energo ID. Обновите через sync на странице ENERGO ID.',
+  },
+  openEnergoId: {
+    uz: 'ENERGO ID sync',
+    en: 'ENERGO ID sync',
+    ru: 'ENERGO ID sync',
+  },
 } as const;
 
 const QP_DEFAULTS = { search: undefined } as const;
@@ -239,18 +250,27 @@ const Organizations = () => {
               size="small"
               icon={<Pencil size={14} />}
               onClick={() => openModal(org)}
-              disabled={!can('organizations', 'update')}
+              disabled={
+                !can('organizations', 'update') ||
+                Boolean(org.energoBranchId || org.energoExternalId)
+              }
             />
             <Popconfirm
               title={t(T.deleteConfirm)}
               onConfirm={() => handleDelete(org.id)}
-              disabled={!can('organizations', 'delete')}
+              disabled={
+                !can('organizations', 'delete') ||
+                Boolean(org.energoBranchId || org.energoExternalId)
+              }
             >
               <Button
                 size="small"
                 danger
                 icon={<Trash2 size={14} />}
-                disabled={!can('organizations', 'delete')}
+                disabled={
+                  !can('organizations', 'delete') ||
+                  Boolean(org.energoBranchId || org.energoExternalId)
+                }
               />
             </Popconfirm>
           </div>
@@ -266,21 +286,18 @@ const Organizations = () => {
         icon={Building2}
         title={t(T.title)}
         description={t({
-          uz: 'Filiallar va tashkilotlar boshqaruvi',
-          en: 'Manage branches and organizations',
-          ru: 'Управление филиалами и организациями',
+          uz: 'Energo ID filiallari — ro‘yxat sinxronizatsiyadan keladi',
+          en: 'Energo ID branches — list is synced from Energo ID',
+          ru: 'Филиалы Energo ID — список из синхронизации',
         })}
         actions={
-          <Button
-            type="primary"
-            icon={<Plus size={16} />}
-            onClick={() => openModal()}
-            disabled={!can('organizations', 'create')}
-          >
-            {t(T.addOrg)}
+          <Button type="primary" icon={<RefreshCw size={16} />} asChild>
+            <Link to="/dashboard/nes-sync">{t(T.openEnergoId)}</Link>
           </Button>
         }
       />
+
+      <p className="text-sm text-muted-foreground">{t(T.energoSyncHint)}</p>
 
       <FilterBar>
         <Input
