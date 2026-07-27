@@ -20,6 +20,7 @@ import {
   Flame,
   Star,
   Upload,
+  CalendarDays,
 } from 'lucide-react';
 import {
   Card,
@@ -40,14 +41,17 @@ import type {
   DailyTrend,
   HomeOverview,
   LevelFunnelItem,
+  MonthlyPlanMatrix,
   QuestionError,
   UserProfile,
 } from '@/services/api';
 import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
 import { MiniSparkline } from './Home/MiniSparkline';
 import { formatDelta, shortBranchName } from './Home/branchName';
+import { PlanMatrixTable } from './Reports/PlanMatrixTable';
 import { PageHeader } from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
+import { todayStr } from './Analytics/analytics-utils';
 
 const { Title, Text } = Typography;
 
@@ -300,6 +304,30 @@ export default function HomePage() {
     { enabled: ready },
   );
 
+  const homeMonth = todayStr().slice(0, 7);
+  const homeToday = todayStr();
+
+  const emptyHomeMatrix: MonthlyPlanMatrix = {
+    orgId: '',
+    orgName: '',
+    month: homeMonth,
+    daysInMonth: 30,
+    dailyGoalCorrect: 10,
+    days: [],
+    totalEmployees: 0,
+    averageMonthlyPercent: 0,
+    fullCompletedEmployees: 0,
+    employees: [],
+  };
+
+  const { data: planMatrix, initialLoading: planMatrixLoading } =
+    useFetch<MonthlyPlanMatrix>(
+      ['home-plan-matrix', homeMonth],
+      () => apiService.getMonthlyPlanMatrix({ month: homeMonth }),
+      emptyHomeMatrix,
+      { enabled: ready },
+    );
+
   const insight = homeOverview?.insight;
   const weekSpark = useMemo(() => {
     const rows = homeOverview?.branchHeatmap ?? [];
@@ -505,6 +533,35 @@ export default function HomePage() {
             );
           })}
         </div>
+      </Card>
+
+      <Card
+        className="!border-border !shadow-none"
+        title={
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <CalendarDays
+              size={15}
+              strokeWidth={1.75}
+              className="text-[var(--shell-rail)]"
+            />
+            {t({
+              uz: 'Xodimlar — kunlik reja (joriy oy)',
+              en: 'Employees — daily plan (this month)',
+              ru: 'Сотрудники — дневной план (текущий месяц)',
+            })}
+          </span>
+        }
+      >
+        {planMatrixLoading ? (
+          <Skeleton active paragraph={{ rows: 8 }} />
+        ) : (
+          <PlanMatrixTable
+            data={planMatrix}
+            highlightDate={homeToday}
+            reportsHref="/dashboard/reports"
+            pageSize={30}
+          />
+        )}
       </Card>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
