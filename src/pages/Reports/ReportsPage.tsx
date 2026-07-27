@@ -233,6 +233,79 @@ export default function ReportsPage() {
     return list;
   }, [planMatrix.employees, employeeFilter]);
 
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      if (planMode === 'daily') {
+        const scope = orgFilter ? 'filial' : 'barcha';
+        await apiService.downloadDailyReportExcel({
+          date,
+          orgId: orgFilter || undefined,
+          filename: `kunlik-${date}-${scope}.xlsx`,
+        });
+      } else if (planMode === 'monthly') {
+        const scope = orgFilter ? 'filial' : 'barcha';
+        await apiService.downloadMonthlyReportExcel({
+          month,
+          orgId: orgFilter || undefined,
+          filename: `oylik-${month}-${scope}.xlsx`,
+        });
+      } else if (orgFilter) {
+        const safe = (planMatrix.orgName || 'filial').replace(/[^\w\-]+/g, '_');
+        await apiService.downloadMonthlyPlanMatrixExcel({
+          orgId: orgFilter,
+          month,
+          filename: `${month}_${safe}_oylik_reja.xlsx`,
+        });
+      } else {
+        message.warning(
+          t({
+            uz: 'Filial Excel uchun avval filialni tanlang',
+            en: 'Select a branch first for plan Excel',
+            ru: 'Сначала выберите филиал',
+          }),
+        );
+      }
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Yuklab olishda xato');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleSubmitBranchExcel = async (file: File) => {
+    setUploadingReport(true);
+    try {
+      const created = await apiService.uploadReportSubmission(file);
+      if (created.integrityStatus === 'tampered') {
+        const who = created.uploadedBy
+          ? `${created.uploadedBy.lastName} ${created.uploadedBy.firstName}`.trim() ||
+            created.uploadedBy.email
+          : 'noma’lum';
+        message.warning(
+          t({
+            uz: `Hisobot yuklandi, lekin Excel qo‘lda o‘zgartirilgan. Yuklagan: ${who}. ID: ${created.id}`,
+            en: `Uploaded, but Excel was manually altered. Uploader: ${who}. ID: ${created.id}`,
+            ru: `Загружено, но Excel изменён вручную. Загрузил: ${who}. ID: ${created.id}`,
+          }),
+        );
+      } else {
+        message.success(
+          t({
+            uz: `Hisobot yuborildi. ID: ${created.id}`,
+            en: `Report submitted. ID: ${created.id}`,
+            ru: `Отчёт отправлен. ID: ${created.id}`,
+          }),
+        );
+      }
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Yuklashda xato');
+    } finally {
+      setUploadingReport(false);
+    }
+    return false;
+  };
+
   return (
     <div>
       <PageHeader
