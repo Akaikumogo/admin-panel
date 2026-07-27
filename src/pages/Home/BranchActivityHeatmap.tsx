@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 const levelColor = (count: number, max: number) => {
   if (count <= 0 || max <= 0) return 'bg-muted';
   const ratio = count / max;
-  if (ratio >= 0.75) return 'bg-teal-500';
-  if (ratio >= 0.5) return 'bg-teal-400/90';
-  if (ratio >= 0.25) return 'bg-teal-300/80 dark:bg-teal-700/70';
-  return 'bg-teal-200/70 dark:bg-teal-900/50';
+  if (ratio >= 0.75) return 'bg-blue-500';
+  if (ratio >= 0.5) return 'bg-blue-400/90';
+  if (ratio >= 0.25) return 'bg-blue-300/80 dark:bg-blue-700/70';
+  return 'bg-blue-200/70 dark:bg-blue-900/50';
 };
 
 interface Props {

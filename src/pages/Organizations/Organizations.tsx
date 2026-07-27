@@ -170,7 +170,7 @@ const Organizations = () => {
         key: 'name',
         render: (_: unknown, org: Organization) => (
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
               <Building2 size={16} className="text-white" />
             </div>
             <div className="min-w-0">
