@@ -214,8 +214,13 @@ const Levels = () => {
   const fetchQuestions = useCallback(async (theoryId: string) => {
     try {
       const res = await apiService.getQuestions({ theoryId, limit: 100 });
-      setQuestions((prev) => ({ ...prev, [theoryId]: res.data }));
-    } catch { /* empty */ }
+      setQuestions((prev) => ({
+        ...prev,
+        [theoryId]: Array.isArray(res?.data) ? res.data : [],
+      }));
+    } catch {
+      setQuestions((prev) => ({ ...prev, [theoryId]: [] }));
+    }
   }, []);
 
   useEffect(() => {

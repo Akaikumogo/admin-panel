@@ -63,17 +63,49 @@ export function Collapse({
   onChange?: (key: string | string[]) => void;
   className?: string;
 }) {
-  void accordion;
   void ghost;
-  void onChange;
   const defaultValue = Array.isArray(defaultActiveKey)
     ? defaultActiveKey
     : defaultActiveKey
       ? [defaultActiveKey]
       : [];
 
+  const handleValueChange = (value: string | string[]) => {
+    if (!onChange) return;
+    if (accordion) {
+      const next = Array.isArray(value) ? value[0] ?? '' : value;
+      onChange(next);
+      return;
+    }
+    onChange(value);
+  };
+
+  if (accordion) {
+    return (
+      <Accordion
+        type="single"
+        collapsible
+        defaultValue={defaultValue[0]}
+        onValueChange={handleValueChange}
+        className={cn('rounded-xl border px-4', className)}
+      >
+        {items.map((item) => (
+          <AccordionItem key={item.key} value={item.key}>
+            <AccordionTrigger>{item.label}</AccordionTrigger>
+            <AccordionContent>{item.children}</AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  }
+
   return (
-    <Accordion type="multiple" defaultValue={defaultValue} className={cn('rounded-xl border px-4', className)}>
+    <Accordion
+      type="multiple"
+      defaultValue={defaultValue}
+      onValueChange={handleValueChange}
+      className={cn('rounded-xl border px-4', className)}
+    >
       {items.map((item) => (
         <AccordionItem key={item.key} value={item.key}>
           <AccordionTrigger>{item.label}</AccordionTrigger>
