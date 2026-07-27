@@ -259,10 +259,15 @@ export default function ExecutiveDashboard() {
   );
 
   const filteredBranches = useMemo(() => {
-    let list = ranking.branches;
+    let list = ranking.branches.filter((b) => !b.isDefault);
     if (orgId) list = list.filter((b) => b.orgId === orgId);
     return list;
   }, [ranking.branches, orgId]);
+
+  const rankingAllBranches = useMemo(
+    () => [...filteredBranches].sort((a, b) => b.percent - a.percent || a.orgName.localeCompare(b.orgName)),
+    [filteredBranches],
+  );
 
   const top10 = useMemo(() => filteredBranches.slice(0, 10), [filteredBranches]);
   const bottom5 = useMemo(
