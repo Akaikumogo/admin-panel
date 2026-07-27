@@ -525,7 +525,7 @@ const Layout = () => {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto bg-background">
-          <div className="mx-auto w-full max-w-[1440px] p-4 md:p-6">
+          <div className="w-full p-2 md:p-2">
             {me?.role !== 'USER' && !isModeratorForbiddenRoute ? (
               <Outlet />
             ) : null}
