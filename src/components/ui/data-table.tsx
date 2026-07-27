@@ -435,7 +435,7 @@ export function DataTable<T extends Record<string, unknown>>({
             scroll?.x ? 'min-w-max table-auto' : 'min-w-full table-fixed',
           )}
         >
-          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-sm dark:bg-[#111318]/p>
+          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-sm dark:bg-[#111318]">
             {groupedHeaders ? (
               <>
                 <TableRow className="border-border hover:bg-transparent">
