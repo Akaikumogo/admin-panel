@@ -435,7 +435,7 @@ export function DataTable<T extends Record<string, unknown>>({
             scroll?.x ? 'min-w-max table-auto' : 'min-w-full table-fixed',
           )}
         >
-          <TableHeader className="bg-muted/50 dark:bg-[#111318]">
+          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-sm dark:bg-[#111318]/p>
             {groupedHeaders ? (
               <>
                 <TableRow className="border-border hover:bg-transparent">
@@ -582,6 +582,8 @@ export function DataTable<T extends Record<string, unknown>>({
                     style={rowProps.style}
                     className={cn(
                       'border-border dark:border-slate-800 dark:hover:bg-[#151820]',
+                      row.index % 2 === 1 && 'bg-muted/20 dark:bg-white/[0.02]',
+                      'hover:bg-muted/45 dark:hover:bg-[#151820]',
                       rowProps.onClick && 'cursor-pointer',
                     )}
                   >

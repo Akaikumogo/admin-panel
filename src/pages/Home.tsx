@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Users,
@@ -9,6 +10,17 @@ import {
   HelpCircle,
   AlertTriangle,
   Home as HomeIcon,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Trophy,
+  Wifi,
+  Plus,
+  BookOpen,
+  Flame,
+  Star,
+  Sparkles,
+  Upload,
 } from 'lucide-react';
 import {
   Card,
@@ -18,32 +30,101 @@ import {
   Avatar,
   Skeleton,
   Table,
-  Tag,
   Progress,
+  Tooltip,
 } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type {
   AnalyticsSummary,
+  DailyTrend,
   HomeOverview,
   LevelFunnelItem,
   QuestionError,
   UserProfile,
 } from '@/services/api';
 import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
+import { MiniSparkline } from './Home/MiniSparkline';
+import { formatDelta, shortBranchName } from './Home/branchName';
 import { PageHeader } from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 
 const { Title, Text } = Typography;
 
-const KPI_META = [
-  { key: 'totalUsers' as const, icon: Users },
-  { key: 'activeUsers7d' as const, icon: Activity },
-  { key: 'totalOrganizations' as const, icon: Building2 },
-  { key: 'totalModerators' as const, icon: Shield },
-  { key: 'totalLevels' as const, icon: Layers },
-  { key: 'totalQuestions' as const, icon: HelpCircle },
+type KpiTone = {
+  accent: string;
+  spark: string;
+  chip: string;
+};
+
+const KPI_META: Array<{
+  key: keyof Pick<
+    AnalyticsSummary,
+    | 'totalUsers'
+    | 'activeUsers7d'
+    | 'totalOrganizations'
+    | 'totalModerators'
+    | 'totalLevels'
+    | 'totalQuestions'
+  >;
+  icon: typeof Users;
+  tone: KpiTone;
+}> = [
+  {
+    key: 'totalUsers',
+    icon: Users,
+    tone: {
+      accent: 'text-cyan-600 dark:text-cyan-400',
+      spark: 'rgb(8 145 178)',
+      chip: 'bg-cyan-500/10',
+    },
+  },
+  {
+    key: 'activeUsers7d',
+    icon: Activity,
+    tone: {
+      accent: 'text-teal-600 dark:text-teal-400',
+      spark: 'rgb(13 148 136)',
+      chip: 'bg-teal-500/10',
+    },
+  },
+  {
+    key: 'totalOrganizations',
+    icon: Building2,
+    tone: {
+      accent: 'text-orange-600 dark:text-orange-400',
+      spark: 'rgb(234 88 12)',
+      chip: 'bg-orange-500/10',
+    },
+  },
+  {
+    key: 'totalModerators',
+    icon: Shield,
+    tone: {
+      accent: 'text-violet-600 dark:text-violet-400',
+      spark: 'rgb(124 58 237)',
+      chip: 'bg-violet-500/10',
+    },
+  },
+  {
+    key: 'totalLevels',
+    icon: Layers,
+    tone: {
+      accent: 'text-sky-600 dark:text-sky-400',
+      spark: 'rgb(2 132 199)',
+      chip: 'bg-sky-500/10',
+    },
+  },
+  {
+    key: 'totalQuestions',
+    icon: HelpCircle,
+    tone: {
+      accent: 'text-emerald-600 dark:text-emerald-400',
+      spark: 'rgb(5 150 105)',
+      chip: 'bg-emerald-500/10',
+    },
+  },
 ];
 
 const KPI_LABELS: Record<string, { uz: string; en: string; ru: string }> = {
@@ -63,38 +144,104 @@ const KPI_LABELS: Record<string, { uz: string; en: string; ru: string }> = {
   totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
 };
 
+const FUNNEL_ICONS = [Star, Flame, BookOpen, Layers, Trophy];
+
+function DeltaBadge({
+  percent,
+  invert = false,
+}: {
+  percent: number | null | undefined;
+  invert?: boolean;
+}) {
+  const { text, up } = formatDelta(percent);
+  if (up === null) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground">
+        <Minus size={11} /> —
+      </span>
+    );
+  }
+  const good = invert ? !up : up;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums',
+        good
+          ? 'text-emerald-600 dark:text-emerald-400'
+          : 'text-rose-600 dark:text-rose-400',
+      )}
+    >
+      <Icon size={11} strokeWidth={2.25} />
+      {text}
+    </span>
+  );
+}
+
 function KpiCell({
   label,
   value,
   icon: Icon,
   loading,
+  tone,
+  sparkValues,
+  deltaPercent,
 }: {
   label: string;
   value: number | string;
   icon: typeof Users;
   loading: boolean;
+  tone: KpiTone;
+  sparkValues?: number[];
+  deltaPercent?: number | null;
 }) {
   return (
-    <div className="px-4 py-3">
+    <div className="relative px-3 py-3 sm:px-4">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
           {label}
         </p>
-        <Icon
-          size={15}
-          strokeWidth={1.75}
-          className="shrink-0 text-[var(--shell-rail)] opacity-80"
-        />
+        <span
+          className={cn(
+            'flex h-7 w-7 items-center justify-center rounded-md',
+            tone.chip,
+            tone.accent,
+          )}
+        >
+          <Icon size={14} strokeWidth={1.75} />
+        </span>
       </div>
       {loading ? (
         <Skeleton.Input active size="small" className="mt-2 !w-16" />
       ) : (
-        <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums text-foreground">
-          {value}
-        </p>
+        <>
+          <p
+            className={cn(
+              'mt-1.5 text-2xl font-semibold tracking-tight tabular-nums',
+              tone.accent,
+            )}
+          >
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </p>
+          <div className="mt-2 flex items-end justify-between gap-2">
+            <DeltaBadge percent={deltaPercent} />
+            {sparkValues && sparkValues.length > 1 ? (
+              <MiniSparkline values={sparkValues} stroke={tone.spark} />
+            ) : null}
+          </div>
+        </>
       )}
     </div>
   );
+}
+
+function severityOf(rate: number): {
+  label: string;
+  color: string;
+} {
+  if (rate >= 50) return { label: 'Critical', color: 'text-rose-600 dark:text-rose-400' };
+  if (rate >= 30) return { label: 'High', color: 'text-orange-600 dark:text-orange-400' };
+  return { label: 'Medium', color: 'text-amber-600 dark:text-amber-400' };
 }
 
 export default function HomePage() {
@@ -147,6 +294,70 @@ export default function HomePage() {
     { enabled: ready },
   );
 
+  const { data: dailyTrend } = useFetch<DailyTrend | null>(
+    ['daily-trend-home'],
+    () => apiService.getDailyTrend({ orgId: 'all' }),
+    null,
+    { enabled: ready },
+  );
+
+  const insight = homeOverview?.insight;
+  const weekSpark = useMemo(() => {
+    const rows = homeOverview?.branchHeatmap ?? [];
+    if (!rows.length) return [] as number[];
+    const weeks = rows[0]?.weeks ?? [];
+    return weeks.map((_, i) =>
+      rows.reduce((sum, r) => sum + (r.weeks[i]?.count ?? 0), 0),
+    );
+  }, [homeOverview?.branchHeatmap]);
+
+  const planSpark = useMemo(
+    () => (dailyTrend?.points ?? []).slice(-14).map((p) => p.percent),
+    [dailyTrend?.points],
+  );
+
+  const storyInsight = useMemo(() => {
+    const top = homeOverview?.mostActiveBranch;
+    const err = homeOverview?.topErrorBranches?.[0];
+    const loginD = formatDelta(insight?.loginDeltaPercent);
+    const errD = formatDelta(insight?.errorDeltaPercent);
+    const parts: string[] = [];
+    if (top) {
+      parts.push(
+        t({
+          uz: `Eng faol: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} login)`,
+          en: `Top activity: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} logins)`,
+          ru: `Активнее всего: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} входов)`,
+        }),
+      );
+    }
+    if (err && insight) {
+      parts.push(
+        t({
+          uz: `Eng ko‘p xato: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30 kun). Umumiy xato ${errD.text}.`,
+          en: `Most errors: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30d). Errors overall ${errD.text}.`,
+          ru: `Больше ошибок: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30д). Ошибки ${errD.text}.`,
+        }),
+      );
+    } else if (insight) {
+      parts.push(
+        t({
+          uz: `Loginlar haftalik ${loginD.text}, xatolar 30 kun ${errD.text}.`,
+          en: `Weekly logins ${loginD.text}, 30d errors ${errD.text}.`,
+          ru: `Логины за неделю ${loginD.text}, ошибки 30д ${errD.text}.`,
+        }),
+      );
+    }
+    return parts.join(' ');
+  }, [homeOverview, insight, t]);
+
+  const weakModules = useMemo(() => {
+    return (funnel ?? []).filter((item) => {
+      if (item.totalStarted <= 0) return true;
+      return item.totalCompleted / item.totalStarted < 0.25;
+    }).length;
+  }, [funnel]);
+
   const errorColumns = useMemo(
     () => [
       {
@@ -154,79 +365,261 @@ export default function HomePage() {
         dataIndex: 'prompt',
         key: 'prompt',
         ellipsis: true,
-        width: '35%',
+        width: '32%',
+        filterable: true,
       },
       {
         title: t({ uz: 'Modul', en: 'Module', ru: 'Модуль' }),
         dataIndex: 'levelTitle',
         key: 'levelTitle',
+        filterable: true,
       },
       {
         title: t({ uz: 'Nazariya', en: 'Theory', ru: 'Теория' }),
         dataIndex: 'theoryTitle',
         key: 'theoryTitle',
+        filterable: true,
       },
       {
         title: t({ uz: 'Urinishlar', en: 'Attempts', ru: 'Попытки' }),
         dataIndex: 'totalAttempts',
         key: 'totalAttempts',
         width: 100,
+        filterable: false,
         render: (v: number) => (
-          <span className="tabular-nums">{v}</span>
+          <span className="tabular-nums">{v.toLocaleString()}</span>
         ),
       },
       {
         title: t({ uz: 'Xatolik %', en: 'Error %', ru: 'Ошибки %' }),
         dataIndex: 'errorRate',
         key: 'errorRate',
-        width: 120,
-        render: (val: number) => (
-          <Tag color={val > 50 ? 'red' : val > 30 ? 'orange' : 'green'}>
-            <span className="tabular-nums">{val}%</span>
-          </Tag>
-        ),
+        width: 180,
+        filterable: false,
+        render: (val: number) => {
+          const sev = severityOf(val);
+          return (
+            <div className="min-w-[140px] space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold tabular-nums">{val}%</span>
+                <span className={cn('text-[10px] font-semibold uppercase', sev.color)}>
+                  ● {sev.label}
+                </span>
+              </div>
+              <Progress
+                percent={val}
+                size="small"
+                showInfo={false}
+                strokeColor={
+                  val > 50
+                    ? 'rgb(225 29 72)'
+                    : val > 30
+                      ? 'rgb(234 88 12)'
+                      : 'rgb(5 150 105)'
+                }
+              />
+            </div>
+          );
+        },
       },
     ],
     [t],
   );
 
-  return (
-    <div className="space-y-4">
-      <PageHeader
-        icon={HomeIcon}
-        title={t({
-          uz: `Xush kelibsiz${me?.firstName ? `, ${me.firstName}` : ''}`,
-          en: `Welcome${me?.firstName ? `, ${me.firstName}` : ''}`,
-          ru: `Добро пожаловать${me?.firstName ? `, ${me.firstName}` : ''}`,
-        })}
-        description={t({
-          uz: 'Operatsion holat: KPI, filial faolligi va xatolik markazlari',
-          en: 'Operational status: KPIs, branch activity, and error hotspots',
-          ru: 'Операционный статус: KPI, активность филиалов и зоны ошибок',
-        })}
-      />
+  const quickActions = [
+    {
+      to: '/dashboard/users',
+      label: t({ uz: '+ User', en: '+ User', ru: '+ User' }),
+      icon: Plus,
+    },
+    {
+      to: '/dashboard/levels',
+      label: t({ uz: '+ Modul', en: '+ Module', ru: '+ Модуль' }),
+      icon: Layers,
+    },
+    {
+      to: '/dashboard/organizations',
+      label: t({ uz: '+ Tashkilot', en: '+ Org', ru: '+ Орг.' }),
+      icon: Building2,
+    },
+    {
+      to: '/dashboard/import-export',
+      label: t({ uz: 'Import', en: 'Import', ru: 'Импорт' }),
+      icon: Upload,
+    },
+  ];
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <Card className="xl:col-span-8 !border-border !shadow-none">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              {t({ uz: 'Asosiy ko‘rsatkichlar', en: 'Core metrics', ru: 'Ключевые метрики' })}
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <PageHeader
+          icon={HomeIcon}
+          title={t({
+            uz: `Xush kelibsiz${me?.firstName ? `, ${me.firstName}` : ''}`,
+            en: `Welcome${me?.firstName ? `, ${me.firstName}` : ''}`,
+            ru: `Добро пожаловать${me?.firstName ? `, ${me.firstName}` : ''}`,
+          })}
+          description={t({
+            uz: 'Bugungi holat — 5 soniyada tushunarli',
+            en: 'Today’s status — clear in 5 seconds',
+            ru: 'Статус на сегодня — понятно за 5 секунд',
+          })}
+        />
+        <div className="flex flex-wrap gap-2 lg:pt-1">
+          {quickActions.map((a) => (
+            <Button key={a.to} type="default" size="small" asChild>
+              <Link to={a.to} className="inline-flex items-center gap-1.5">
+                <a.icon size={13} strokeWidth={2} />
+                {a.label}
+              </Link>
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Story strip — "nima bo'lyapti?" */}
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+        <StoryTile
+          loading={homeOverviewLoading || summaryLoading}
+          icon={<Activity size={14} />}
+          label={t({ uz: 'Faol foydalanuvchi', en: 'Active users', ru: 'Активные' })}
+          value={(summary?.activeUsers7d ?? 0).toLocaleString()}
+          hint={<DeltaBadge percent={insight?.loginDeltaPercent} />}
+          tone="teal"
+        />
+        <StoryTile
+          loading={homeOverviewLoading}
+          icon={<AlertTriangle size={14} />}
+          label={t({ uz: 'Yangi xato (30 kun)', en: 'Errors (30d)', ru: 'Ошибки (30д)' })}
+          value={(insight?.errors30d ?? 0).toLocaleString()}
+          hint={<DeltaBadge percent={insight?.errorDeltaPercent} invert />}
+          tone="rose"
+        />
+        <StoryTile
+          loading={homeOverviewLoading}
+          icon={<Trophy size={14} />}
+          label={t({ uz: 'Top filial', en: 'Top branch', ru: 'Топ филиал' })}
+          value={
+            homeOverview?.mostActiveBranch
+              ? shortBranchName(homeOverview.mostActiveBranch.orgName)
+              : '—'
+          }
+          hint={
+            homeOverview?.mostActiveBranch
+              ? `${homeOverview.mostActiveBranch.value.toLocaleString()} login`
+              : undefined
+          }
+          tone="amber"
+          title={homeOverview?.mostActiveBranch?.orgName}
+        />
+        <StoryTile
+          loading={funnelLoading}
+          icon={<AlertTriangle size={14} />}
+          label={t({ uz: 'Diqqat', en: 'Attention', ru: 'Внимание' })}
+          value={`${weakModules}`}
+          hint={t({
+            uz: 'ta modul past completion',
+            en: 'modules with low completion',
+            ru: 'модуля с низким completion',
+          })}
+          tone="amber"
+        />
+        <StoryTile
+          loading={homeOverviewLoading}
+          icon={<Wifi size={14} />}
+          label={t({ uz: 'Online', en: 'Online', ru: 'Онлайн' })}
+          value={(insight?.onlineHint ?? 0).toLocaleString()}
+          hint={t({ uz: 'hozir sessiyada', en: 'in session now', ru: 'сейчас в сессии' })}
+          tone="cyan"
+          className="col-span-2 md:col-span-1 xl:col-span-1"
+        />
+      </div>
+
+      {storyInsight ? (
+        <div className="flex items-start gap-3 rounded-lg border border-teal-500/25 bg-teal-500/5 px-4 py-3">
+          <Sparkles
+            size={16}
+            className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-400"
+          />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700 dark:text-teal-300">
+              {t({ uz: 'AI Insight', en: 'AI Insight', ru: 'AI Insight' })}
             </p>
-            <p className="text-[11px] text-muted-foreground tabular-nums">
-              {new Date().toLocaleDateString()}
+            <p className="mt-0.5 text-sm leading-relaxed text-foreground/90">
+              {storyInsight}
             </p>
           </div>
-          <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-6">
-            {KPI_META.map(({ key, icon }) => (
+        </div>
+      ) : null}
+
+      {/* KPI — larger visual weight */}
+      <Card className="!border-border !shadow-none">
+        <div className="mb-1 flex items-center justify-between px-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            {t({
+              uz: 'Asosiy ko‘rsatkichlar',
+              en: 'Core metrics',
+              ru: 'Ключевые метрики',
+            })}
+          </p>
+          <p className="text-[11px] tabular-nums text-muted-foreground">
+            {new Date().toLocaleDateString()}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-6">
+          {KPI_META.map(({ key, icon, tone }) => {
+            const spark =
+              key === 'activeUsers7d'
+                ? weekSpark
+                : key === 'totalUsers'
+                  ? planSpark
+                  : undefined;
+            return (
               <KpiCell
                 key={key}
                 label={t(KPI_LABELS[key])}
                 icon={icon}
+                tone={tone}
                 loading={summaryLoading}
                 value={summary?.[key] ?? 0}
+                sparkValues={spark}
+                deltaPercent={
+                  key === 'activeUsers7d' ? insight?.loginDeltaPercent : null
+                }
               />
-            ))}
-          </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <Card
+          className="xl:col-span-8 !border-border !shadow-none min-h-[320px]"
+          title={
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <Activity
+                size={15}
+                strokeWidth={1.75}
+                className="text-[var(--shell-rail)]"
+              />
+              {t({
+                uz: 'Filial bo‘yicha faollik (12 hafta)',
+                en: 'Branch activity (12 weeks)',
+                ru: 'Активность филиалов (12 недель)',
+              })}
+            </span>
+          }
+          extra={
+            <span className="text-xs text-muted-foreground">
+              {homeOverview?.scopeLabel}
+            </span>
+          }
+        >
+          {homeOverviewLoading ? (
+            <Skeleton active paragraph={{ rows: 6 }} />
+          ) : (
+            <BranchActivityHeatmap rows={homeOverview?.branchHeatmap ?? []} />
+          )}
         </Card>
 
         <div className="xl:col-span-4 space-y-4">
@@ -243,7 +636,7 @@ export default function HomePage() {
                     <Title level={4} className="!mb-0 !mt-1 !text-base">
                       {me?.firstName} {me?.lastName}
                     </Title>
-                    <Text className="text-muted-foreground text-sm">
+                    <Text className="text-sm text-muted-foreground">
                       {me?.email} · {me?.role}
                     </Text>
                   </>
@@ -258,12 +651,20 @@ export default function HomePage() {
             </div>
             <div className="mt-3 border-t border-border pt-3">
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                {t({ uz: 'Ruxsat holati', en: 'Permissions', ru: 'Права доступа' })}
+                {t({
+                  uz: 'Ruxsat holati',
+                  en: 'Permissions',
+                  ru: 'Права доступа',
+                })}
               </p>
               <div className="mt-2 flex items-center justify-between">
                 <Badge
                   color="green"
-                  text={me?.role === 'SUPERADMIN' ? adminPing?.message || 'OK' : 'Limited'}
+                  text={
+                    me?.role === 'SUPERADMIN'
+                      ? adminPing?.message || 'OK'
+                      : 'Limited'
+                  }
                 />
                 {me?.role === 'SUPERADMIN' ? (
                   <Button type="primary" onClick={() => void refetchMe()}>
@@ -275,97 +676,74 @@ export default function HomePage() {
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
-                <Building2 size={16} strokeWidth={1.75} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  {t({
-                    uz: 'Eng aktiv filial (7 kun)',
-                    en: 'Most active branch (7d)',
-                    ru: 'Самый активный филиал (7д)',
-                  })}
-                </p>
-                {homeOverviewLoading ? (
-                  <Skeleton.Input active size="small" className="mt-2 !w-40" />
-                ) : homeOverview?.mostActiveBranch ? (
-                  <>
-                    <p className="mt-1 text-sm font-semibold leading-snug text-foreground">
-                      {homeOverview.mostActiveBranch.isDefault ? '★ ' : null}
-                      {homeOverview.mostActiveBranch.orgName}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                      {homeOverview.mostActiveBranch.value} ta login
-                    </p>
-                  </>
-                ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t({ uz: 'Maʼlumot yoʻq', en: 'No data', ru: 'Нет данных' })}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <Card
-          className="xl:col-span-8 !border-border !shadow-none"
-          title={
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <Activity size={15} strokeWidth={1.75} className="text-[var(--shell-rail)]" />
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <AlertTriangle
+                size={15}
+                strokeWidth={1.75}
+                className="text-destructive"
+              />
               {t({
-                uz: 'Filial bo‘yicha faollik (12 hafta)',
-                en: 'Branch activity (12 weeks)',
-                ru: 'Активность филиалов (12 недель)',
+                uz: 'Filial xatolari (30 kun)',
+                en: 'Branch errors (30d)',
+                ru: 'Ошибки филиалов (30д)',
               })}
-            </span>
-          }
-          extra={<span className="text-xs text-muted-foreground">{homeOverview?.scopeLabel}</span>}
-        >
-          {homeOverviewLoading ? (
-            <Skeleton active paragraph={{ rows: 6 }} />
-          ) : (
-            <BranchActivityHeatmap rows={homeOverview?.branchHeatmap ?? []} />
-          )}
-        </Card>
-
-        <div className="xl:col-span-4 rounded-lg border border-border bg-card p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <AlertTriangle size={15} strokeWidth={1.75} className="text-destructive" />
-            {t({ uz: 'Filial xatolari (30 kun)', en: 'Branch errors (30d)', ru: 'Ошибки филиалов (30д)' })}
+            </div>
+            {homeOverviewLoading ? (
+              <Skeleton active paragraph={{ rows: 4 }} />
+            ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
+              <p className="py-2 text-sm text-muted-foreground">
+                {t({ uz: 'Maʼlumot yoʻq', en: 'No data', ru: 'Нет данных' })}
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {(homeOverview?.topErrorBranches ?? []).map((row, idx) => {
+                  const prev = row.previousValue ?? 0;
+                  const deltaPct =
+                    prev > 0
+                      ? Math.round(((row.value - prev) / prev) * 1000) / 10
+                      : row.value > 0
+                        ? 100
+                        : null;
+                  const short = shortBranchName(row.orgName);
+                  return (
+                    <li
+                      key={row.orgId}
+                      className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[10px] tabular-nums text-muted-foreground">
+                          #{idx + 1}
+                        </span>
+                        <Tooltip title={row.orgName}>
+                          <p className="truncate text-sm font-semibold">
+                            {row.isDefault ? (
+                              <span className="mr-1 text-amber-500">★</span>
+                            ) : null}
+                            {short}
+                          </p>
+                        </Tooltip>
+                        <p className="text-[11px] text-muted-foreground">
+                          {t({
+                            uz: `Oldingi: ${prev.toLocaleString()}`,
+                            en: `Prev: ${prev.toLocaleString()}`,
+                            ru: `Было: ${prev.toLocaleString()}`,
+                          })}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="block rounded bg-destructive/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-destructive">
+                          {row.value.toLocaleString()}
+                        </span>
+                        <div className="mt-1 flex justify-end">
+                          <DeltaBadge percent={deltaPct} invert />
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-          {homeOverviewLoading ? (
-            <Skeleton active paragraph={{ rows: 4 }} />
-          ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
-            <p className="py-2 text-sm text-muted-foreground">
-              {t({ uz: 'Maʼlumot yoʻq', en: 'No data', ru: 'Нет данных' })}
-            </p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {(homeOverview?.topErrorBranches ?? []).map((row, idx) => (
-                <li
-                  key={row.orgId}
-                  className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <span className="text-[10px] text-muted-foreground tabular-nums">#{idx + 1}</span>
-                    <p className="truncate text-sm font-medium">
-                      {row.isDefault ? (
-                        <span className="mr-1 text-amber-600 dark:text-amber-400">★</span>
-                      ) : null}
-                      {row.orgName}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded bg-destructive/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-destructive">
-                    {row.value}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
 
@@ -373,7 +751,11 @@ export default function HomePage() {
         <Card
           title={
             <span className="flex items-center gap-2 text-sm font-semibold">
-              <Layers size={15} strokeWidth={1.75} className="text-[var(--shell-rail)]" />
+              <Layers
+                size={15}
+                strokeWidth={1.75}
+                className="text-[var(--shell-rail)]"
+              />
               {t({
                 uz: 'Modul funnel',
                 en: 'Module funnel',
@@ -387,33 +769,38 @@ export default function HomePage() {
             <Skeleton active paragraph={{ rows: 4 }} />
           ) : (
             <div className="space-y-3">
-              {funnel.map((item) => {
+              {funnel.map((item, idx) => {
                 const pct =
                   item.totalStarted > 0
                     ? Math.round(
                         (item.totalCompleted / item.totalStarted) * 100,
                       )
                     : 0;
+                const Icon = FUNNEL_ICONS[idx % FUNNEL_ICONS.length];
                 return (
                   <div
                     key={item.levelId}
-                    className="flex items-center gap-4"
+                    className="flex items-center gap-3 rounded-md px-1 py-1.5 hover:bg-muted/40"
                   >
-                    <div className="w-48 truncate text-sm font-medium text-foreground">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-300">
+                      <Icon size={15} strokeWidth={1.75} />
+                    </span>
+                    <div className="w-40 shrink-0 truncate text-sm font-medium text-foreground sm:w-52">
                       #{item.orderIndex + 1} {item.levelTitle}
                     </div>
                     <Progress
                       percent={pct}
                       size="small"
-                      className="flex-1"
+                      className="min-w-0 flex-1"
                       strokeColor="var(--primary)"
                     />
-                    <div
-                      className={cn(
-                        'w-28 text-right text-xs text-muted-foreground tabular-nums',
-                      )}
-                    >
-                      {item.totalCompleted}/{item.totalStarted} ({pct}%)
+                    <div className="hidden w-36 shrink-0 text-right text-xs text-muted-foreground sm:block">
+                      <div className="font-semibold tabular-nums text-foreground">
+                        {item.totalStarted.toLocaleString()} users
+                      </div>
+                      <div className="tabular-nums">
+                        {pct}% · {item.totalCompleted.toLocaleString()} done
+                      </div>
                     </div>
                   </div>
                 );
@@ -441,14 +828,71 @@ export default function HomePage() {
             <Skeleton active paragraph={{ rows: 4 }} />
           ) : (
             <Table
-              dataSource={errorQuestions}
+              dataSource={errorQuestions as unknown as Record<string, unknown>[]}
               columns={errorColumns}
               rowKey="questionId"
               pagination={false}
               size="small"
+              scroll={{ y: 420 }}
+              className="[&_tbody_tr:nth-child(even)]:bg-muted/25 [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10"
             />
           )}
         </Card>
+      )}
+    </div>
+  );
+}
+
+function StoryTile({
+  loading,
+  icon,
+  label,
+  value,
+  hint,
+  tone,
+  title,
+  className,
+}: {
+  loading?: boolean;
+  icon: ReactNode;
+  label: string;
+  value: string;
+  hint?: ReactNode;
+  tone: 'teal' | 'rose' | 'amber' | 'cyan';
+  title?: string;
+  className?: string;
+}) {
+  const toneMap = {
+    teal: 'border-teal-500/20 bg-teal-500/[0.06] text-teal-700 dark:text-teal-300',
+    rose: 'border-rose-500/20 bg-rose-500/[0.06] text-rose-700 dark:text-rose-300',
+    amber:
+      'border-amber-500/25 bg-amber-500/[0.07] text-amber-800 dark:text-amber-300',
+    cyan: 'border-cyan-500/20 bg-cyan-500/[0.06] text-cyan-700 dark:text-cyan-300',
+  };
+  return (
+    <div
+      title={title}
+      className={cn(
+        'rounded-lg border px-3 py-3',
+        toneMap[tone],
+        className,
+      )}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide opacity-80">
+        {icon}
+        {label}
+      </div>
+      {loading ? (
+        <Skeleton.Input active size="small" className="mt-2 !w-20" />
+      ) : (
+        <>
+          <p className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
+            {value}
+          </p>
+          {hint ? (
+            <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+          ) : null}
+        </>
       )}
     </div>
   );

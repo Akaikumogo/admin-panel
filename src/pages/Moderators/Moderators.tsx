@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -32,6 +32,7 @@ import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
+import { PageHeader } from '@/components/PageHeader';
 import apiService, { BACKEND_ORIGIN, type Organization, type UserProfile } from '@/services/api';
 import { filterSelectOption } from '@/utils/selectSearch.util';
 
@@ -600,92 +601,109 @@ const Moderators = () => {
   );
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)] moderators-page">
-      <div className="flex items-end gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
-        <Filter size={16} className="text-muted-foreground mb-2" />
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">{t(T.filialFilter)}</span>
-          <Select
-            allowClear
-            showSearch
-            placeholder={t(T.allFiliallar)}
-            value={qp.orgId}
-            onChange={handleOrgChange}
-            optionFilterProp="label"
-            filterOption={filterSelectOption}
-            className="moderator-filial-filter"
-            popupClassName="moderator-filial-popup"
-            style={{ width: 320 }}
-            listHeight={300}
-            virtual
-            options={orgOptions}
-            optionRender={(option) => (
-              <span className="moderator-filial-option">{option.label}</span>
-            )}
-          />
+    <div className="space-y-4 moderators-page">
+      <PageHeader
+        icon={Shield}
+        title={t(T.title)}
+        description={t({
+          uz: 'Moderatorlar ro‘yxati, filial biriktirish va ruxsat boshqaruvi',
+          en: 'Moderator list, branch assignment, and permission control',
+          ru: 'Список модераторов, филиалы и права доступа',
+        })}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Tag className="text-xs tabular-nums">
+              {t(T.total)}: {total}
+            </Tag>
+            <Button
+              icon={<Table2 size={16} />}
+              onClick={() => navigate('/dashboard/permissions')}
+            >
+              {t(T.permissionsPage)}
+            </Button>
+            <Button
+              type="primary"
+              icon={<Plus size={16} />}
+              onClick={openCreateModal}
+            >
+              {t(T.addModerator)}
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          <Filter size={14} />
+          {t({ uz: 'Filtrlar', en: 'Filters', ru: 'Фильтры' })}
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">{t(T.filterMode)}</span>
-          <Select
-            value={qp.orgMode === 'exclude' ? 'exclude' : 'include'}
-            onChange={handleOrgModeChange}
-            disabled={!qp.orgId}
-            style={{ width: 240 }}
-            options={[
-              { value: 'include', label: t(T.orgModeInclude) },
-              { value: 'exclude', label: t(T.orgModeExclude) },
-            ]}
-          />
-        </div>
-        <Tag className="text-xs mb-0.5">
-          {t(T.total)}: {total}
-        </Tag>
-        <div className="ml-auto flex items-center gap-2 mb-0.5">
-          <Button
-            icon={<Table2 size={16} />}
-            onClick={() => navigate('/dashboard/permissions')}
-          >
-            {t(T.permissionsPage)}
-          </Button>
-          <Button
-            type="primary"
-            icon={<Plus size={16} />}
-            onClick={openCreateModal}
-          >
-            {t(T.addModerator)}
-          </Button>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(320px,1fr)_260px]">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">{t(T.filialFilter)}</span>
+            <Select
+              allowClear
+              showSearch
+              placeholder={t(T.allFiliallar)}
+              value={qp.orgId}
+              onChange={handleOrgChange}
+              optionFilterProp="label"
+              filterOption={filterSelectOption}
+              className="moderator-filial-filter"
+              popupClassName="moderator-filial-popup"
+              listHeight={300}
+              virtual
+              options={orgOptions}
+              optionRender={(option) => (
+                <span className="moderator-filial-option">{option.label}</span>
+              )}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">{t(T.filterMode)}</span>
+            <Select
+              value={qp.orgMode === 'exclude' ? 'exclude' : 'include'}
+              onChange={handleOrgModeChange}
+              disabled={!qp.orgId}
+              options={[
+                { value: 'include', label: t(T.orgModeInclude) },
+                { value: 'exclude', label: t(T.orgModeExclude) },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
-      {initialLoading ? (
-        <div className="flex items-center justify-center h-32">
-          <Spin />
-        </div>
-      ) : moderators.length === 0 && !loading ? (
-        <NoData text={t(T.noData)} />
-      ) : (
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={moderators}
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize,
-            showSizeChanger: true,
-            hideOnSinglePage: false,
-            pageSizeOptions: [20, 50, 100],
-            onChange: (page, size) => {
-              setParams({
-                page: page > 1 ? String(page) : undefined,
-                limit: size && size !== PAGE_SIZE ? String(size) : undefined,
-              });
-            },
-          }}
-          scroll={{ x: 1280 }}
-          className="moderators-table"
-        />
-      )}
+      <div className="rounded-lg border border-border bg-card p-2">
+        {initialLoading ? (
+          <div className="flex h-32 items-center justify-center">
+            <Spin />
+          </div>
+        ) : moderators.length === 0 && !loading ? (
+          <NoData text={t(T.noData)} />
+        ) : (
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={moderators}
+            loading={loading}
+            pagination={{
+              current: currentPage,
+              pageSize,
+              showSizeChanger: true,
+              hideOnSinglePage: false,
+              pageSizeOptions: [20, 50, 100],
+              onChange: (page, size) => {
+                setParams({
+                  page: page > 1 ? String(page) : undefined,
+                  limit: size && size !== PAGE_SIZE ? String(size) : undefined,
+                });
+              },
+            }}
+            scroll={{ x: 1280 }}
+            className="moderators-table"
+          />
+        )}
+      </div>
 
       <Modal
         title={t(T.addModerator)}
