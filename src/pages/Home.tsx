@@ -467,12 +467,17 @@ export default function HomePage() {
         />
         <div className="flex flex-wrap gap-2 lg:pt-1">
           {quickActions.map((a) => (
-            <Button key={a.to} type="default" size="small" asChild>
-              <Link to={a.to} className="inline-flex items-center gap-1.5">
-                <a.icon size={13} strokeWidth={2} />
-                {a.label}
-              </Link>
-            </Button>
+            <Link
+              key={a.to}
+              to={a.to}
+              className={cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors',
+                'hover:bg-accent hover:text-accent-foreground',
+              )}
+            >
+              <a.icon size={13} strokeWidth={2} />
+              {a.label}
+            </Link>
           ))}
         </div>
       </div>
