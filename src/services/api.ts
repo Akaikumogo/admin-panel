@@ -279,6 +279,8 @@ export type MonthlyPlanMatrixDayCell = {
 
 export type MonthlyPlanMatrixEmployee = {
   userId: string;
+  orgId?: string;
+  orgName?: string;
   fullName: string;
   email: string;
   daysCompleted: number;
@@ -1720,7 +1722,7 @@ class ApiService {
   }
 
   async getMonthlyPlanMatrix(params: {
-    orgId: string;
+    orgId?: string;
     month?: string;
   }): Promise<MonthlyPlanMatrix> {
     const response = await this.api.get<MonthlyPlanMatrix>(
