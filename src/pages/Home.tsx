@@ -13,13 +13,11 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Trophy,
   Wifi,
   Plus,
   BookOpen,
   Flame,
   Star,
-  Sparkles,
   Upload,
 } from 'lucide-react';
 import {
@@ -316,48 +314,6 @@ export default function HomePage() {
     [dailyTrend?.points],
   );
 
-  const storyInsight = useMemo(() => {
-    const top = homeOverview?.mostActiveBranch;
-    const err = homeOverview?.topErrorBranches?.[0];
-    const loginD = formatDelta(insight?.loginDeltaPercent);
-    const errD = formatDelta(insight?.errorDeltaPercent);
-    const parts: string[] = [];
-    if (top) {
-      parts.push(
-        t({
-          uz: `Eng faol: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} login)`,
-          en: `Top activity: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} logins)`,
-          ru: `Активнее всего: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} входов)`,
-        }),
-      );
-    }
-    if (err && insight) {
-      parts.push(
-        t({
-          uz: `Eng ko‘p xato: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30 kun). Umumiy xato ${errD.text}.`,
-          en: `Most errors: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30d). Errors overall ${errD.text}.`,
-          ru: `Больше ошибок: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30д). Ошибки ${errD.text}.`,
-        }),
-      );
-    } else if (insight) {
-      parts.push(
-        t({
-          uz: `Loginlar haftalik ${loginD.text}, xatolar 30 kun ${errD.text}.`,
-          en: `Weekly logins ${loginD.text}, 30d errors ${errD.text}.`,
-          ru: `Логины за неделю ${loginD.text}, ошибки 30д ${errD.text}.`,
-        }),
-      );
-    }
-    return parts.join(' ');
-  }, [homeOverview, insight, t]);
-
-  const weakModules = useMemo(() => {
-    return (funnel ?? []).filter((item) => {
-      if (item.totalStarted <= 0) return true;
-      return item.totalCompleted / item.totalStarted < 0.25;
-    }).length;
-  }, [funnel]);
-
   const errorColumns = useMemo(
     () => [
       {
@@ -483,7 +439,7 @@ export default function HomePage() {
       </div>
 
       {/* Story strip — "nima bo'lyapti?" */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <StoryTile
           loading={homeOverviewLoading || summaryLoading}
           icon={<Activity size={14} />}
@@ -502,60 +458,13 @@ export default function HomePage() {
         />
         <StoryTile
           loading={homeOverviewLoading}
-          icon={<Trophy size={14} />}
-          label={t({ uz: 'Top filial', en: 'Top branch', ru: 'Топ филиал' })}
-          value={
-            homeOverview?.mostActiveBranch
-              ? shortBranchName(homeOverview.mostActiveBranch.orgName)
-              : '—'
-          }
-          hint={
-            homeOverview?.mostActiveBranch
-              ? `${homeOverview.mostActiveBranch.value.toLocaleString()} login`
-              : undefined
-          }
-          tone="amber"
-          title={homeOverview?.mostActiveBranch?.orgName}
-        />
-        <StoryTile
-          loading={funnelLoading}
-          icon={<AlertTriangle size={14} />}
-          label={t({ uz: 'Diqqat', en: 'Attention', ru: 'Внимание' })}
-          value={`${weakModules}`}
-          hint={t({
-            uz: 'ta modul past completion',
-            en: 'modules with low completion',
-            ru: 'модуля с низким completion',
-          })}
-          tone="amber"
-        />
-        <StoryTile
-          loading={homeOverviewLoading}
           icon={<Wifi size={14} />}
           label={t({ uz: 'Online', en: 'Online', ru: 'Онлайн' })}
           value={(insight?.onlineHint ?? 0).toLocaleString()}
           hint={t({ uz: 'hozir sessiyada', en: 'in session now', ru: 'сейчас в сессии' })}
           tone="cyan"
-          className="col-span-2 md:col-span-1 xl:col-span-1"
         />
       </div>
-
-      {storyInsight ? (
-        <div className="flex items-start gap-3 rounded-lg border border-blue-500/25 bg-blue-500/5 px-4 py-3">
-          <Sparkles
-            size={16}
-            className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400"
-          />
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-blue-700 dark:text-blue-300">
-              {t({ uz: 'AI Insight', en: 'AI Insight', ru: 'AI Insight' })}
-            </p>
-            <p className="mt-0.5 text-sm leading-relaxed text-foreground/90">
-              {storyInsight}
-            </p>
-          </div>
-        </div>
-      ) : null}
 
       {/* KPI — larger visual weight */}
       <Card className="!border-border !shadow-none">
