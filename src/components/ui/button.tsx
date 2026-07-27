@@ -90,12 +90,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <Comp
         className={cn(buttonVariants({ variant: resolvedVariant, size: resolvedSize, className }), block && 'w-full')}
         ref={ref}
-        type={htmlType}
-        disabled={disabled || loading}
+        type={asChild ? undefined : htmlType}
+        disabled={asChild ? undefined : disabled || loading}
         {...props}
       >
-        {loading ? <Loader2 className="animate-spin" /> : icon}
-        {children}
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {loading ? <Loader2 className="animate-spin" /> : icon}
+            {children}
+          </>
+        )}
       </Comp>
     );
   },
