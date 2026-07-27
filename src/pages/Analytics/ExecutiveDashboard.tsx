@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -189,6 +189,8 @@ export default function ExecutiveDashboard() {
   const { date, orgId, planType } = useAnalyticsFilters();
   const rankingSnapRef = useRef<HTMLDivElement>(null);
   const [copyingRank, setCopyingRank] = useState(false);
+  const [rankingPage, setRankingPage] = useState(1);
+  const RANK_PAGE_SIZE = 14;
 
   const copyRankingSnapshot = async () => {
     const root = rankingSnapRef.current;
@@ -197,6 +199,20 @@ export default function ExecutiveDashboard() {
 
     const restores: Array<() => void> = [];
     try {
+      const prevMinW = root.style.minWidth;
+      const prevPad = root.style.padding;
+      const prevFont = root.style.fontSize;
+      root.style.minWidth = '980px';
+      root.style.padding = '8px';
+      root.style.fontSize = '16px';
+      root.classList.add('ranking-snap-hires');
+      restores.push(() => {
+        root.style.minWidth = prevMinW;
+        root.style.padding = prevPad;
+        root.style.fontSize = prevFont;
+        root.classList.remove('ranking-snap-hires');
+      });
+
       root.querySelectorAll<HTMLElement>('.overflow-auto').forEach((node) => {
         const prev = {
           maxHeight: node.style.maxHeight,
@@ -223,9 +239,29 @@ export default function ExecutiveDashboard() {
         });
       });
 
+      // Yozuvlarni kattalashtirish
+      root.querySelectorAll<HTMLElement>('th, td, .text-sm, .text-xs').forEach((node) => {
+        const prev = {
+          fontSize: node.style.fontSize,
+          lineHeight: node.style.lineHeight,
+          padding: node.style.padding,
+        };
+        const isHead = node.tagName === 'TH';
+        node.style.fontSize = isHead ? '15px' : '16px';
+        node.style.lineHeight = '1.45';
+        if (node.tagName === 'TD' || node.tagName === 'TH') {
+          node.style.padding = '12px 14px';
+        }
+        restores.push(() => {
+          node.style.fontSize = prev.fontSize;
+          node.style.lineHeight = prev.lineHeight;
+          node.style.padding = prev.padding;
+        });
+      });
+
       const isDark = document.documentElement.classList.contains('dark');
       const blob = await domToBlob(root, {
-        scale: 2,
+        scale: 3,
         backgroundColor: isDark ? '#0f172a' : '#ffffff',
         filter: (node) => {
           if (!(node instanceof HTMLElement)) return true;
@@ -240,13 +276,13 @@ export default function ExecutiveDashboard() {
       }
 
       await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob }),
+        new ClipboardItem({ 'image/png': Promise.resolve(blob) }),
       ]);
       message.success(
         t({
-          uz: 'Reyting rasmi nusxalandi — Telegramda Ctrl+V',
-          en: 'Ranking image copied — paste in Telegram (Ctrl+V)',
-          ru: 'Рейтинг скопирован — вставьте в Telegram (Ctrl+V)',
+          uz: `${rankingPage}-sahifa rasmi nusxalandi — Telegramda Ctrl+V`,
+          en: `Page ${rankingPage} image copied — paste in Telegram (Ctrl+V)`,
+          ru: `Страница ${rankingPage} скопирована — Ctrl+V в Telegram`,
         }),
       );
     } catch (err) {
@@ -347,6 +383,20 @@ export default function ExecutiveDashboard() {
     [filteredBranches],
   );
 
+  const rankingPageCount = Math.max(1, Math.ceil(rankingAllBranches.length / RANK_PAGE_SIZE));
+  const safeRankingPage = Math.min(rankingPage, rankingPageCount);
+
+  const rankingPageBranches = useMemo(() => {
+    const start = (safeRankingPage - 1) * RANK_PAGE_SIZE;
+    return rankingAllBranches.slice(start, start + RANK_PAGE_SIZE);
+  }, [rankingAllBranches, safeRankingPage, RANK_PAGE_SIZE]);
+
+  const rankingRankOffset = (safeRankingPage - 1) * RANK_PAGE_SIZE;
+
+  useEffect(() => {
+    setRankingPage(1);
+  }, [date, orgId, planType, rankingAllBranches.length]);
+
   const top10 = useMemo(() => filteredBranches.slice(0, 10), [filteredBranches]);
   const bottom5 = useMemo(
     () => [...filteredBranches].sort((a, b) => a.percent - b.percent).slice(0, 5),
@@ -426,9 +476,11 @@ export default function ExecutiveDashboard() {
       title: '#',
       dataIndex: 'rank',
       key: 'rank',
-      width: 48,
+      width: 56,
       render: (_: unknown, __: BranchRankingRow, i: number) => (
-        <span className="text-muted-foreground tabular-nums">{i + 1}</span>
+        <span className="text-base font-semibold tabular-nums text-muted-foreground">
+          {rankingRankOffset + i + 1}
+        </span>
       ),
     },
     {
@@ -439,7 +491,7 @@ export default function ExecutiveDashboard() {
       render: (name: string, row: BranchRankingRow) => (
         <button
           type="button"
-          className="text-left font-medium transition-colors hover:text-blue-600"
+          className="text-left text-[15px] font-semibold transition-colors hover:text-blue-600"
           onClick={() => navigate(`/dashboard/analytics/branches/${row.orgId}?date=${date}`)}
         >
           {name}
@@ -450,13 +502,13 @@ export default function ExecutiveDashboard() {
       title: '%',
       dataIndex: 'percent',
       key: 'percent',
-      width: 200,
+      width: 220,
       render: (p: number, row: BranchRankingRow) => (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <StatusBadge status={row.status} percent={p} />
           </div>
-          <PercentBar percent={p} status={row.status} height="sm" />
+          <PercentBar percent={p} status={row.status} height="md" />
         </div>
       ),
     },
@@ -734,14 +786,19 @@ export default function ExecutiveDashboard() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-4 py-3">
                 <div>
-                  <div className="text-sm font-semibold">
+                  <div className="text-base font-semibold">
                     {t({
                       uz: 'Filiallar reytingi',
                       en: 'Branch ranking',
                       ru: 'Рейтинг филиалов',
                     })}
+                    {rankingPageCount > 1 ? (
+                      <span className="ml-2 text-sm font-medium text-muted-foreground">
+                        · {safeRankingPage}/{rankingPageCount}
+                      </span>
+                    ) : null}
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {date} ·{' '}
                     {t({
                       uz: 'Asosiy filialsiz · barcha filiallar',
@@ -750,30 +807,52 @@ export default function ExecutiveDashboard() {
                     })}
                   </p>
                 </div>
-                <Button
-                  type="primary"
-                  size="small"
-                  data-snapshot-ignore="1"
-                  loading={copyingRank}
-                  icon={<ClipboardCopy size={14} />}
-                  onClick={() => void copyRankingSnapshot()}
-                  disabled={copyingRank || rankingAllBranches.length === 0}
-                >
-                  {t({
-                    uz: 'Rasmni nusxalash',
-                    en: 'Copy image',
-                    ru: 'Копировать фото',
-                  })}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2" data-snapshot-ignore="1">
+                  {rankingPageCount > 1
+                    ? Array.from({ length: rankingPageCount }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          type={page === safeRankingPage ? 'primary' : 'default'}
+                          size="small"
+                          onClick={() => setRankingPage(page)}
+                        >
+                          {page}-page
+                        </Button>
+                      ))
+                    : null}
+                  <Button
+                    type="primary"
+                    size="small"
+                    loading={copyingRank}
+                    icon={<ClipboardCopy size={14} />}
+                    onClick={() => void copyRankingSnapshot()}
+                    disabled={copyingRank || rankingPageBranches.length === 0}
+                  >
+                    {t({
+                      uz:
+                        rankingPageCount > 1
+                          ? `${safeRankingPage}-sahifani nusxalash`
+                          : 'Rasmni nusxalash',
+                      en:
+                        rankingPageCount > 1
+                          ? `Copy page ${safeRankingPage}`
+                          : 'Copy image',
+                      ru:
+                        rankingPageCount > 1
+                          ? `Копировать стр. ${safeRankingPage}`
+                          : 'Копировать фото',
+                    })}
+                  </Button>
+                </div>
               </div>
-              <div className="p-2 md:p-3">
+              <div className="p-3 md:p-4">
                 <Table
                   size="middle"
                   rowKey="orgId"
                   columns={branchColumns}
-                  dataSource={rankingAllBranches}
+                  dataSource={rankingPageBranches}
                   pagination={false}
-                  scroll={{ y: 560 }}
+                  scroll={rankingPageBranches.length > 12 ? { y: 620 } : undefined}
                 />
               </div>
             </div>
