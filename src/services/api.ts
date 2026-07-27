@@ -161,6 +161,17 @@ export type HomeBranchRank = {
   orgName: string;
   isDefault: boolean;
   value: number;
+  previousValue?: number | null;
+};
+
+export type HomeInsight = {
+  loginsThisWeek: number;
+  loginsPrevWeek: number;
+  loginDeltaPercent: number | null;
+  errors30d: number;
+  errorsPrev30d: number;
+  errorDeltaPercent: number | null;
+  onlineHint: number;
 };
 
 export type HomeOverview = {
@@ -168,6 +179,7 @@ export type HomeOverview = {
   branchHeatmap: HomeBranchHeatmapRow[];
   mostActiveBranch: HomeBranchRank | null;
   topErrorBranches: HomeBranchRank[];
+  insight?: HomeInsight;
 };
 
 export type BranchAnalyticsSummary = {
@@ -1595,6 +1607,7 @@ class ApiService {
       branchHeatmap: data?.branchHeatmap ?? [],
       mostActiveBranch: data?.mostActiveBranch ?? null,
       topErrorBranches: data?.topErrorBranches ?? [],
+      insight: data?.insight,
     };
   }
 
