@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
+  Popconfirm,
   Spin,
   Table,
   Tag,
   Typography,
+  message,
 } from '@/components/ui';
-import { AlertTriangle, RefreshCw, Wrench } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Trash2, Wrench } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
@@ -65,6 +67,8 @@ export default function AnomalozPage() {
   const [reconciling, setReconciling] = useState(false);
   const [lastFix, setLastFix] = useState<XpAnomalyReconcileResult | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedBlockedIds, setSelectedBlockedIds] = useState<string[]>([]);
+  const [deletingBlocked, setDeletingBlocked] = useState(false);
 
   const { data: me, initialLoading: meLoading } = useFetch<UserProfile | null>(
     ['me'],
@@ -108,8 +112,40 @@ export default function AnomalozPage() {
       const res = await apiService.reconcileXpAnomalies();
       setLastFix(res);
       setRefreshKey((k) => k + 1);
+      message.success('Tuzatildi');
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Xato');
     } finally {
       setReconciling(false);
+    }
+  };
+
+  const deleteBlockedOne = async (userId: string) => {
+    setDeletingBlocked(true);
+    try {
+      await apiService.deleteBlockedEmailLogin(userId);
+      message.success('Akkaunt o‘chirildi');
+      setSelectedBlockedIds((ids) => ids.filter((id) => id !== userId));
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'O‘chirishda xato');
+    } finally {
+      setDeletingBlocked(false);
+    }
+  };
+
+  const deleteBlockedSelected = async () => {
+    if (selectedBlockedIds.length === 0) return;
+    setDeletingBlocked(true);
+    try {
+      const res = await apiService.bulkDeleteBlockedEmailLogins(selectedBlockedIds);
+      message.success(`${res.deleted} ta akkaunt o‘chirildi`);
+      setSelectedBlockedIds([]);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'O‘chirishda xato');
+    } finally {
+      setDeletingBlocked(false);
     }
   };
 
@@ -322,8 +358,34 @@ export default function AnomalozPage() {
         key: 'sessionCount',
         width: 90,
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 90,
+        fixed: 'right' as const,
+        render: (_: unknown, r: BlockedEmailLoginRow) => (
+          <Popconfirm
+            title={t({
+              uz: 'Akkauntni o‘chirasizmi?',
+              en: 'Delete this account?',
+              ru: 'Удалить аккаунт?',
+            })}
+            description={r.login}
+            onConfirm={() => void deleteBlockedOne(r.userId)}
+            okText={t({ uz: 'O‘chirish', en: 'Delete', ru: 'Удалить' })}
+            cancelText={t({ uz: 'Bekor', en: 'Cancel', ru: 'Отмена' })}
+          >
+            <Button
+              danger
+              size="small"
+              icon={<Trash2 size={14} />}
+              loading={deletingBlocked}
+            />
+          </Popconfirm>
+        ),
+      },
     ],
-    [t],
+    [t, deletingBlocked],
   );
 
   if (meLoading || !me) {
@@ -393,12 +455,39 @@ export default function AnomalozPage() {
           })}
         </p>
         {blockedEmails ? (
-          <div className="mb-3 flex flex-wrap gap-3 text-sm">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
             <Tag>Jami: {blockedEmails.total}</Tag>
             <Tag color="red">Blok: {blockedEmails.blocked}</Tag>
             <Tag color="blue">Kirgan: {blockedEmails.withLoginHistory}</Tag>
             <Tag color="purple">IP bor: {blockedEmails.withIp ?? 0}</Tag>
             <Tag>Hech qachon kirmagan: {blockedEmails.neverLoggedIn}</Tag>
+            <div className="ml-auto">
+              <Popconfirm
+                title={t({
+                  uz: 'Tanlanganlarni o‘chirasizmi?',
+                  en: 'Delete selected?',
+                  ru: 'Удалить выбранные?',
+                })}
+                description={`${selectedBlockedIds.length} ta`}
+                disabled={selectedBlockedIds.length === 0}
+                onConfirm={() => void deleteBlockedSelected()}
+                okText={t({ uz: 'O‘chirish', en: 'Delete', ru: 'Удалить' })}
+                cancelText={t({ uz: 'Bekor', en: 'Cancel', ru: 'Отмена' })}
+              >
+                <Button
+                  danger
+                  icon={<Trash2 size={14} />}
+                  disabled={selectedBlockedIds.length === 0}
+                  loading={deletingBlocked}
+                >
+                  {t({
+                    uz: 'Tanlanganlarni o‘chirish',
+                    en: 'Delete selected',
+                    ru: 'Удалить выбранные',
+                  })}
+                </Button>
+              </Popconfirm>
+            </div>
           </div>
         ) : null}
         <Table
@@ -408,6 +497,10 @@ export default function AnomalozPage() {
           columns={blockedColumns}
           size="small"
           pagination={{ pageSize: 20 }}
+          rowSelection={{
+            selectedRowKeys: selectedBlockedIds,
+            onChange: (keys) => setSelectedBlockedIds(keys as string[]),
+          }}
         />
       </Card>
 

@@ -20,6 +20,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  Upload as UploadIcon,
   Users,
 } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -34,6 +35,8 @@ import {
   Table,
   Tag,
   Typography,
+  Upload,
+  message,
 } from '@/components/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { useFetch } from '@/hooks/useFetch';
@@ -45,14 +48,16 @@ import type {
   MonthlyPlanMatrix,
   MonthlyPlanMatrixEmployee,
   MonthlyReport,
+  UserProfile,
 } from '@/services/api';
 import { StatusBadge } from '@/pages/Analytics/components/StatusBadge';
 import { PercentBar } from '@/pages/Analytics/components/PercentBar';
 import { formatNumber, todayStr } from '@/pages/Analytics/analytics-utils';
+import { ReportCompareSection } from './ReportCompareSection';
 
 const { Text, Title } = Typography;
 
-type PlanMode = 'daily' | 'monthly' | 'branch';
+type PlanMode = 'daily' | 'monthly' | 'branch' | 'compare';
 type EmployeeFilter = 'all' | 'inactive' | 'completed' | 'extra';
 
 const PIE_COLORS = ['#22c55e', '#f59e0b', '#ef4444', '#6366f1'];
@@ -93,14 +98,25 @@ export default function ReportsPage() {
   const [orgFilter, setOrgFilter] = useState('');
   const [employeeFilter, setEmployeeFilter] = useState<EmployeeFilter>('all');
   const [downloading, setDownloading] = useState(false);
+  const [uploadingReport, setUploadingReport] = useState(false);
 
   const month = date.slice(0, 7);
+
+  const { data: me } = useFetch<UserProfile | null>(
+    ['me'],
+    () => apiService.me(),
+    null,
+  );
 
   const { data: organizations } = useFetch(
     ['reports-orgs'],
     () => apiService.getOrganizations(),
     [],
   );
+
+  const canCompare =
+    me?.role === 'SUPERADMIN' ||
+    Boolean(me?.organizations?.some((o) => o.isDefault));
 
   const { data: dailyReport, initialLoading: dailyLoading } = useFetch(
     ['daily-report', date],
@@ -135,7 +151,9 @@ export default function ReportsPage() {
       ? dailyLoading
       : planMode === 'monthly'
         ? monthlyLoading
-        : matrixLoading;
+        : planMode === 'branch'
+          ? matrixLoading
+          : false;
 
   const orgOptions = useMemo(
     () => organizations.map((o) => ({ value: o.id, label: o.name })),
@@ -247,7 +265,7 @@ export default function ReportsPage() {
       } else if (planMode === 'monthly') {
         await apiService.downloadMonthlyReportExcel({
           month,
-          filename: `oylik-${month}.xlsx`,
+          filename: `umumiy-oylik-${month}.xlsx`,
         });
       } else if (orgFilter) {
         const safe = (planMatrix.orgName || 'filial').replace(/[^\w\-]+/g, '_');
@@ -260,6 +278,25 @@ export default function ReportsPage() {
     } finally {
       setDownloading(false);
     }
+  };
+
+  const handleSubmitBranchExcel = async (file: File) => {
+    setUploadingReport(true);
+    try {
+      const created = await apiService.uploadReportSubmission(file);
+      message.success(
+        t({
+          uz: `Hisobot yuborildi. ID: ${created.id}`,
+          en: `Report submitted. ID: ${created.id}`,
+          ru: `Отчёт отправлен. ID: ${created.id}`,
+        }),
+      );
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Yuklashda xato');
+    } finally {
+      setUploadingReport(false);
+    }
+    return false;
   };
 
   const matrixColumns = useMemo(() => {
@@ -502,12 +539,33 @@ export default function ReportsPage() {
       <PageHeader
         title={t({ uz: 'Hisobotlar', en: 'Reports', ru: 'Отчёты' })}
         description={t({
-          uz: 'Kunlik va oylik natijalar, diagrammalar va Excel yuklab olish',
-          en: 'Daily and monthly results, charts, and Excel export',
-          ru: 'Дневные и месячные результаты, диаграммы и Excel',
+          uz: 'Umumiy va filial hisobotlari, Excel yuklab olish va solishtirish',
+          en: 'Overall and branch reports, Excel download and comparison',
+          ru: 'Общие и филиальные отчёты, Excel и сравнение',
         })}
       />
 
+      {planMode === 'compare' ? (
+        canCompare ? (
+          <ReportCompareSection
+            organizations={organizations}
+            month={month}
+            onMonthChange={(m) => setDate(`${m}-01`)}
+          />
+        ) : (
+          <Card className="!rounded-xl">
+            <Text type="secondary">
+              {t({
+                uz: 'Solishtirish faqat asosiy filial moderatorlariga ochiq.',
+                en: 'Comparison is only for main-branch moderators.',
+                ru: 'Сравнение доступно только модераторам основного филиала.',
+              })}
+            </Text>
+          </Card>
+        )
+      ) : null}
+
+      {planMode !== 'compare' ? (
       <Card className="mb-6 !rounded-xl">
         <div className="flex flex-wrap items-center gap-3">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
@@ -530,23 +588,56 @@ export default function ReportsPage() {
           <Select
             value={planMode}
             onChange={(v) => {
-              setPlanMode(v as PlanMode);
-              if (v === 'branch' && !orgFilter && organizations[0]) {
+              const next = v as PlanMode;
+              if (next === 'compare' && !canCompare) {
+                message.warning(
+                  t({
+                    uz: 'Solishtirish faqat asosiy filial moderatorlariga ochiq',
+                    en: 'Comparison is only for main-branch moderators',
+                    ru: 'Сравнение только для основного филиала',
+                  }),
+                );
+                return;
+              }
+              setPlanMode(next);
+              if (next === 'branch' && !orgFilter && organizations[0]) {
                 setOrgFilter(organizations[0].id);
               }
             }}
-            className="min-w-[180px]"
+            className="min-w-[200px]"
             options={[
-              { value: 'daily', label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }) },
-              { value: 'monthly', label: t({ uz: 'Oylik (jami)', en: 'Monthly (all)', ru: 'Месяц (все)' }) },
+              {
+                value: 'daily',
+                label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }),
+              },
+              {
+                value: 'monthly',
+                label: t({
+                  uz: 'Umumiy hisobot',
+                  en: 'Overall report',
+                  ru: 'Общий отчёт',
+                }),
+              },
               {
                 value: 'branch',
                 label: t({
-                  uz: 'Filial oylik jadval',
-                  en: 'Branch monthly grid',
-                  ru: 'Филиал — месяц',
+                  uz: 'Filial kesimida',
+                  en: 'By branch',
+                  ru: 'По филиалу',
                 }),
               },
+              ...(canCompare
+                ? [
+                    {
+                      value: 'compare',
+                      label: t({
+                        uz: 'Solishtirish',
+                        en: 'Compare',
+                        ru: 'Сравнение',
+                      }),
+                    },
+                  ]
+                : []),
             ]}
           />
           <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -573,26 +664,91 @@ export default function ReportsPage() {
             {planMode === 'daily'
               ? t({ uz: 'Kunlik Excel', en: 'Daily Excel', ru: 'День Excel' })
               : planMode === 'monthly'
-                ? t({ uz: 'Oylik Excel', en: 'Monthly Excel', ru: 'Месяц Excel' })
+                ? t({
+                    uz: 'Umumiy Excel yuklash',
+                    en: 'Download overall Excel',
+                    ru: 'Скачать общий Excel',
+                  })
                 : t({
                     uz: 'Filial Excel yuklash',
                     en: 'Download branch Excel',
                     ru: 'Скачать Excel филиала',
                   })}
           </Button>
+          {planMode === 'branch' ? (
+            <Upload
+              accept=".xlsx,.xls"
+              beforeUpload={(file) => {
+                void handleSubmitBranchExcel(file);
+                return false;
+              }}
+            >
+              <Button
+                icon={<UploadIcon className="h-4 w-4" />}
+                loading={uploadingReport}
+              >
+                {t({
+                  uz: 'Excelni taqdim etish',
+                  en: 'Submit Excel',
+                  ru: 'Отправить Excel',
+                })}
+              </Button>
+            </Upload>
+          ) : null}
         </div>
         {planMode === 'branch' && (
           <p className="mt-3 text-xs text-muted-foreground">
             {t({
-              uz: 'Har bir kun: bajarilgan savollar / 10. Oxirida oylik plan foizi (bajarilgan kunlar ÷ oy kunlari).',
-              en: 'Each day: done questions / 10. End column: monthly plan % (completed days ÷ days in month).',
-              ru: 'Каждый день: выполнено / 10. В конце — % месячного плана.',
+              uz: 'Filial Excel ni yuklab oling, keyin «Excelni taqdim etish» orqali yuboring — ID beriladi. Asosiy filial Solishtirishda tekshiradi.',
+              en: 'Download branch Excel, then submit it — you get an ID. Main branch checks it under Compare.',
+              ru: 'Скачайте Excel филиала и отправьте — появится ID. Основной филиал сверит в разделе Сравнение.',
             })}
           </p>
         )}
       </Card>
+      ) : (
+      <Card className="mb-6 !rounded-xl">
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={planMode}
+            onChange={(v) => setPlanMode(v as PlanMode)}
+            className="min-w-[200px]"
+            options={[
+              {
+                value: 'daily',
+                label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }),
+              },
+              {
+                value: 'monthly',
+                label: t({
+                  uz: 'Umumiy hisobot',
+                  en: 'Overall report',
+                  ru: 'Общий отчёт',
+                }),
+              },
+              {
+                value: 'branch',
+                label: t({
+                  uz: 'Filial kesimida',
+                  en: 'By branch',
+                  ru: 'По филиалу',
+                }),
+              },
+              {
+                value: 'compare',
+                label: t({
+                  uz: 'Solishtirish',
+                  en: 'Compare',
+                  ru: 'Сравнение',
+                }),
+              },
+            ]}
+          />
+        </div>
+      </Card>
+      )}
 
-      {planMode === 'branch' ? (
+      {planMode === 'compare' ? null : planMode === 'branch' ? (
         !orgFilter ? (
           <Card className="!rounded-xl">
             <Text type="secondary">

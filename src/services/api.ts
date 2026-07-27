@@ -790,6 +790,80 @@ export type BlockedEmailLoginsResponse = {
   users: BlockedEmailLoginRow[];
 };
 
+export type ReportSubmissionListItem = {
+  id: string;
+  organizationId: string;
+  orgName: string;
+  month: string;
+  fileName: string;
+  employeeCount: number;
+  createdAt: string;
+  uploadedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+};
+
+export type ReportSubmissionDetail = ReportSubmissionListItem & {
+  payload: {
+    orgId: string;
+    orgName: string;
+    month: string;
+    daysInMonth: number;
+    dailyGoalCorrect: number;
+    employees: Array<{
+      email: string;
+      fullName: string;
+      daysCompleted: number;
+      monthlyPercent: number;
+      extraCorrectTotal: number;
+      dayLabels: string[];
+    }>;
+  };
+};
+
+export type ReportSubmissionCompareResult = {
+  submission: ReportSubmissionListItem;
+  system: {
+    orgId: string;
+    orgName: string;
+    month: string;
+    totalEmployees: number;
+    averageMonthlyPercent: number;
+  };
+  summary: {
+    matched: number;
+    mismatched: number;
+    onlyInUpload: number;
+    onlyInSystem: number;
+    total: number;
+  };
+  rows: Array<{
+    email: string;
+    fullName: string;
+    status: 'match' | 'mismatch' | 'only_upload' | 'only_system';
+    uploaded: {
+      email: string;
+      fullName: string;
+      daysCompleted: number;
+      monthlyPercent: number;
+      extraCorrectTotal: number;
+      dayLabels: string[];
+    } | null;
+    system: {
+      email: string;
+      fullName: string;
+      daysCompleted: number;
+      monthlyPercent: number;
+      extraCorrectTotal: number;
+      dayLabels: string[];
+    } | null;
+    diffs: string[];
+  }>;
+};
+
 export type LostQuestion = {
   questionId: string;
   prompt: string;
@@ -2787,6 +2861,59 @@ class ApiService {
   async getBlockedEmailLogins(): Promise<BlockedEmailLoginsResponse> {
     const response = await this.api.get<BlockedEmailLoginsResponse>(
       '/admin/blocked-email-logins',
+    );
+    return response.data;
+  }
+
+  async deleteBlockedEmailLogin(userId: string): Promise<{ deleted: number; userId: string }> {
+    const response = await this.api.delete<{ deleted: number; userId: string }>(
+      `/admin/blocked-email-logins/${userId}`,
+    );
+    return response.data;
+  }
+
+  async bulkDeleteBlockedEmailLogins(userIds: string[]): Promise<{
+    deleted: number;
+    deletedIds: string[];
+    skipped: Array<{ userId: string; reason: string }>;
+  }> {
+    const response = await this.api.post('/admin/blocked-email-logins/bulk-delete', {
+      userIds,
+    });
+    return response.data;
+  }
+
+  async uploadReportSubmission(file: File): Promise<ReportSubmissionListItem> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.api.post<ReportSubmissionListItem>(
+      '/admin/report-submissions/upload',
+      form,
+    );
+    return response.data;
+  }
+
+  async listReportSubmissions(params?: {
+    month?: string;
+    orgId?: string;
+  }): Promise<ReportSubmissionListItem[]> {
+    const response = await this.api.get<ReportSubmissionListItem[]>(
+      '/admin/report-submissions',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getReportSubmission(id: string): Promise<ReportSubmissionDetail> {
+    const response = await this.api.get<ReportSubmissionDetail>(
+      `/admin/report-submissions/${id}`,
+    );
+    return response.data;
+  }
+
+  async compareReportSubmission(id: string): Promise<ReportSubmissionCompareResult> {
+    const response = await this.api.get<ReportSubmissionCompareResult>(
+      `/admin/report-submissions/${id}/compare`,
     );
     return response.data;
   }
