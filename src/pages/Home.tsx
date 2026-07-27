@@ -296,7 +296,7 @@ export default function HomePage() {
 
   const { data: dailyTrend } = useFetch<DailyTrend | null>(
     ['daily-trend-home'],
-    () => apiService.getDailyTrend({ orgId: 'all' }),
+    () => apiService.getDailyTrend({}),
     null,
     { enabled: ready },
   );

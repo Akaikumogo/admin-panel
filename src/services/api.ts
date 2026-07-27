@@ -1775,9 +1775,15 @@ class ApiService {
     to?: string;
     orgId?: string;
   }): Promise<DailyTrend> {
+    const { orgId, ...rest } = params ?? {};
     const response = await this.api.get<DailyTrend>(
       '/admin/branch-analytics/daily-trend',
-      { params },
+      {
+        params: {
+          ...rest,
+          ...(orgId && orgId !== 'all' ? { orgId } : {}),
+        },
+      },
     );
     return response.data;
   }
