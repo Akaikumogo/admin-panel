@@ -1308,7 +1308,10 @@ class ApiService {
       // call-site da timeout override qilinishi kerak (uploadFile).
       timeout: 60_000,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        // Admin API: brauzer HTTP 304 keshini ishlatmasin (firewall/tunnel/localhost bir xil)
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
       }
     });
 
@@ -1318,6 +1321,13 @@ class ApiService {
         const accessToken = localStorage.getItem('accessToken');
         if (accessToken) {
           config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        // GET larda har doim yangi javob so‘rash (304 + eski body muammosi)
+        if ((config.method ?? 'get').toLowerCase() === 'get') {
+          config.headers['Cache-Control'] = 'no-cache';
+          config.headers.Pragma = 'no-cache';
+          config.headers['If-None-Match'] = undefined;
+          config.headers['If-Modified-Since'] = undefined;
         }
         return config;
       },
