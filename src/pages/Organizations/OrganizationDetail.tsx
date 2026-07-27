@@ -361,7 +361,7 @@ export default function OrganizationDetail() {
 
       <Card className="!border-slate-200 dark:!border-slate-700/60">
         <div className="flex flex-wrap items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
             <Building2 size={26} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">

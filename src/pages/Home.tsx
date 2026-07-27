@@ -84,9 +84,9 @@ const KPI_META: Array<{
     key: 'activeUsers7d',
     icon: Activity,
     tone: {
-      accent: 'text-teal-600 dark:text-teal-400',
-      spark: 'rgb(13 148 136)',
-      chip: 'bg-teal-500/10',
+      accent: 'text-blue-600 dark:text-blue-400',
+      spark: 'rgb(37 99 235)',
+      chip: 'bg-blue-500/10',
     },
   },
   {
@@ -490,7 +490,7 @@ export default function HomePage() {
           label={t({ uz: 'Faol foydalanuvchi', en: 'Active users', ru: 'Активные' })}
           value={(summary?.activeUsers7d ?? 0).toLocaleString()}
           hint={<DeltaBadge percent={insight?.loginDeltaPercent} />}
-          tone="teal"
+          tone="blue"
         />
         <StoryTile
           loading={homeOverviewLoading}
@@ -541,13 +541,13 @@ export default function HomePage() {
       </div>
 
       {storyInsight ? (
-        <div className="flex items-start gap-3 rounded-lg border border-teal-500/25 bg-teal-500/5 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-lg border border-blue-500/25 bg-blue-500/5 px-4 py-3">
           <Sparkles
             size={16}
-            className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-400"
+            className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400"
           />
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700 dark:text-teal-300">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-blue-700 dark:text-blue-300">
               {t({ uz: 'AI Insight', en: 'AI Insight', ru: 'AI Insight' })}
             </p>
             <p className="mt-0.5 text-sm leading-relaxed text-foreground/90">
@@ -787,7 +787,7 @@ export default function HomePage() {
                     key={item.levelId}
                     className="flex items-center gap-3 rounded-md px-1 py-1.5 hover:bg-muted/40"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-300">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-300">
                       <Icon size={15} strokeWidth={1.75} />
                     </span>
                     <div className="w-40 shrink-0 truncate text-sm font-medium text-foreground sm:w-52">
@@ -863,12 +863,12 @@ function StoryTile({
   label: string;
   value: string;
   hint?: ReactNode;
-  tone: 'teal' | 'rose' | 'amber' | 'cyan';
+  tone: 'blue' | 'rose' | 'amber' | 'cyan';
   title?: string;
   className?: string;
 }) {
   const toneMap = {
-    teal: 'border-teal-500/20 bg-teal-500/[0.06] text-teal-700 dark:text-teal-300',
+    blue: 'border-blue-500/20 bg-blue-500/[0.06] text-blue-700 dark:text-blue-300',
     rose: 'border-rose-500/20 bg-rose-500/[0.06] text-rose-700 dark:text-rose-300',
     amber:
       'border-amber-500/25 bg-amber-500/[0.07] text-amber-800 dark:text-amber-300',
