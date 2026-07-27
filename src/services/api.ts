@@ -811,6 +811,9 @@ export type ReportSubmissionListItem = {
   fileName: string;
   employeeCount: number;
   createdAt: string;
+  integrityStatus?: 'ok' | 'tampered' | 'unsigned';
+  contentHash?: string | null;
+  exportId?: string | null;
   uploadedBy: {
     id: string;
     firstName: string;
@@ -839,6 +842,12 @@ export type ReportSubmissionDetail = ReportSubmissionListItem & {
 
 export type ReportSubmissionCompareResult = {
   submission: ReportSubmissionListItem;
+  integrity?: {
+    status: 'ok' | 'tampered' | 'unsigned';
+    contentHash: string | null;
+    exportId: string | null;
+    message: string;
+  };
   system: {
     orgId: string;
     orgName: string;
@@ -1822,7 +1831,10 @@ class ApiService {
     return response.data;
   }
 
-  async getDailyReport(params?: { date?: string }): Promise<DailyReport> {
+  async getDailyReport(params?: {
+    date?: string;
+    orgId?: string;
+  }): Promise<DailyReport> {
     const response = await this.api.get<DailyReport>(
       '/admin/branch-analytics/daily-report',
       { params },
@@ -1830,7 +1842,10 @@ class ApiService {
     return response.data;
   }
 
-  async getMonthlyReport(params?: { month?: string }): Promise<MonthlyReport> {
+  async getMonthlyReport(params?: {
+    month?: string;
+    orgId?: string;
+  }): Promise<MonthlyReport> {
     const response = await this.api.get<MonthlyReport>(
       '/admin/branch-analytics/monthly-report',
       { params },
@@ -1838,10 +1853,17 @@ class ApiService {
     return response.data;
   }
 
-  async downloadDailyReportExcel(params: { date?: string; filename?: string }) {
+  async downloadDailyReportExcel(params: {
+    date?: string;
+    orgId?: string;
+    filename?: string;
+  }) {
     const response = await this.api.get(
       '/admin/branch-analytics/export/daily-report',
-      { params: { date: params.date }, responseType: 'blob' },
+      {
+        params: { date: params.date, orgId: params.orgId },
+        responseType: 'blob',
+      },
     );
     const blob = new Blob([response.data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -1856,10 +1878,17 @@ class ApiService {
     URL.revokeObjectURL(url);
   }
 
-  async downloadMonthlyReportExcel(params: { month?: string; filename?: string }) {
+  async downloadMonthlyReportExcel(params: {
+    month?: string;
+    orgId?: string;
+    filename?: string;
+  }) {
     const response = await this.api.get(
       '/admin/branch-analytics/export/monthly-report',
-      { params: { month: params.month }, responseType: 'blob' },
+      {
+        params: { month: params.month, orgId: params.orgId },
+        responseType: 'blob',
+      },
     );
     const blob = new Blob([response.data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

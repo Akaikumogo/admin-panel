@@ -258,14 +258,18 @@ export default function ReportsPage() {
     setDownloading(true);
     try {
       if (planMode === 'daily') {
+        const scope = orgFilter ? 'filial' : 'barcha';
         await apiService.downloadDailyReportExcel({
           date,
-          filename: `kunlik-${date}.xlsx`,
+          orgId: orgFilter || undefined,
+          filename: `kunlik-${date}-${scope}.xlsx`,
         });
       } else if (planMode === 'monthly') {
+        const scope = orgFilter ? 'filial' : 'barcha';
         await apiService.downloadMonthlyReportExcel({
           month,
-          filename: `umumiy-oylik-${month}.xlsx`,
+          orgId: orgFilter || undefined,
+          filename: `oylik-${month}-${scope}.xlsx`,
         });
       } else if (orgFilter) {
         const safe = (planMatrix.orgName || 'filial').replace(/[^\w\-]+/g, '_');
@@ -284,13 +288,27 @@ export default function ReportsPage() {
     setUploadingReport(true);
     try {
       const created = await apiService.uploadReportSubmission(file);
-      message.success(
-        t({
-          uz: `Hisobot yuborildi. ID: ${created.id}`,
-          en: `Report submitted. ID: ${created.id}`,
-          ru: `Отчёт отправлен. ID: ${created.id}`,
-        }),
-      );
+      if (created.integrityStatus === 'tampered') {
+        const who = created.uploadedBy
+          ? `${created.uploadedBy.lastName} ${created.uploadedBy.firstName}`.trim() ||
+            created.uploadedBy.email
+          : 'noma’lum';
+        message.warning(
+          t({
+            uz: `Hisobot yuklandi, lekin Excel qo‘lda o‘zgartirilgan. Yuklagan: ${who}. ID: ${created.id}`,
+            en: `Uploaded, but Excel was manually altered. Uploader: ${who}. ID: ${created.id}`,
+            ru: `Загружено, но Excel изменён вручную. Загрузил: ${who}. ID: ${created.id}`,
+          }),
+        );
+      } else {
+        message.success(
+          t({
+            uz: `Hisobot yuborildi. ID: ${created.id}`,
+            en: `Report submitted. ID: ${created.id}`,
+            ru: `Отчёт отправлен. ID: ${created.id}`,
+          }),
+        );
+      }
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Yuklashda xato');
     } finally {
@@ -662,17 +680,33 @@ export default function ReportsPage() {
             onClick={handleDownload}
           >
             {planMode === 'daily'
-              ? t({ uz: 'Kunlik Excel', en: 'Daily Excel', ru: 'День Excel' })
-              : planMode === 'monthly'
+              ? orgFilter
                 ? t({
-                    uz: 'Umumiy Excel yuklash',
-                    en: 'Download overall Excel',
-                    ru: 'Скачать общий Excel',
+                    uz: '1 filial · kunlik Excel',
+                    en: '1 branch · daily Excel',
+                    ru: '1 филиал · день Excel',
                   })
                 : t({
-                    uz: 'Filial Excel yuklash',
-                    en: 'Download branch Excel',
-                    ru: 'Скачать Excel филиала',
+                    uz: 'Barcha filial · kunlik Excel',
+                    en: 'All branches · daily Excel',
+                    ru: 'Все филиалы · день Excel',
+                  })
+              : planMode === 'monthly'
+                ? orgFilter
+                  ? t({
+                      uz: '1 filial · oylik Excel',
+                      en: '1 branch · monthly Excel',
+                      ru: '1 филиал · месяц Excel',
+                    })
+                  : t({
+                      uz: 'Barcha filial · oylik Excel',
+                      en: 'All branches · monthly Excel',
+                      ru: 'Все филиалы · месяц Excel',
+                    })
+                : t({
+                    uz: 'Filial reja Excel (solishtirish uchun)',
+                    en: 'Branch plan Excel (for compare)',
+                    ru: 'Excel плана филиала',
                   })}
           </Button>
           {planMode === 'branch' ? (
@@ -696,12 +730,21 @@ export default function ReportsPage() {
             </Upload>
           ) : null}
         </div>
+        {planMode !== 'branch' ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t({
+              uz: 'Filial tanlanmasa — barcha filiallar: har biri alohida Excel sheet (turli rang). Bitta filial tanlansa — faqat shu filial.',
+              en: 'No branch selected = all branches, each on its own colored Excel sheet. One branch = that branch only.',
+              ru: 'Без филиала — все филиалы, каждый на отдельном цветном листе. Один филиал — только он.',
+            })}
+          </p>
+        ) : null}
         {planMode === 'branch' && (
           <p className="mt-3 text-xs text-muted-foreground">
             {t({
-              uz: 'Filial Excel ni yuklab oling, keyin «Excelni taqdim etish» orqali yuboring — ID beriladi. Asosiy filial Solishtirishda tekshiradi.',
-              en: 'Download branch Excel, then submit it — you get an ID. Main branch checks it under Compare.',
-              ru: 'Скачайте Excel филиала и отправьте — появится ID. Основной филиал сверит в разделе Сравнение.',
+              uz: 'Filial Excel ni yuklab oling, keyin «Excelni taqdim etish» orqali yuboring — ID beriladi. Qo‘lda o‘zgartirilsa yuklagan ko‘rinadi. Asosiy filial Solishtirishda tekshiradi.',
+              en: 'Download branch Excel, then submit — you get an ID. If altered, uploader is shown. Main branch checks under Compare.',
+              ru: 'Скачайте Excel филиала и отправьте — появится ID. При правке видно кто загрузил. Сверка в разделе Сравнение.',
             })}
           </p>
         )}
