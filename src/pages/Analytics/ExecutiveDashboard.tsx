@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -189,8 +189,6 @@ export default function ExecutiveDashboard() {
   const { date, orgId, planType } = useAnalyticsFilters();
   const rankingSnapRef = useRef<HTMLDivElement>(null);
   const [copyingRank, setCopyingRank] = useState(false);
-  const [rankingPage, setRankingPage] = useState(1);
-  const RANK_PAGE_SIZE = 14;
 
   const copyRankingSnapshot = async () => {
     const root = rankingSnapRef.current;
@@ -280,9 +278,9 @@ export default function ExecutiveDashboard() {
       ]);
       message.success(
         t({
-          uz: `${rankingPage}-sahifa rasmi nusxalandi — Telegramda Ctrl+V`,
-          en: `Page ${rankingPage} image copied — paste in Telegram (Ctrl+V)`,
-          ru: `Страница ${rankingPage} скопирована — Ctrl+V в Telegram`,
+          uz: 'Reyting rasmi nusxalandi — Telegramda Ctrl+V',
+          en: 'Ranking image copied — paste in Telegram (Ctrl+V)',
+          ru: 'Рейтинг скопирован — вставьте в Telegram (Ctrl+V)',
         }),
       );
     } catch (err) {
@@ -383,20 +381,6 @@ export default function ExecutiveDashboard() {
     [filteredBranches],
   );
 
-  const rankingPageCount = Math.max(1, Math.ceil(rankingAllBranches.length / RANK_PAGE_SIZE));
-  const safeRankingPage = Math.min(rankingPage, rankingPageCount);
-
-  const rankingPageBranches = useMemo(() => {
-    const start = (safeRankingPage - 1) * RANK_PAGE_SIZE;
-    return rankingAllBranches.slice(start, start + RANK_PAGE_SIZE);
-  }, [rankingAllBranches, safeRankingPage, RANK_PAGE_SIZE]);
-
-  const rankingRankOffset = (safeRankingPage - 1) * RANK_PAGE_SIZE;
-
-  useEffect(() => {
-    setRankingPage(1);
-  }, [date, orgId, planType, rankingAllBranches.length]);
-
   const top10 = useMemo(() => filteredBranches.slice(0, 10), [filteredBranches]);
   const bottom5 = useMemo(
     () => [...filteredBranches].sort((a, b) => a.percent - b.percent).slice(0, 5),
@@ -479,7 +463,7 @@ export default function ExecutiveDashboard() {
       width: 56,
       render: (_: unknown, __: BranchRankingRow, i: number) => (
         <span className="text-base font-semibold tabular-nums text-muted-foreground">
-          {rankingRankOffset + i + 1}
+          {i + 1}
         </span>
       ),
     },
@@ -792,11 +776,6 @@ export default function ExecutiveDashboard() {
                       en: 'Branch ranking',
                       ru: 'Рейтинг филиалов',
                     })}
-                    {rankingPageCount > 1 ? (
-                      <span className="ml-2 text-sm font-medium text-muted-foreground">
-                        · {safeRankingPage}/{rankingPageCount}
-                      </span>
-                    ) : null}
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     {date} ·{' '}
@@ -807,52 +786,29 @@ export default function ExecutiveDashboard() {
                     })}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2" data-snapshot-ignore="1">
-                  {rankingPageCount > 1
-                    ? Array.from({ length: rankingPageCount }, (_, i) => i + 1).map((page) => (
-                        <Button
-                          key={page}
-                          type={page === safeRankingPage ? 'primary' : 'default'}
-                          size="small"
-                          onClick={() => setRankingPage(page)}
-                        >
-                          {page}-page
-                        </Button>
-                      ))
-                    : null}
-                  <Button
-                    type="primary"
-                    size="small"
-                    loading={copyingRank}
-                    icon={<ClipboardCopy size={14} />}
-                    onClick={() => void copyRankingSnapshot()}
-                    disabled={copyingRank || rankingPageBranches.length === 0}
-                  >
-                    {t({
-                      uz:
-                        rankingPageCount > 1
-                          ? `${safeRankingPage}-sahifani nusxalash`
-                          : 'Rasmni nusxalash',
-                      en:
-                        rankingPageCount > 1
-                          ? `Copy page ${safeRankingPage}`
-                          : 'Copy image',
-                      ru:
-                        rankingPageCount > 1
-                          ? `Копировать стр. ${safeRankingPage}`
-                          : 'Копировать фото',
-                    })}
-                  </Button>
-                </div>
+                <Button
+                  type="primary"
+                  size="small"
+                  data-snapshot-ignore="1"
+                  loading={copyingRank}
+                  icon={<ClipboardCopy size={14} />}
+                  onClick={() => void copyRankingSnapshot()}
+                  disabled={copyingRank || rankingAllBranches.length === 0}
+                >
+                  {t({
+                    uz: 'Rasmni nusxalash',
+                    en: 'Copy image',
+                    ru: 'Копировать фото',
+                  })}
+                </Button>
               </div>
               <div className="p-3 md:p-4">
                 <Table
                   size="middle"
                   rowKey="orgId"
                   columns={branchColumns}
-                  dataSource={rankingPageBranches}
+                  dataSource={rankingAllBranches}
                   pagination={false}
-                  scroll={rankingPageBranches.length > 12 ? { y: 620 } : undefined}
                 />
               </div>
             </div>
