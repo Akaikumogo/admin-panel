@@ -607,6 +607,7 @@ export type Organization = {
   energoBranchId?: string | null;
   energoExternalId?: string | null;
   branchCode?: string | null;
+  archivedAt?: string | null;
   users?: {
     id: string;
     user: {
