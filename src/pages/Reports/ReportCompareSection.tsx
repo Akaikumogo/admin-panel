@@ -75,13 +75,27 @@ export function ReportCompareSection({
     setUploading(true);
     try {
       const created = await apiService.uploadReportSubmission(file);
-      message.success(
-        t({
-          uz: `Yuklandi. ID: ${created.id}`,
-          en: `Uploaded. ID: ${created.id}`,
-          ru: `Загружено. ID: ${created.id}`,
-        }),
-      );
+      if (created.integrityStatus === 'tampered') {
+        const who = created.uploadedBy
+          ? `${created.uploadedBy.lastName} ${created.uploadedBy.firstName}`.trim() ||
+            created.uploadedBy.email
+          : 'noma’lum';
+        message.warning(
+          t({
+            uz: `Yuklandi, lekin Excel qo‘lda o‘zgartirilgan. Yuklagan: ${who}. ID: ${created.id}`,
+            en: `Uploaded, but Excel was altered. Uploader: ${who}. ID: ${created.id}`,
+            ru: `Загружено, но Excel изменён. Загрузил: ${who}. ID: ${created.id}`,
+          }),
+        );
+      } else {
+        message.success(
+          t({
+            uz: `Yuklandi. ID: ${created.id}`,
+            en: `Uploaded. ID: ${created.id}`,
+            ru: `Загружено. ID: ${created.id}`,
+          }),
+        );
+      }
       setRefreshKey((k) => k + 1);
       setComparingId(created.id);
     } catch (e) {
@@ -146,6 +160,33 @@ export function ReportCompareSection({
         r.uploadedBy
           ? `${r.uploadedBy.lastName} ${r.uploadedBy.firstName}`.trim()
           : '—',
+    },
+    {
+      title: t({ uz: 'Yaxlitlik', en: 'Integrity', ru: 'Целостность' }),
+      key: 'integrity',
+      width: 140,
+      render: (_: unknown, r: ReportSubmissionListItem) => {
+        const s = r.integrityStatus ?? 'unsigned';
+        if (s === 'ok') {
+          return (
+            <Tag color="green">
+              {t({ uz: 'Original', en: 'Original', ru: 'Оригинал' })}
+            </Tag>
+          );
+        }
+        if (s === 'tampered') {
+          return (
+            <Tag color="red">
+              {t({ uz: 'O‘zgartirilgan', en: 'Altered', ru: 'Изменён' })}
+            </Tag>
+          );
+        }
+        return (
+          <Tag color="default">
+            {t({ uz: 'Imzosiz', en: 'Unsigned', ru: 'Без подписи' })}
+          </Tag>
+        );
+      },
     },
     {
       title: t({ uz: 'Vaqt', en: 'Time', ru: 'Время' }),
@@ -347,6 +388,19 @@ export function ReportCompareSection({
               {compareResult.system.orgName} · {compareResult.system.month}
             </Tag>
           </div>
+          {compareResult.integrity ? (
+            <div
+              className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                compareResult.integrity.status === 'tampered'
+                  ? 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-200'
+                  : compareResult.integrity.status === 'ok'
+                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+              }`}
+            >
+              {compareResult.integrity.message}
+            </div>
+          ) : null}
           <Table
             rowKey={(r) => `${r.status}-${r.email}`}
             loading={compareLoading}
