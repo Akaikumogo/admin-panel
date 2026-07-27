@@ -1,12 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NavLink, useLocation } from 'react-router-dom';
-import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 export type NavItem = {
   path: string;
   label: { uz: string; en: string; ru: string };
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 };
 
 export type NavGroup = {
@@ -23,80 +22,59 @@ export const Sidebar: React.FC<{
   isCollapsed?: boolean;
 }> = ({ navGroups, isCollapsed = false }) => {
   const location = useLocation();
-  const indicatorRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const { t } = useTranslation();
 
-  const flatItems = useMemo(
-    () => navGroups.flatMap((group) => group.items),
-    [navGroups],
-  );
-
-  useEffect(() => {
-    const activeIndex = flatItems.findIndex((item) =>
-      isNavActive(item.path, location.pathname),
-    );
-    const activeEl = itemRefs.current[activeIndex];
-    const containerEl = containerRef.current;
-
-    if (activeEl && containerEl && indicatorRef.current) {
-      const activeRect = activeEl.getBoundingClientRect();
-      const containerRect = containerEl.getBoundingClientRect();
-      indicatorRef.current.style.top = `${activeRect.top - containerRect.top}px`;
-      indicatorRef.current.style.height = `${activeRect.height}px`;
-    }
-  }, [location.pathname, flatItems]);
-
-  let itemIndex = 0;
-
   return (
-    <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4">
-      <div className="relative space-y-4" ref={containerRef}>
-        <div
-          ref={indicatorRef}
-          className="absolute left-0 w-full rounded-lg z-0 transition-all duration-300 bg-slate-800 dark:bg-slate-700 dark:border dark:border-slate-600/50"
-          style={{ top: 0, height: 0 }}
-        />
-
+    <nav
+      className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-3"
+      aria-label="Main"
+    >
+      <div className="space-y-5">
         {navGroups.map((group) => (
-          <div key={group.label.uz} className="space-y-1">
+          <div key={group.label.uz} className="space-y-0.5">
             {!isCollapsed && (
-              <p className="px-3 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {t(group.label)}
               </p>
             )}
             {group.items.map((item) => {
-              const currentIndex = itemIndex;
-              itemIndex += 1;
               const Icon = item.icon;
-              const isActive = isNavActive(item.path, location.pathname);
+              const active = isNavActive(item.path, location.pathname);
 
               return (
-                <div
+                <NavLink
                   key={item.path}
-                  className="relative z-10"
-                  ref={(el) => {
-                    itemRefs.current[currentIndex] = el;
-                  }}
+                  to={item.path}
+                  title={isCollapsed ? t(item.label) : undefined}
+                  className={cn(
+                    'group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    active
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
+                    isCollapsed && 'justify-center px-2',
+                  )}
                 >
-                  <NavLink to={item.path}>
-                    <div
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                        isActive
-                          ? 'text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-muted hover:text-foreground'
-                      }`}
-                    >
-                      <Icon size={20} className="flex-shrink-0" />
-                      {!isCollapsed && (
-                        <span className="text-sm font-medium whitespace-nowrap">
-                          {t(item.label)}
-                        </span>
-                      )}
-                    </div>
-                  </NavLink>
-                </div>
+                  {/* Signature: active left rail */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--shell-rail)] transition-opacity duration-200',
+                      active ? 'opacity-100' : 'opacity-0 group-hover:opacity-40',
+                    )}
+                  />
+                  <Icon
+                    size={18}
+                    strokeWidth={1.75}
+                    className={cn(
+                      'shrink-0 transition-colors',
+                      active ? 'text-[var(--shell-rail)]' : 'text-current',
+                    )}
+                  />
+                  {!isCollapsed && (
+                    <span className="truncate">{t(item.label)}</span>
+                  )}
+                </NavLink>
               );
             })}
           </div>
