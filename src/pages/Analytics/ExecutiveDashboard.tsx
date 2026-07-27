@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -7,11 +7,13 @@ import {
   ArrowUpRight,
   Building2,
   CheckCircle2,
+  ClipboardCopy,
   Minus,
   Target,
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { domToBlob } from 'modern-screenshot';
 import {
   Area,
   AreaChart,
@@ -23,7 +25,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Card, Skeleton, Table, Tag } from '@/components/ui';
+import { Button, Card, Skeleton, Table, Tag, message } from '@/components/ui';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
@@ -185,6 +187,82 @@ export default function ExecutiveDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { date, orgId, planType } = useAnalyticsFilters();
+  const rankingSnapRef = useRef<HTMLDivElement>(null);
+  const [copyingRank, setCopyingRank] = useState(false);
+
+  const copyRankingSnapshot = async () => {
+    const root = rankingSnapRef.current;
+    if (!root) return;
+    setCopyingRank(true);
+
+    const restores: Array<() => void> = [];
+    try {
+      root.querySelectorAll<HTMLElement>('.overflow-auto').forEach((node) => {
+        const prev = {
+          maxHeight: node.style.maxHeight,
+          height: node.style.height,
+          overflow: node.style.overflow,
+        };
+        node.style.maxHeight = 'none';
+        node.style.height = 'auto';
+        node.style.overflow = 'visible';
+        restores.push(() => {
+          node.style.maxHeight = prev.maxHeight;
+          node.style.height = prev.height;
+          node.style.overflow = prev.overflow;
+        });
+      });
+
+      // Jadvaldagi filter qatorini vaqtincha yashirish — Telegram uchun toza rasm
+      root.querySelectorAll<HTMLElement>('thead tr').forEach((tr, idx) => {
+        if (idx === 0) return;
+        const prev = tr.style.display;
+        tr.style.display = 'none';
+        restores.push(() => {
+          tr.style.display = prev;
+        });
+      });
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const blob = await domToBlob(root, {
+        scale: 2,
+        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+        filter: (node) => {
+          if (!(node instanceof HTMLElement)) return true;
+          return node.dataset.snapshotIgnore !== '1';
+        },
+      });
+
+      if (!blob) throw new Error('Snapshot yaratilmadi');
+
+      if (!navigator.clipboard?.write) {
+        throw new Error('Clipboard API qo‘llab-quvvatlanmaydi');
+      }
+
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob }),
+      ]);
+      message.success(
+        t({
+          uz: 'Reyting rasmi nusxalandi — Telegramda Ctrl+V',
+          en: 'Ranking image copied — paste in Telegram (Ctrl+V)',
+          ru: 'Рейтинг скопирован — вставьте в Telegram (Ctrl+V)',
+        }),
+      );
+    } catch (err) {
+      console.error(err);
+      message.error(
+        t({
+          uz: 'Rasmni nusxalab bo‘lmadi. HTTPS va ruxsatni tekshiring.',
+          en: 'Could not copy image. Check HTTPS and permissions.',
+          ru: 'Не удалось скопировать изображение.',
+        }),
+      );
+    } finally {
+      restores.forEach((fn) => fn());
+      setCopyingRank(false);
+    }
+  };
 
   const { data: dashboard, initialLoading: dashLoading } = useFetch(
     ['executive-dashboard', date, planType],
@@ -612,7 +690,7 @@ export default function ExecutiveDashboard() {
             </div>
 
             <div className="grid gap-4 xl:grid-cols-12">
-              <Card className="!border-border/40 !bg-white !shadow-sm xl:col-span-5 dark:!bg-slate-950">
+              <Card className="!border-border/40 !bg-white !shadow-sm xl:col-span-7 dark:!bg-slate-950">
                 <div className="border-b border-border/40 px-4 py-3 text-sm font-semibold">
                   {t({ uz: 'Top 10 filial', en: 'Top 10 branches', ru: 'Топ 10 филиалов' })}
                 </div>
@@ -631,7 +709,7 @@ export default function ExecutiveDashboard() {
                 </div>
               </Card>
 
-              <Card className="!border-border/40 !bg-white !shadow-sm xl:col-span-3 dark:!bg-slate-950">
+              <Card className="!border-border/40 !bg-white !shadow-sm xl:col-span-5 dark:!bg-slate-950">
                 <div className="border-b border-border/40 px-4 py-3 text-sm font-semibold text-red-600">
                   {t({ uz: 'Eng orqada', en: 'Bottom performers', ru: 'Отстающие' })}
                 </div>
@@ -648,21 +726,56 @@ export default function ExecutiveDashboard() {
                   ))}
                 </div>
               </Card>
+            </div>
 
-              <Card className="!border-border/40 !bg-white !shadow-sm xl:col-span-4 dark:!bg-slate-950">
-                <div className="border-b border-border/40 px-4 py-3 text-sm font-semibold">
-                  {t({ uz: 'Filiallar reytingi', en: 'Branch ranking', ru: 'Рейтинг филиалов' })}
+            <div
+              ref={rankingSnapRef}
+              className="rounded-2xl border border-border/40 bg-white shadow-sm dark:bg-slate-950"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-4 py-3">
+                <div>
+                  <div className="text-sm font-semibold">
+                    {t({
+                      uz: 'Filiallar reytingi',
+                      en: 'Branch ranking',
+                      ru: 'Рейтинг филиалов',
+                    })}
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {date} ·{' '}
+                    {t({
+                      uz: 'Asosiy filialsiz · barcha filiallar',
+                      en: 'Excluding main branch · all branches',
+                      ru: 'Без головного · все филиалы',
+                    })}
+                  </p>
                 </div>
-                <div className="p-2">
-                  <Table
-                    size="small"
-                    rowKey="orgId"
-                    columns={branchColumns}
-                    dataSource={filteredBranches}
-                    pagination={{ pageSize: 8, sizeSizeChanger: false }}
-                  />
-                </div>
-              </Card>
+                <Button
+                  type="primary"
+                  size="small"
+                  data-snapshot-ignore="1"
+                  loading={copyingRank}
+                  icon={<ClipboardCopy size={14} />}
+                  onClick={() => void copyRankingSnapshot()}
+                  disabled={copyingRank || rankingAllBranches.length === 0}
+                >
+                  {t({
+                    uz: 'Rasmni nusxalash',
+                    en: 'Copy image',
+                    ru: 'Копировать фото',
+                  })}
+                </Button>
+              </div>
+              <div className="p-2 md:p-3">
+                <Table
+                  size="middle"
+                  rowKey="orgId"
+                  columns={branchColumns}
+                  dataSource={rankingAllBranches}
+                  pagination={false}
+                  scroll={{ y: 560 }}
+                />
+              </div>
             </div>
           </section>
 
