@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -99,6 +99,15 @@ type MatrixTableProps = {
   pageSize?: number;
   reportsHref?: string;
   userId?: string;
+  /** Server pagination (oylik) */
+  serverPagination?: {
+    current: number;
+    pageSize: number;
+    total: number;
+    onChange: (page: number, pageSize: number) => void;
+  };
+  columnFilters?: Record<string, string>;
+  onColumnFiltersChange?: (filters: Record<string, string>) => void;
 };
 
 function PlanMatrixTableBase({
@@ -110,15 +119,33 @@ function PlanMatrixTableBase({
   pageSize = 40,
   reportsHref,
   userId,
+  serverPagination,
+  columnFilters,
+  onColumnFiltersChange,
 }: MatrixTableProps) {
   const { t } = useTranslation();
   const yearly = isYearly(data);
+  const goal = yearly
+    ? (data as YearlyPlanMatrix).dailyGoalCorrect
+    : (data as MonthlyPlanMatrix).dailyGoalCorrect;
 
   const employees = useMemo(() => {
     const rows = data.employees ?? [];
-    if (!userId) return rows;
+    // userId endi serverda filtrlanadi; eski payload uchun client fallback
+    if (!userId || serverPagination) return rows;
     return rows.filter((e) => e.userId === userId);
-  }, [data.employees, userId]);
+  }, [data.employees, userId, serverPagination]);
+
+  const dayCellMaps = useMemo(() => {
+    if (yearly) return null;
+    const map = new Map<string, Map<string, MonthlyPlanMatrixEmployee['dayResults'][number]>>();
+    for (const row of employees as MonthlyPlanMatrixEmployee[]) {
+      const m = new Map<string, MonthlyPlanMatrixEmployee['dayResults'][number]>();
+      for (const c of row.dayResults ?? []) m.set(c.date, c);
+      map.set(`${row.orgId ?? ''}:${row.userId}`, m);
+    }
+    return map;
+  }, [employees, yearly]);
 
   const columns = useMemo(() => {
     const idxCol = {
@@ -127,7 +154,10 @@ function PlanMatrixTableBase({
       width: 48,
       fixed: 'left' as const,
       filterable: false as const,
-      render: (_: unknown, __: { userId: string }, i: number) => i + 1,
+      render: (_: unknown, __: { userId: string }, i: number) =>
+        serverPagination
+          ? (serverPagination.current - 1) * serverPagination.pageSize + i + 1
+          : i + 1,
     };
 
     const orgCol = showFilial
@@ -300,7 +330,6 @@ function PlanMatrixTableBase({
     }
 
     const dayCols = dayKeys.map((d) => {
-      const idx = (mData.days ?? []).indexOf(d);
       const title =
         period === 'daily'
           ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`
@@ -316,12 +345,24 @@ function PlanMatrixTableBase({
             ? { className: 'bg-sky-50 dark:bg-sky-950/30' }
             : {},
         render: (_: unknown, row: MonthlyPlanMatrixEmployee) => {
-          const cell = idx >= 0 ? row.dayResults[idx] : undefined;
-          if (!cell) return '—';
+          const found = dayCellMaps
+            ?.get(`${row.orgId ?? ''}:${row.userId}`)
+            ?.get(d);
+          const cell = found ?? {
+            date: d,
+            day: Number(d.slice(8, 10)),
+            rawCorrect: 0,
+            planCorrect: 0,
+            extraCorrect: 0,
+            attempts: 0,
+            wrong: 0,
+            completed: false,
+            label: `0/${goal}`,
+          };
           const tip = t({
-            uz: `Sana: ${cell.date}\nReja: ${cell.label}\nUrinish: ${cell.attempts ?? 0} · Xato: ${cell.wrong ?? 0} · Plandan tashqari: ${cell.extraCorrect ?? Math.max(0, cell.rawCorrect - 10)}`,
-            en: `Date: ${cell.date}\nPlan: ${cell.label}\nAttempts: ${cell.attempts ?? 0} · Errors: ${cell.wrong ?? 0} · Extra: ${cell.extraCorrect ?? Math.max(0, cell.rawCorrect - 10)}`,
-            ru: `Дата: ${cell.date}\nПлан: ${cell.label}\nПопытки: ${cell.attempts ?? 0} · Ошибки: ${cell.wrong ?? 0} · Сверх: ${cell.extraCorrect ?? Math.max(0, cell.rawCorrect - 10)}`,
+            uz: `Sana: ${cell.date}\nReja: ${cell.label}\nUrinish: ${cell.attempts ?? 0} · Xato: ${cell.wrong ?? 0} · Plandan tashqari: ${cell.extraCorrect ?? Math.max(0, cell.rawCorrect - goal)}`,
+            en: `Date: ${cell.date}\nPlan: ${cell.label}\nAttempts: ${cell.attempts ?? 0} · Errors: ${cell.wrong ?? 0} · Extra: ${cell.extraCorrect ?? Math.max(0, cell.rawCorrect - goal)}`,
+            ru: `Дата: ${cell.date}\nПлан: ${cell.label}\nПопытки: ${cell.attempts ?? 0} · Ошибки: ${cell.wrong ?? 0} · Сверх: ${cell.extraCorrect ?? Math.max(0, cell.rawCorrect - goal)}`,
           });
           return (
             <ScoreChip
@@ -370,7 +411,7 @@ function PlanMatrixTableBase({
       },
       ...statsCols,
     ];
-  }, [data, period, showFilial, highlightDate, yearly, t]);
+  }, [data, period, showFilial, highlightDate, yearly, t, dayCellMaps, goal, serverPagination]);
 
   const scrollX = useMemo(() => {
     if (yearly) {
@@ -388,7 +429,12 @@ function PlanMatrixTableBase({
     );
   }, [data, period, showFilial, yearly]);
 
-  const metaEmployees = employees.length;
+  const metaEmployees =
+    yearly
+      ? employees.length
+      : ((data as MonthlyPlanMatrix).total ??
+        (data as MonthlyPlanMatrix).totalEmployees ??
+        employees.length);
   const metaLabel = yearly
     ? `${(data as YearlyPlanMatrix).year} · ${metaEmployees}`
     : period === 'daily' && highlightDate
@@ -448,7 +494,19 @@ function PlanMatrixTableBase({
         loading={loading}
         dataSource={employees}
         columns={columns}
-        pagination={{ pageSize, showSizeChanger: true }}
+        pagination={
+          serverPagination
+            ? {
+                current: serverPagination.current,
+                pageSize: serverPagination.pageSize,
+                total: serverPagination.total,
+                showSizeChanger: true,
+                onChange: serverPagination.onChange,
+              }
+            : { pageSize, showSizeChanger: true }
+        }
+        columnFilters={columnFilters}
+        onColumnFiltersChange={onColumnFiltersChange}
         size="small"
         scroll={{ x: scrollX }}
         className="min-w-0"
@@ -517,19 +575,50 @@ function PlanResultsTableInner({
   const [month, setMonth] = useState(today.slice(0, 7));
   const [year, setYear] = useState(today.slice(0, 4));
   const [exporting, setExporting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(pageSize);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>(
+    {},
+  );
 
   const monthForFetch = period === 'daily' ? day.slice(0, 7) : month;
+  const search = useMemo(() => {
+    const parts = [columnFilters.orgName, columnFilters.fullName]
+      .map((s) => s?.trim())
+      .filter(Boolean);
+    return parts.join(' ').trim() || undefined;
+  }, [columnFilters.orgName, columnFilters.fullName]);
 
-  const { data: planMatrix, initialLoading: monthLoading } =
+  // Period/filter o‘zgaganda 1-sahifaga
+  useEffect(() => {
+    setPage(1);
+  }, [orgId, userId, monthForFetch, period, day, search]);
+
+  const { data: planMatrix, initialLoading: monthLoading, loading: monthFetching } =
     useFetch<MonthlyPlanMatrix>(
-      ['plan-results-month', orgId ?? '', userId ?? '', monthForFetch],
+      [
+        'plan-results-month',
+        orgId ?? '',
+        userId ?? '',
+        monthForFetch,
+        period,
+        period === 'daily' ? day : '',
+        page,
+        limit,
+        search ?? '',
+      ],
       () =>
         apiService.getMonthlyPlanMatrix({
           orgId: orgId || undefined,
           month: monthForFetch,
+          userId: userId || undefined,
+          page: userId ? 1 : page,
+          limit: userId ? 5 : limit,
+          search: userId ? undefined : search,
+          date: period === 'daily' ? day : undefined,
         }),
       emptyMonth(monthForFetch),
-      { enabled: period !== 'yearly' },
+      { enabled: period !== 'yearly', keepPrevious: true },
     );
 
   const { data: yearMatrix, initialLoading: yearLoading } =
@@ -545,6 +634,7 @@ function PlanResultsTableInner({
     );
 
   const loading = period === 'yearly' ? yearLoading : monthLoading;
+  const tableBusy = period !== 'yearly' && monthFetching && !monthLoading;
 
   const onExport = async () => {
     setExporting(true);
@@ -576,6 +666,19 @@ function PlanResultsTableInner({
     }
   };
 
+  const serverPagination =
+    period !== 'yearly' && !userId
+      ? {
+          current: page,
+          pageSize: limit,
+          total: planMatrix.total ?? planMatrix.totalEmployees ?? 0,
+          onChange: (p: number, ps: number) => {
+            setPage(p);
+            setLimit(ps);
+          },
+        }
+      : undefined;
+
   return (
     <div className={cn('space-y-3 min-w-0 max-w-full', className)}>
       {(title || embeddedControls) && (
@@ -585,7 +688,10 @@ function PlanResultsTableInner({
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <Segmented<PlanPeriod>
                 value={period}
-                onChange={setPeriod}
+                onChange={(v) => {
+                  setPeriod(v);
+                  setPage(1);
+                }}
                 options={[
                   {
                     value: 'daily',
@@ -612,7 +718,12 @@ function PlanResultsTableInner({
               ) : period === 'daily' ? (
                 <DatePicker
                   value={dayjs(day)}
-                  onChange={(d) => d && setDay(d.format('YYYY-MM-DD'))}
+                  onChange={(d) => {
+                    if (d) {
+                      setDay(d.format('YYYY-MM-DD'));
+                      setPage(1);
+                    }
+                  }}
                   allowClear={false}
                   className="w-[150px]"
                 />
@@ -620,7 +731,12 @@ function PlanResultsTableInner({
                 <DatePicker
                   picker="month"
                   value={dayjs(`${month}-01`)}
-                  onChange={(d) => d && setMonth(d.format('YYYY-MM'))}
+                  onChange={(d) => {
+                    if (d) {
+                      setMonth(d.format('YYYY-MM'));
+                      setPage(1);
+                    }
+                  }}
                   allowClear={false}
                   className="w-[140px]"
                 />
@@ -656,8 +772,19 @@ function PlanResultsTableInner({
           highlightDate={period === 'daily' ? day : today}
           showFilial={showFilial}
           userId={userId}
-          pageSize={pageSize}
+          pageSize={limit}
           reportsHref={reportsHref}
+          loading={tableBusy}
+          serverPagination={serverPagination}
+          columnFilters={serverPagination ? columnFilters : undefined}
+          onColumnFiltersChange={
+            serverPagination
+              ? (next) => {
+                  setColumnFilters(next);
+                  setPage(1);
+                }
+              : undefined
+          }
         />
       )}
     </div>

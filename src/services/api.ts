@@ -302,6 +302,11 @@ export type MonthlyPlanMatrix = {
   dailyGoalCorrect: number;
   days: string[];
   totalEmployees: number;
+  /** Pagination total (filtered) */
+  total?: number;
+  page?: number;
+  limit?: number;
+  sparse?: boolean;
   averageMonthlyPercent: number;
   fullCompletedEmployees: number;
   employees: MonthlyPlanMatrixEmployee[];
@@ -1729,6 +1734,11 @@ class ApiService {
   async getMonthlyPlanMatrix(params: {
     orgId?: string;
     month?: string;
+    userId?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    date?: string;
   }): Promise<MonthlyPlanMatrix> {
     const response = await this.api.get<MonthlyPlanMatrix>(
       '/admin/branch-analytics/monthly-plan-matrix',
