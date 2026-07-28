@@ -27,9 +27,9 @@ const T = {
   totalErrors: { uz: 'Jami xatolar', en: 'Total errors', ru: 'Всего ошибок' },
   xpHistory: { uz: 'XP tarixi', en: 'XP history', ru: 'История XP' },
   xpHistoryHint: {
-    uz: 'Ball (+10) faqat «Kunlik reja» orqali, kuniga birinchi 10 ta yangi to‘g‘ri savol uchun. Darsdan javoblar = 0 ball (lekin reja foizi hisoblanishi mumkin).',
-    en: 'XP (+10) only via Daily plan, first 10 new correct answers per day. Lesson answers = 0 XP (plan % may still count).',
-    ru: 'Баллы (+10) только через дневной план, первые 10 новых верных за день. Ответы из урока = 0 (план % может считаться).',
+    uz: 'Ball (+10) faqat «Kunlik reja» orqali, kuniga birinchi 10 ta yangi to‘g‘ri savol uchun. Darsdan javoblar = 0 ball.',
+    en: 'XP (+10) only via Daily plan, first 10 new correct answers per day. Lesson answers = 0 XP.',
+    ru: 'Баллы (+10) только через дневной план, первые 10 новых верных за день. Ответы из урока = 0.',
   },
   when: { uz: 'Vaqt', en: 'When', ru: 'Когда' },
   xp: { uz: 'Ball', en: 'XP', ru: 'Баллы' },
