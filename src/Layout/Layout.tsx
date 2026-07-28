@@ -379,10 +379,13 @@ const Layout = () => {
   };
 
   return (
-    <div className="flex min-h-dvh max-w-[100vw] overflow-x-hidden bg-background">
+    <div
+      data-app-shell="true"
+      className="flex h-dvh max-w-[100vw] overflow-hidden bg-background"
+    >
       <aside
         className={cn(
-          'sticky top-0 z-30 flex h-dvh shrink-0 flex-col border-r border-border bg-[var(--shell-sidebar)] transition-[width] duration-300 ease-out',
+          'z-30 flex h-full shrink-0 flex-col border-r border-border bg-[var(--shell-sidebar)] transition-[width] duration-300 ease-out',
           isCollapsed ? 'w-[72px]' : 'w-[272px]',
         )}
       >
