@@ -1947,14 +1947,25 @@ class ApiService {
   }
 
   async downloadMonthlyPlanMatrixExcel(params: {
-    orgId: string;
+    orgId?: string;
     month?: string;
+    period?: 'daily' | 'monthly';
+    date?: string;
+    userId?: string;
+    showFilial?: boolean;
     filename?: string;
   }) {
     const response = await this.api.get(
       '/admin/branch-analytics/export/monthly-plan-matrix',
       {
-        params: { orgId: params.orgId, month: params.month },
+        params: {
+          orgId: params.orgId,
+          month: params.month,
+          period: params.period,
+          date: params.date,
+          userId: params.userId,
+          showFilial: params.showFilial ? 'true' : 'false',
+        },
         responseType: 'blob',
       },
     );
@@ -1965,7 +1976,43 @@ class ApiService {
     const link = document.createElement('a');
     link.href = url;
     link.download =
-      params.filename ?? `${params.month ?? 'month'}-oylik-reja.xlsx`;
+      params.filename ??
+      (params.period === 'daily'
+        ? `${params.date ?? 'day'}-kunlik-reja.xlsx`
+        : `${params.month ?? 'month'}-oylik-reja.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async downloadYearlyPlanMatrixExcel(params: {
+    orgId?: string;
+    year?: string;
+    userId?: string;
+    showFilial?: boolean;
+    filename?: string;
+  }) {
+    const response = await this.api.get(
+      '/admin/branch-analytics/export/yearly-plan-matrix',
+      {
+        params: {
+          orgId: params.orgId,
+          year: params.year,
+          userId: params.userId,
+          showFilial: params.showFilial ? 'true' : 'false',
+        },
+        responseType: 'blob',
+      },
+    );
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download =
+      params.filename ?? `${params.year ?? 'year'}-yillik-reja.xlsx`;
     document.body.appendChild(link);
     link.click();
     link.remove();

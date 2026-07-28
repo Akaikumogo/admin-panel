@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -32,8 +32,6 @@ import {
   Table,
   Progress,
   Tooltip,
-  Segmented,
-  DatePicker,
 } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
@@ -43,19 +41,15 @@ import type {
   DailyTrend,
   HomeOverview,
   LevelFunnelItem,
-  MonthlyPlanMatrix,
   QuestionError,
   UserProfile,
-  YearlyPlanMatrix,
 } from '@/services/api';
 import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
 import { MiniSparkline } from './Home/MiniSparkline';
 import { formatDelta, shortBranchName } from './Home/branchName';
-import { PlanMatrixTable, type PlanPeriod } from './Reports/PlanMatrixTable';
+import { PlanResultsTable } from './Reports/PlanMatrixTable';
 import { PageHeader } from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
-import { todayStr } from './Analytics/analytics-utils';
-import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
@@ -308,60 +302,8 @@ export default function HomePage() {
     { enabled: ready },
   );
 
-  const homeToday = todayStr();
-  const [period, setPeriod] = useState<PlanPeriod>('monthly');
-  const [month, setMonth] = useState(homeToday.slice(0, 7));
-  const [year, setYear] = useState(homeToday.slice(0, 4));
   const [searchParams] = useSearchParams();
   const orgFilter = searchParams.get('orgId') ?? '';
-
-  const emptyHomeMatrix: MonthlyPlanMatrix = {
-    orgId: '',
-    orgName: '',
-    month,
-    daysInMonth: 30,
-    dailyGoalCorrect: 10,
-    days: [],
-    totalEmployees: 0,
-    averageMonthlyPercent: 0,
-    fullCompletedEmployees: 0,
-    employees: [],
-  };
-
-  const emptyYearMatrix: YearlyPlanMatrix = {
-    orgId: '',
-    orgName: '',
-    year,
-    months: [],
-    dailyGoalCorrect: 10,
-    totalEmployees: 0,
-    averageYearlyPercent: 0,
-    employees: [],
-  };
-
-  const { data: planMatrix, initialLoading: planMatrixLoading } =
-    useFetch<MonthlyPlanMatrix>(
-      ['home-plan-matrix', month, orgFilter],
-      () =>
-        apiService.getMonthlyPlanMatrix({
-          month,
-          orgId: orgFilter || undefined,
-        }),
-      emptyHomeMatrix,
-      { enabled: ready && period !== 'yearly' },
-    );
-
-  const { data: yearMatrix, initialLoading: yearMatrixLoading } =
-    useFetch<YearlyPlanMatrix>(
-      ['home-year-matrix', year, orgFilter],
-      () =>
-        apiService.getYearlyPlanMatrix({
-          year,
-          orgId: orgFilter || undefined,
-        }),
-      emptyYearMatrix,
-      { enabled: ready && period === 'yearly' },
-    );
 
   const insight = homeOverview?.insight;
   const weekSpark = useMemo(() => {
@@ -570,10 +512,17 @@ export default function HomePage() {
         </div>
       </Card>
 
-      <Card
-        className="!border-border !shadow-none"
-        title={
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="!border-border !shadow-none min-w-0 overflow-hidden">
+        <PlanResultsTable
+          showFilial={!orgFilter}
+          orgId={orgFilter || undefined}
+          pageSize={30}
+          reportsHref={
+            orgFilter
+              ? `/dashboard/reports?orgId=${orgFilter}`
+              : '/dashboard/reports'
+          }
+          title={
             <span className="flex items-center gap-2 text-sm font-semibold">
               <CalendarDays
                 size={15}
@@ -581,94 +530,13 @@ export default function HomePage() {
                 className="text-[var(--shell-rail)]"
               />
               {t({
-                uz:
-                  period === 'yearly'
-                    ? 'Xodimlar — yillik reja'
-                    : period === 'daily'
-                      ? 'Xodimlar — kunlik reja'
-                      : 'Xodimlar — oylik reja',
-                en:
-                  period === 'yearly'
-                    ? 'Employees — yearly plan'
-                    : period === 'daily'
-                      ? 'Employees — daily plan'
-                      : 'Employees — monthly plan',
-                ru:
-                  period === 'yearly'
-                    ? 'Сотрудники — годовой план'
-                    : period === 'daily'
-                      ? 'Сотрудники — дневной план'
-                      : 'Сотрудники — месячный план',
+                uz: 'Xodimlar — reja natijalari',
+                en: 'Employees — plan results',
+                ru: 'Сотрудники — результаты плана',
               })}
             </span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Segmented<PlanPeriod>
-                value={period}
-                onChange={setPeriod}
-                options={[
-                  {
-                    value: 'daily',
-                    label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }),
-                  },
-                  {
-                    value: 'monthly',
-                    label: t({ uz: 'Oylik', en: 'Monthly', ru: 'Мес.' }),
-                  },
-                  {
-                    value: 'yearly',
-                    label: t({ uz: 'Yillik', en: 'Yearly', ru: 'Год' }),
-                  },
-                ]}
-              />
-              {period === 'yearly' ? (
-                <DatePicker
-                  picker="year"
-                  value={dayjs(`${year}-01-01`)}
-                  onChange={(d) => d && setYear(d.format('YYYY'))}
-                  allowClear={false}
-                  className="w-[110px]"
-                />
-              ) : (
-                <DatePicker
-                  picker="month"
-                  value={dayjs(`${month}-01`)}
-                  onChange={(d) => d && setMonth(d.format('YYYY-MM'))}
-                  allowClear={false}
-                  className="w-[140px]"
-                />
-              )}
-            </div>
-          </div>
-        }
-      >
-        {period === 'yearly' ? (
-          yearMatrixLoading ? (
-            <Skeleton active paragraph={{ rows: 8 }} />
-          ) : (
-            <PlanMatrixTable
-              data={yearMatrix}
-              period="yearly"
-              hideOrgColumn={Boolean(orgFilter)}
-              reportsHref="/dashboard/reports"
-              pageSize={30}
-            />
-          )
-        ) : planMatrixLoading ? (
-          <Skeleton active paragraph={{ rows: 8 }} />
-        ) : (
-          <PlanMatrixTable
-            data={planMatrix}
-            period={period}
-            highlightDate={homeToday}
-            hideOrgColumn={Boolean(orgFilter)}
-            reportsHref={
-              orgFilter
-                ? `/dashboard/reports?orgId=${orgFilter}`
-                : '/dashboard/reports'
-            }
-            pageSize={30}
-          />
-        )}
+          }
+        />
       </Card>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
