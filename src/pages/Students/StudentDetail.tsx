@@ -27,12 +27,13 @@ const T = {
   totalErrors: { uz: 'Jami xatolar', en: 'Total errors', ru: 'Всего ошибок' },
   xpHistory: { uz: 'XP tarixi', en: 'XP history', ru: 'История XP' },
   xpHistoryHint: {
-    uz: 'Qachon, qaysi savoldan ball olgani. Ball faqat kunlik majburiyat (plan) uchun; plandan tashqari = +0.',
-    en: 'When and which question earned points. Points only for daily plan; off-plan = +0.',
-    ru: 'Когда и за какой вопрос начислены баллы. Баллы только за дневной план; вне плана = +0.',
+    uz: 'Ball (+10) faqat «Kunlik reja» orqali, kuniga birinchi 10 ta yangi to‘g‘ri savol uchun. Darsdan javoblar = 0 ball (lekin reja foizi hisoblanishi mumkin).',
+    en: 'XP (+10) only via Daily plan, first 10 new correct answers per day. Lesson answers = 0 XP (plan % may still count).',
+    ru: 'Баллы (+10) только через дневной план, первые 10 новых верных за день. Ответы из урока = 0 (план % может считаться).',
   },
   when: { uz: 'Vaqt', en: 'When', ru: 'Когда' },
   xp: { uz: 'Ball', en: 'XP', ru: 'Баллы' },
+  source: { uz: 'Manba', en: 'Source', ru: 'Источник' },
   question: { uz: 'Savol', en: 'Question', ru: 'Вопрос' },
   level: { uz: 'Daraja', en: 'Level', ru: 'Уровень' },
   theory: { uz: 'Nazariya', en: 'Theory', ru: 'Теория' },
@@ -43,6 +44,16 @@ const T = {
   organizations: { uz: 'Tashkilotlar', en: 'Organizations', ru: 'Организации' },
   joined: { uz: 'Qo`shilgan', en: 'Joined', ru: 'Зарегистрирован' },
 } as const;
+
+function xpSourceLabel(source: string | null | undefined) {
+  if (source === 'DAILY_PLAN') {
+    return { uz: 'Kunlik reja', en: 'Daily plan', ru: 'Дневной план' };
+  }
+  if (source === 'LESSON') {
+    return { uz: 'Dars', en: 'Lesson', ru: 'Урок' };
+  }
+  return { uz: 'Noma’lum', en: 'Unknown', ru: 'Неизвестно' };
+}
 
 const ACTIVITY_COLORS = [
   'bg-slate-100 dark:bg-slate-800',
@@ -172,12 +183,46 @@ const StudentDetailPage = () => {
       width: 140,
     },
     {
+      title: t(T.source),
+      dataIndex: 'attemptSource',
+      key: 'attemptSource',
+      width: 120,
+      filterable: false,
+      render: (v: string | null | undefined) => {
+        const label = t(xpSourceLabel(v));
+        return v === 'DAILY_PLAN' ? (
+          <Tag color="green">{label}</Tag>
+        ) : (
+          <Tag>{label}</Tag>
+        );
+      },
+    },
+    {
       title: t(T.xp),
       dataIndex: 'xpEarned',
       key: 'xpEarned',
-      width: 90,
-      render: (v: number) =>
-        v > 0 ? <Tag color="green">+{v}</Tag> : <Tag>0</Tag>,
+      width: 100,
+      filterable: false,
+      render: (v: number, row: { attemptSource?: string | null; countsForXp?: boolean }) => {
+        if (v > 0) return <Tag color="green">+{v}</Tag>;
+        const why =
+          row.attemptSource === 'DAILY_PLAN'
+            ? t({
+                uz: 'Kunlik reja to‘lgan yoki shu savol allaqachon hisoblangan',
+                en: 'Daily plan full or question already counted',
+                ru: 'Дневной план заполнен или вопрос уже учтён',
+              })
+            : t({
+                uz: 'Dars javobi — ball faqat kunlik rejadan',
+                en: 'Lesson answer — XP only from daily plan',
+                ru: 'Ответ из урока — баллы только за дневной план',
+              });
+        return (
+          <Tooltip title={why}>
+            <Tag>0</Tag>
+          </Tooltip>
+        );
+      },
     },
   ];
 
