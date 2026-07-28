@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Progress, Spin, Table, Tag, Tooltip } from '@/components/ui';
+import { Button, Progress, Spin, Table, Tag, Tooltip } from '@/components/ui';
 import { ArrowLeft, CheckCircle2, Zap, Trophy, XCircle, Mail, Calendar, CalendarDays } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import NoData from '@/components/NoData';
-import apiService, { BACKEND_ORIGIN } from '@/services/api';
+import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
+import apiService from '@/services/api';
 import type {
   StudentDetail as StudentDetailType,
   StudentXpHistoryResponse,
@@ -77,7 +78,7 @@ const StudentDetailPage = () => {
   const { t } = useTranslation();
   const [xpPage, setXpPage] = useState(1);
 
-  const { data: student, initialLoading } = useFetch<StudentDetailType | null>(
+  const { data: student, initialLoading, refetch } = useFetch<StudentDetailType | null>(
     ['student-detail', id],
     () => apiService.getStudent(id!),
     null,
@@ -240,13 +241,15 @@ const StudentDetailPage = () => {
       {/* Profile card */}
       <div className="bg-card border border-border rounded-lg p-6">
         <div className="flex items-start gap-5">
-          <Avatar
+          <EmployeeAvatarUpload
+            userId={student.id}
+            firstName={student.firstName}
+            lastName={student.lastName}
+            avatarUrl={student.avatarUrl}
             size={72}
-            src={student.avatarUrl ? `${BACKEND_ORIGIN}${student.avatarUrl}` : undefined}
-            className="bg-gradient-to-br from-blue-500 to-blue-700 flex-shrink-0 text-2xl"
-          >
-            {(student.firstName?.[0] || '') + (student.lastName?.[0] || '')}
-          </Avatar>
+            className="text-2xl"
+            onUploaded={() => refetch()}
+          />
 
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">

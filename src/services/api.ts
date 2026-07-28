@@ -1507,10 +1507,17 @@ class ApiService {
 
   async uploadUserAvatar(
     userId: string,
-    file: File
+    file: File,
+    meta?: { hasFace?: boolean; faceConfidence?: number },
   ): Promise<{ success: boolean; avatarUrl: string; userId: string }> {
     const form = new FormData();
     form.append('file', file);
+    if (meta?.hasFace != null) {
+      form.append('hasFace', meta.hasFace ? 'true' : 'false');
+    }
+    if (meta?.faceConfidence != null) {
+      form.append('faceConfidence', String(meta.faceConfidence));
+    }
     const response = await this.api.post<{
       success: boolean;
       avatarUrl: string;

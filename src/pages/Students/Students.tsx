@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Avatar,
   Button,
   Segmented,
   Select,
@@ -24,8 +23,9 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar, ContentCard } from '@/components/FilterBar';
+import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
 import { downloadCsv } from '@/lib/csv';
-import apiService, { BACKEND_ORIGIN } from '@/services/api';
+import apiService from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
@@ -81,7 +81,7 @@ const Students = () => {
     [columnFilters],
   );
 
-  const { data: students, total, loading, initialLoading } =
+  const { data: students, total, loading, initialLoading, refetch } =
     usePaginatedFetch<StudentSummary>(
       ['students', qp.orgId, qp.levelId, columnSearch, currentPage, pageSize],
       () =>
@@ -216,17 +216,14 @@ const Students = () => {
         `${record.firstName ?? ''} ${record.lastName ?? ''}`.trim(),
       render: (_: unknown, record: StudentSummary) => (
         <div className="flex items-center gap-3">
-          <Avatar
+          <EmployeeAvatarUpload
+            userId={record.id}
+            firstName={record.firstName}
+            lastName={record.lastName}
+            avatarUrl={record.avatarUrl}
             size={36}
-            src={
-              record.avatarUrl
-                ? `${BACKEND_ORIGIN}${record.avatarUrl}`
-                : undefined
-            }
-            className="bg-gradient-to-br from-slate-600 to-slate-800 flex-shrink-0"
-          >
-            {(record.firstName?.[0] || '') + (record.lastName?.[0] || '')}
-          </Avatar>
+            onUploaded={() => refetch()}
+          />
           <div>
             <p className="font-medium text-foreground">
               <HighlightText
