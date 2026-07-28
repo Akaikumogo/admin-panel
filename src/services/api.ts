@@ -701,6 +701,8 @@ export type StudentSummary = {
   lastName: string;
   email: string;
   avatarUrl: string | null;
+  /** USER | MODERATOR — moderatorlar ham plan topshiradi */
+  role?: string;
   personnelNumber: string | null;
   /** Energo ID bo‘lim (division) */
   division?: string | null;

@@ -254,6 +254,11 @@ const StudentDetailPage = () => {
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
               {student.firstName} {student.lastName}
+              {student.role === 'MODERATOR' ? (
+                <Tag className="ml-2 align-middle" color="blue">
+                  Moderator
+                </Tag>
+              ) : null}
             </h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs font-medium">

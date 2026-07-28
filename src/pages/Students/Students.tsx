@@ -229,6 +229,11 @@ const Students = () => {
               <HighlightText
                 text={`${record.firstName} ${record.lastName}`}
               />
+              {record.role === 'MODERATOR' ? (
+                <Tag className="ml-2" color="blue">
+                  Moderator
+                </Tag>
+              ) : null}
             </p>
             <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
               {'⚡'.repeat(record.badge.bolts)} {record.badge.label}
