@@ -10,7 +10,6 @@ import {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Avatar,
   Switch,
   message,
 } from '@/components/ui';
@@ -33,9 +32,9 @@ import {
   Zap,
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
-import { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentSummary } from '@/services/api';
 import apiService from '@/services/api';
+import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
 import { cn } from '@/lib/utils';
 
 /* ─── tree model ─────────────────────────────────────────────────────────── */
@@ -216,18 +215,19 @@ const EmployeeRow = memo(function EmployeeRow({
         !checked && 'opacity-55',
       )}
     >
+      <EmployeeAvatarUpload
+        userId={s.id}
+        firstName={s.firstName}
+        lastName={s.lastName}
+        avatarUrl={s.avatarUrl}
+        size={28}
+        className="rounded-md"
+      />
       <button
         type="button"
         onClick={() => navigate(`/dashboard/employees/${s.id}`)}
         className="flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:opacity-90 active:scale-[0.995]"
       >
-        <Avatar
-          size={28}
-          src={s.avatarUrl ? `${BACKEND_ORIGIN}${s.avatarUrl}` : undefined}
-          className="shrink-0 rounded-md bg-slate-700"
-        >
-          {(s.firstName?.[0] || '') + (s.lastName?.[0] || '')}
-        </Avatar>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium tracking-tight text-foreground">
             {s.lastName} {s.firstName}
