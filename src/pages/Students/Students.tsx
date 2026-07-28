@@ -1,7 +1,22 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Button, Select, Spin, Table, Tag, message } from '@/components/ui';
-import { Download, GraduationCap, Mail, Trophy, Zap } from 'lucide-react';
+import {
+  Avatar,
+  Button,
+  Segmented,
+  Select,
+  Spin,
+  Table,
+  Tag,
+  message,
+} from '@/components/ui';
+import {
+  Download,
+  GraduationCap,
+  Mail,
+  Trophy,
+  Zap,
+} from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
@@ -12,6 +27,7 @@ import { FilterBar, ContentCard } from '@/components/FilterBar';
 import { downloadCsv } from '@/lib/csv';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
+import { EmployeesHierarchy } from './EmployeesHierarchy';
 
 const T = {
   title: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
@@ -28,6 +44,8 @@ const T = {
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
   export: { uz: 'Eksport CSV', en: 'Export CSV', ru: 'Экспорт CSV' },
   exporting: { uz: 'Eksport...', en: 'Exporting...', ru: 'Экспорт...' },
+  flat: { uz: 'Ro‘yxat', en: 'List', ru: 'Список' },
+  tree: { uz: 'Ierarxiya', en: 'Hierarchy', ru: 'Иерархия' },
   subtitle: {
     uz: 'Energo ID orqali sinxronlangan xodimlar',
     en: 'Employees synced from Energo ID',
@@ -40,31 +58,58 @@ const QP_DEFAULTS = {
   levelId: undefined,
   page: undefined,
   limit: undefined,
+  view: undefined,
 } as const;
 
 const Students = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { params: qp, setParam, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
+  const { params: qp, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const [exporting, setExporting] = useState(false);
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
   const pageSize = qp.limit ? parseInt(qp.limit, 10) : 20;
+  const viewMode = qp.view === 'tree' ? 'tree' : 'flat';
 
   const columnSearch = useMemo(
-    () => Object.values(columnFilters).map((v) => v.trim()).filter(Boolean).join(' '),
+    () =>
+      Object.values(columnFilters)
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .join(' '),
     [columnFilters],
   );
 
-  const { data: students, total, loading, initialLoading } = usePaginatedFetch<StudentSummary>(
-    ['students', qp.orgId, qp.levelId, columnSearch, currentPage, pageSize],
-    () => apiService.getStudents({
-      orgId: qp.orgId,
-      levelId: qp.levelId,
-      search: columnSearch || undefined,
-      page: currentPage,
-      limit: pageSize,
-    }),
+  const { data: students, total, loading, initialLoading } =
+    usePaginatedFetch<StudentSummary>(
+      ['students', qp.orgId, qp.levelId, columnSearch, currentPage, pageSize],
+      () =>
+        apiService.getStudents({
+          orgId: qp.orgId,
+          levelId: qp.levelId,
+          search: columnSearch || undefined,
+          page: currentPage,
+          limit: pageSize,
+        }),
+    );
+
+  const {
+    data: treeStudents,
+    initialLoading: treeLoading,
+    loading: treeFetching,
+  } = useFetch<StudentSummary[]>(
+    ['students-tree', qp.orgId, qp.levelId, columnSearch],
+    async () => {
+      const res = await apiService.getStudents({
+        orgId: qp.orgId,
+        levelId: qp.levelId,
+        search: columnSearch || undefined,
+        light: true,
+      });
+      return res.data ?? [];
+    },
+    [],
+    { enabled: viewMode === 'tree', keepPrevious: true },
   );
 
   const { data: orgs } = useFetch<Organization[]>(
@@ -96,19 +141,25 @@ const Students = () => {
       });
       const rows = res.data ?? [];
       downloadCsv(`xodimlar-${new Date().toISOString().slice(0, 10)}.csv`, [
-        ['Tabel', 'Ism', 'Email', 'XP', 'Daraja', 'Tashkilot'],
+        ['Tabel', 'Ism', 'Email', 'Bo‘lim', 'Lavozim', 'XP', 'Daraja', 'Tashkilot'],
         ...rows.map((row) => [
           row.personnelNumber ?? '',
           `${row.firstName ?? ''} ${row.lastName ?? ''}`.trim(),
           row.email ?? '',
+          row.division ?? '',
+          row.post ?? '',
           row.totalXp ?? 0,
           row.currentLevelTitle ?? '',
           row.organizations?.map((o) => o.name).join('; ') ?? '',
         ]),
       ]);
-      message.success(t({ uz: 'CSV yuklandi', en: 'CSV downloaded', ru: 'CSV загружен' }));
+      message.success(
+        t({ uz: 'CSV yuklandi', en: 'CSV downloaded', ru: 'CSV загружен' }),
+      );
     } catch {
-      message.error(t({ uz: 'Eksport xatosi', en: 'Export failed', ru: 'Ошибка экспорта' }));
+      message.error(
+        t({ uz: 'Eksport xatosi', en: 'Export failed', ru: 'Ошибка экспорта' }),
+      );
     } finally {
       setExporting(false);
     }
@@ -148,14 +199,20 @@ const Students = () => {
         <div className="flex items-center gap-3">
           <Avatar
             size={36}
-            src={record.avatarUrl ? `${BACKEND_ORIGIN}${record.avatarUrl}` : undefined}
+            src={
+              record.avatarUrl
+                ? `${BACKEND_ORIGIN}${record.avatarUrl}`
+                : undefined
+            }
             className="bg-gradient-to-br from-slate-600 to-slate-800 flex-shrink-0"
           >
             {(record.firstName?.[0] || '') + (record.lastName?.[0] || '')}
           </Avatar>
           <div>
             <p className="font-medium text-foreground">
-              <HighlightText text={`${record.firstName} ${record.lastName}`} />
+              <HighlightText
+                text={`${record.firstName} ${record.lastName}`}
+              />
             </p>
             <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
               {'⚡'.repeat(record.badge.bolts)} {record.badge.label}
@@ -206,7 +263,8 @@ const Students = () => {
       key: 'level',
       filterable: true,
       filterPlaceholder: 'Daraja...',
-      getFilterValue: (record: StudentSummary) => record.currentLevelTitle ?? '',
+      getFilterValue: (record: StudentSummary) =>
+        record.currentLevelTitle ?? '',
       render: (_: unknown, record: StudentSummary) => (
         <Tag color="default">{record.currentLevelTitle ?? '—'}</Tag>
       ),
@@ -219,20 +277,28 @@ const Students = () => {
       getFilterValue: (record: StudentSummary) =>
         record.organizations.map((o) => o.name).join(' '),
       render: (_: unknown, record: StudentSummary) =>
-        record.organizations.map((o) => (
-          <Tag key={o.id}>{o.name}</Tag>
-        )),
+        record.organizations.map((o) => <Tag key={o.id}>{o.name}</Tag>),
     },
   ];
 
+  const showTree = viewMode === 'tree';
+  const busy = showTree ? treeLoading : initialLoading;
+  const empty = showTree
+    ? treeStudents.length === 0 && !treeFetching
+    : students.length === 0 && !loading;
+
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden p-4 md:p-6">
       <PageHeader
         icon={GraduationCap}
         title={t(T.title)}
         description={t(T.subtitle)}
         actions={
-          <Button variant="outline" onClick={handleExportCsv} disabled={exporting}>
+          <Button
+            variant="outline"
+            onClick={handleExportCsv}
+            disabled={exporting}
+          >
             <Download size={16} className="mr-2" />
             {exporting ? t(T.exporting) : t(T.export)}
           </Button>
@@ -240,33 +306,52 @@ const Students = () => {
       />
 
       <FilterBar showIcon>
+        <Segmented<'flat' | 'tree'>
+          value={viewMode}
+          onChange={(v) =>
+            setParams({
+              view: v === 'tree' ? 'tree' : undefined,
+              page: undefined,
+            })
+          }
+          options={[
+            { value: 'flat', label: t(T.flat) },
+            { value: 'tree', label: t(T.tree) },
+          ]}
+        />
         <Select
           allowClear
           placeholder={t(T.allOrgs)}
-          style={{ width: 200 }}
+          style={{ width: 220 }}
           value={qp.orgId}
           onChange={(v) => setParams({ orgId: v, page: undefined })}
           options={orgs.map((o) => ({ value: o.id, label: o.name }))}
         />
-        <Select
-          allowClear
-          placeholder={t(T.allLevels)}
-          style={{ width: 200 }}
-          value={qp.levelId}
-          onChange={(v) => setParams({ levelId: v, page: undefined })}
-          options={levels.map((l) => ({ value: l.id, label: l.title }))}
-        />
+        {!showTree ? (
+          <Select
+            allowClear
+            placeholder={t(T.allLevels)}
+            style={{ width: 200 }}
+            value={qp.levelId}
+            onChange={(v) => setParams({ levelId: v, page: undefined })}
+            options={levels.map((l) => ({ value: l.id, label: l.title }))}
+          />
+        ) : null}
         <Tag className="text-sm ml-auto">
-          {t(T.total)}: {total}
+          {t(T.total)}: {showTree ? treeStudents.length : total}
         </Tag>
       </FilterBar>
 
-      {initialLoading ? (
-        <div className="flex items-center justify-center h-32">
+      {busy ? (
+        <div className="flex h-32 items-center justify-center">
           <Spin />
         </div>
-      ) : students.length === 0 && !loading ? (
+      ) : empty ? (
         <NoData text={t(T.noData)} />
+      ) : showTree ? (
+        <ContentCard loading={treeFetching && !treeLoading}>
+          <EmployeesHierarchy students={treeStudents} />
+        </ContentCard>
       ) : (
         <ContentCard loading={loading}>
           <Table
