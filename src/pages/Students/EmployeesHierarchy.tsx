@@ -231,6 +231,11 @@ const EmployeeRow = memo(function EmployeeRow({
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium tracking-tight text-foreground">
             {s.lastName} {s.firstName}
+            {s.role === 'MODERATOR' ? (
+              <span className="ml-1.5 rounded bg-blue-500/15 px-1 py-0.5 text-[10px] font-normal text-blue-700 dark:text-blue-300">
+                Mod
+              </span>
+            ) : null}
           </span>
           <span className="block truncate font-mono text-[11px] tabular-nums text-muted-foreground">
             {s.personnelNumber ? `№ ${s.personnelNumber}` : s.email}
