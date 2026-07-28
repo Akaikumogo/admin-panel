@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Form, Input, Progress, Select, Spin, Table, Tag, Tooltip } from '@/components/ui';
-import { ArrowLeft, CheckCircle2, Pencil, X, Zap, Trophy, XCircle, Mail, Calendar } from 'lucide-react';
+import { Avatar, Button, Progress, Segmented, Spin, Table, Tag, Tooltip, DatePicker, Skeleton } from '@/components/ui';
+import { ArrowLeft, CheckCircle2, Zap, Trophy, XCircle, Mail, Calendar, CalendarDays } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import NoData from '@/components/NoData';
@@ -11,10 +11,12 @@ import type {
   StudentXpHistoryResponse,
   LostQuestion,
   ActivityDay,
-  EmployeeCertificate,
-  EmployeeCheck,
-  EmployeeCheckType,
+  MonthlyPlanMatrix,
+  YearlyPlanMatrix,
 } from '@/services/api';
+import { PlanMatrixTable, type PlanPeriod } from '@/pages/Reports/PlanMatrixTable';
+import { todayStr } from '@/pages/Analytics/analytics-utils';
+import dayjs from 'dayjs';
 
 const T = {
   back: { uz: 'Orqaga', en: 'Back', ru: 'Назад' },
@@ -66,35 +68,66 @@ const StudentDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [certForm] = Form.useForm<{
-    organizationId: string;
-    positionTitle: string;
-    certificateNumber: string;
-    presentedByFullName: string;
-  }>();
-  const [checkForm] = Form.useForm<{
-    type: EmployeeCheckType;
-    checkDate: string;
-    reason?: string;
-    grade?: string;
-    nextCheckDate?: string;
-    commissionLeaderSignature?: string;
-    qualificationGroup?: string;
-    ruleName?: string;
-    conclusion?: string;
-    doctorConclusion?: string;
-    responsibleSignature?: string;
-  }>();
-  const [checksType, setChecksType] = useState<EmployeeCheckType | 'all'>('all');
-  const [editCert, setEditCert] = useState(false);
-  const [editCheck, setEditCheck] = useState(false);
   const [xpPage, setXpPage] = useState(1);
+  const [planPeriod, setPlanPeriod] = useState<PlanPeriod>('monthly');
+  const [planMonth, setPlanMonth] = useState(todayStr().slice(0, 7));
+  const [planYear, setPlanYear] = useState(todayStr().slice(0, 4));
 
   const { data: student, initialLoading } = useFetch<StudentDetailType | null>(
     ['student-detail', id],
     () => apiService.getStudent(id!),
     null,
   );
+
+  const studentOrgId = student?.organizations?.[0]?.id;
+
+  const emptyMatrix: MonthlyPlanMatrix = {
+    orgId: '',
+    orgName: '',
+    month: planMonth,
+    daysInMonth: 30,
+    dailyGoalCorrect: 10,
+    days: [],
+    totalEmployees: 0,
+    averageMonthlyPercent: 0,
+    fullCompletedEmployees: 0,
+    employees: [],
+  };
+
+  const emptyYearMatrix: YearlyPlanMatrix = {
+    orgId: '',
+    orgName: '',
+    year: planYear,
+    months: [],
+    dailyGoalCorrect: 10,
+    totalEmployees: 0,
+    averageYearlyPercent: 0,
+    employees: [],
+  };
+
+  const { data: studentPlanMatrix, initialLoading: planLoading } =
+    useFetch<MonthlyPlanMatrix>(
+      ['student-plan-matrix', id, studentOrgId, planMonth],
+      () =>
+        apiService.getMonthlyPlanMatrix({
+          orgId: studentOrgId,
+          month: planMonth,
+        }),
+      emptyMatrix,
+      { enabled: !!id && !!studentOrgId && planPeriod !== 'yearly' },
+    );
+
+  const { data: studentYearMatrix, initialLoading: yearPlanLoading } =
+    useFetch<YearlyPlanMatrix>(
+      ['student-year-matrix', id, studentOrgId, planYear],
+      () =>
+        apiService.getYearlyPlanMatrix({
+          orgId: studentOrgId,
+          year: planYear,
+        }),
+      emptyYearMatrix,
+      { enabled: !!id && !!studentOrgId && planPeriod === 'yearly' },
+    );
 
   const { data: xpHistory, initialLoading: xpLoading } = useFetch<StudentXpHistoryResponse | null>(
     ['student-xp-history', id, xpPage],
@@ -114,35 +147,9 @@ const StudentDetailPage = () => {
     [],
   );
 
-  const { data: employeeCert } = useFetch<EmployeeCertificate | null>(
-    ['student-employee-certificate', id],
-    () => apiService.getEmployeeCertificate(id!),
-    null,
-  );
-
-  const { data: checks, initialLoading: checksLoading } = useFetch<EmployeeCheck[]>(
-    ['student-checks', id, checksType],
-    () => apiService.listEmployeeChecks(id!, checksType === 'all' ? {} : { type: checksType }),
-    [],
-  );
-
   useEffect(() => {
-    setEditCert(false);
-    setEditCheck(false);
     setXpPage(1);
   }, [id]);
-
-  useEffect(() => {
-    if (!student) return;
-    certForm.setFieldsValue({
-      organizationId:
-        employeeCert?.organizationId ??
-        (student.organizations[0]?.id || undefined),
-      positionTitle: employeeCert?.positionTitle ?? '',
-      certificateNumber: employeeCert?.certificateNumber ?? '',
-      presentedByFullName: employeeCert?.presentedByFullName ?? '',
-    });
-  }, [employeeCert, student, certForm]);
 
   if (initialLoading || !student) {
     return (
@@ -151,33 +158,6 @@ const StudentDetailPage = () => {
       </div>
     );
   }
-
-  const orgOptions = student.organizations.map((o) => ({
-    value: o.id,
-    label: o.name,
-  }));
-
-  const saveCertificate = async () => {
-    const values = await certForm.validateFields();
-    await apiService.upsertEmployeeCertificate(id!, values);
-  };
-
-  const addCheck = async () => {
-    const values = await checkForm.validateFields();
-    await apiService.createEmployeeCheck(id!, {
-      ...values,
-      reason: values.reason ?? null,
-      grade: values.grade ?? null,
-      nextCheckDate: values.nextCheckDate ?? null,
-      commissionLeaderSignature: values.commissionLeaderSignature ?? null,
-      qualificationGroup: values.qualificationGroup ?? null,
-      ruleName: values.ruleName ?? null,
-      conclusion: values.conclusion ?? null,
-      doctorConclusion: values.doctorConclusion ?? null,
-      responsibleSignature: values.responsibleSignature ?? null,
-    } as any);
-    checkForm.resetFields();
-  };
 
   const lostColumns = [
     {
@@ -257,7 +237,7 @@ const StudentDetailPage = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="space-y-6">
       <Button
         type="text"
         icon={<ArrowLeft size={16} />}
@@ -336,6 +316,80 @@ const StudentDetailPage = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Personal plan matrix */}
+      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <CalendarDays size={16} className="text-[var(--shell-rail)]" />
+            {t({
+              uz: 'Shaxsiy reja natijalari',
+              en: 'Personal plan results',
+              ru: 'Личные результаты плана',
+            })}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <Segmented<PlanPeriod>
+              value={planPeriod}
+              onChange={setPlanPeriod}
+              options={[
+                { value: 'daily', label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }) },
+                { value: 'monthly', label: t({ uz: 'Oylik', en: 'Monthly', ru: 'Мес.' }) },
+                { value: 'yearly', label: t({ uz: 'Yillik', en: 'Yearly', ru: 'Год' }) },
+              ]}
+            />
+            {planPeriod === 'yearly' ? (
+              <DatePicker
+                picker="year"
+                value={dayjs(`${planYear}-01-01`)}
+                onChange={(d) => d && setPlanYear(d.format('YYYY'))}
+                allowClear={false}
+                className="w-[110px]"
+              />
+            ) : (
+              <DatePicker
+                picker="month"
+                value={dayjs(`${planMonth}-01`)}
+                onChange={(d) => d && setPlanMonth(d.format('YYYY-MM'))}
+                allowClear={false}
+                className="w-[140px]"
+              />
+            )}
+          </div>
+        </div>
+        {!studentOrgId ? (
+          <NoData
+            text={t({
+              uz: 'Tashkilot biriktirilmagan',
+              en: 'No organization assigned',
+              ru: 'Организация не назначена',
+            })}
+          />
+        ) : planPeriod === 'yearly' ? (
+          yearPlanLoading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : (
+            <PlanMatrixTable
+              data={studentYearMatrix}
+              period="yearly"
+              hideOrgColumn
+              userId={id}
+              pageSize={5}
+            />
+          )
+        ) : planLoading ? (
+          <Skeleton active paragraph={{ rows: 4 }} />
+        ) : (
+          <PlanMatrixTable
+            data={studentPlanMatrix}
+            period={planPeriod}
+            highlightDate={todayStr()}
+            hideOrgColumn
+            userId={id}
+            pageSize={5}
+          />
+        )}
       </div>
 
       {/* XP history — qachon / qaysi savol / necha ball */}
@@ -423,180 +477,6 @@ const StudentDetailPage = () => {
             rowKey="questionId"
             pagination={false}
             size="small"
-          />
-        )}
-      </div>
-
-      {/* Employee certificate */}
-      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-          Elektron guvohnoma
-        </h3>
-        <Form
-          form={certForm}
-          layout="vertical"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Form.Item name="organizationId" label="Ish joyi (organization)" rules={[{ required: true }]}>
-              <Select options={orgOptions} placeholder="Tashkilotni tanlang" disabled={!editCert} />
-            </Form.Item>
-            <Form.Item name="positionTitle" label="Lavozim" rules={[{ required: true }]}>
-              <Input placeholder="Lavozim" readOnly={!editCert} />
-            </Form.Item>
-            <Form.Item name="certificateNumber" label="Guvohnoma raqami" rules={[{ required: true }]}>
-              <Input placeholder="Raqam" readOnly={!editCert} />
-            </Form.Item>
-            <Form.Item name="presentedByFullName" label="Taqdim etgan shaxs (F.I.Sh.)" rules={[{ required: true }]}>
-              <Input placeholder="Ism Familiya" readOnly={!editCert} />
-            </Form.Item>
-          </div>
-          <div className="flex items-center gap-2">
-            {editCert ? (
-              <>
-                <Button
-                  icon={<X size={16} />}
-                  onClick={() => {
-                    certForm.setFieldsValue({
-                      organizationId:
-                        employeeCert?.organizationId ??
-                        (student.organizations[0]?.id || undefined),
-                      positionTitle: employeeCert?.positionTitle ?? '',
-                      certificateNumber: employeeCert?.certificateNumber ?? '',
-                      presentedByFullName: employeeCert?.presentedByFullName ?? '',
-                    });
-                    setEditCert(false);
-                  }}
-                >
-                  Bekor qilish
-                </Button>
-                <Button type="primary" onClick={() => void saveCertificate()}>
-                  Saqlash
-                </Button>
-              </>
-            ) : (
-              <Button icon={<Pencil size={16} />} onClick={() => setEditCert(true)}>
-                Tahrirlash
-              </Button>
-            )}
-          </div>
-        </Form>
-      </div>
-
-      {/* Employee checks */}
-      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-            Tekshiruvlar
-          </h3>
-          <Select
-            value={checksType}
-            onChange={(v) => setChecksType(v)}
-            style={{ width: 280 }}
-            options={[
-              { value: 'all', label: 'Hammasi' },
-              { value: 'GENERAL_KNOWLEDGE', label: 'Umumiy bilim' },
-              { value: 'SAFETY_TECHNIQUE', label: 'Xavfsizlik texnikasi' },
-              { value: 'SPECIAL_WORK_PERMIT', label: 'Maxsus ishlar ruxsati' },
-              { value: 'RESUSCITATION_TRAINING', label: 'Reanimatsiya treningi' },
-              { value: 'MEDICAL_EXAM', label: 'Tibbiy ko‘rik' },
-            ]}
-          />
-        </div>
-
-        <Form form={checkForm} layout="vertical">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-              <Select
-                disabled={!editCheck}
-                options={[
-                  { value: 'GENERAL_KNOWLEDGE', label: 'Umumiy bilim' },
-                  { value: 'SAFETY_TECHNIQUE', label: 'Xavfsizlik texnikasi' },
-                  { value: 'SPECIAL_WORK_PERMIT', label: 'Maxsus ishlar ruxsati' },
-                  { value: 'RESUSCITATION_TRAINING', label: 'Reanimatsiya treningi' },
-                  { value: 'MEDICAL_EXAM', label: 'Tibbiy ko‘rik' },
-                ]}
-              />
-            </Form.Item>
-            <Form.Item name="checkDate" label="Tekshiruv sanasi" rules={[{ required: true }]}>
-              <Input type="date" readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="nextCheckDate" label="Keyingi tekshiruv sanasi">
-              <Input type="date" readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="reason" label="Sabab">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="grade" label="Baho">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="commissionLeaderSignature" label="Komissiya rahbari imzosi">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="qualificationGroup" label="Malaka guruhi (xavfsizlik)">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="ruleName" label="Qoida nomi (maxsus ishlar)">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="conclusion" label="Xulosa (maxsus ishlar)">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="doctorConclusion" label="Shifokor xulosasi (tibbiy)">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-            <Form.Item name="responsibleSignature" label="Mas’ul shaxs imzosi (tibbiy)">
-              <Input readOnly={!editCheck} />
-            </Form.Item>
-          </div>
-          <div className="flex items-center gap-2">
-            {editCheck ? (
-              <>
-                <Button
-                  icon={<X size={16} />}
-                  onClick={() => {
-                    checkForm.resetFields();
-                    setEditCheck(false);
-                  }}
-                >
-                  Bekor qilish
-                </Button>
-                <Button type="primary" onClick={() => void addCheck()}>
-                  Tekshiruv qo‘shish
-                </Button>
-              </>
-            ) : (
-              <Button icon={<Pencil size={16} />} onClick={() => setEditCheck(true)}>
-                Tahrirlash
-              </Button>
-            )}
-          </div>
-        </Form>
-
-        {checksLoading ? (
-          <div className="flex items-center justify-center h-16"><Spin /></div>
-        ) : (
-          <Table
-            dataSource={checks}
-            rowKey="id"
-            size="small"
-            pagination={false}
-            columns={[
-              { title: 'Sana', dataIndex: 'checkDate', key: 'checkDate', width: 120 },
-              { title: 'Type', dataIndex: 'type', key: 'type', width: 180 },
-              { title: 'Baho', dataIndex: 'grade', key: 'grade', width: 120 },
-              { title: 'Keyingi sana', dataIndex: 'nextCheckDate', key: 'nextCheckDate', width: 140 },
-              { title: 'Sabab', dataIndex: 'reason', key: 'reason', ellipsis: true },
-              {
-                title: '',
-                key: 'actions',
-                width: 90,
-                render: (_: unknown, row: EmployeeCheck) => (
-                  <Button danger size="small" onClick={() => void apiService.deleteEmployeeCheck(id!, row.id)}>
-                    O‘chirish
-                  </Button>
-                ),
-              },
-            ]}
           />
         )}
       </div>

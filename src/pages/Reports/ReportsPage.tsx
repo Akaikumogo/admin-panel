@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CalendarDays,
@@ -7,6 +7,7 @@ import {
   Upload as UploadIcon,
 } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -14,6 +15,7 @@ import {
   DatePicker,
   Row,
   Select,
+  Segmented,
   Skeleton,
   Typography,
   Upload,
@@ -23,10 +25,14 @@ import { PageHeader } from '@/components/PageHeader';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
-import type { MonthlyPlanMatrix, UserProfile } from '@/services/api';
+import type {
+  MonthlyPlanMatrix,
+  UserProfile,
+  YearlyPlanMatrix,
+} from '@/services/api';
 import { formatNumber, todayStr } from '@/pages/Analytics/analytics-utils';
 import { ReportCompareSection } from './ReportCompareSection';
-import { PlanMatrixTable } from './PlanMatrixTable';
+import { PlanMatrixTable, type PlanPeriod } from './PlanMatrixTable';
 
 const { Text, Title } = Typography;
 
@@ -47,16 +53,43 @@ const emptyMatrix: MonthlyPlanMatrix = {
   employees: [],
 };
 
+const emptyYearMatrix: YearlyPlanMatrix = {
+  orgId: '',
+  orgName: '',
+  year: '',
+  months: [],
+  dailyGoalCorrect: 10,
+  totalEmployees: 0,
+  averageYearlyPercent: 0,
+  employees: [],
+};
+
 export default function ReportsPage() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<PageTab>('grid');
   const [date, setDate] = useState(todayStr());
-  const [orgFilter, setOrgFilter] = useState('');
+  const [year, setYear] = useState(todayStr().slice(0, 4));
+  const [period, setPeriod] = useState<PlanPeriod>('monthly');
+  const [orgFilter, setOrgFilter] = useState(searchParams.get('orgId') ?? '');
   const [employeeFilter, setEmployeeFilter] = useState<EmployeeFilter>('all');
   const [downloading, setDownloading] = useState<DownloadKind>(null);
   const [uploadingReport, setUploadingReport] = useState(false);
 
   const month = date.slice(0, 7);
+
+  useEffect(() => {
+    const fromUrl = searchParams.get('orgId') ?? '';
+    setOrgFilter(fromUrl);
+  }, [searchParams]);
+
+  const setOrg = (v: string) => {
+    setOrgFilter(v);
+    const next = new URLSearchParams(searchParams);
+    if (v) next.set('orgId', v);
+    else next.delete('orgId');
+    setSearchParams(next, { replace: true });
+  };
 
   const { data: me } = useFetch<UserProfile | null>(
     ['me'],
@@ -82,7 +115,18 @@ export default function ReportsPage() {
         month,
       }),
     emptyMatrix,
-    { enabled: tab === 'grid' },
+    { enabled: tab === 'grid' && period !== 'yearly' },
+  );
+
+  const { data: yearMatrix, initialLoading: yearLoading } = useFetch(
+    ['yearly-plan-matrix', orgFilter, year],
+    () =>
+      apiService.getYearlyPlanMatrix({
+        orgId: orgFilter || undefined,
+        year,
+      }),
+    emptyYearMatrix,
+    { enabled: tab === 'grid' && period === 'yearly' },
   );
 
   const orgOptions = useMemo(
@@ -107,6 +151,24 @@ export default function ReportsPage() {
     }
     return { ...planMatrix, employees };
   }, [planMatrix, employeeFilter]);
+
+  const filteredYearMatrix = useMemo((): YearlyPlanMatrix => {
+    let employees = yearMatrix.employees ?? [];
+    switch (employeeFilter) {
+      case 'inactive':
+        employees = employees.filter((e) => e.daysCompleted === 0);
+        break;
+      case 'completed':
+        employees = employees.filter((e) => e.yearlyPercent >= 100);
+        break;
+      case 'extra':
+        employees = employees.filter((e) => e.extraCorrectTotal > 0);
+        break;
+      default:
+        break;
+    }
+    return { ...yearMatrix, employees };
+  }, [yearMatrix, employeeFilter]);
 
   const runDownload = async (kind: Exclude<DownloadKind, null>) => {
     if (kind === 'matrix' && !orgFilter) {
@@ -250,14 +312,42 @@ export default function ReportsPage() {
         <>
           <Card className="mb-6 !rounded-xl">
             <div className="flex flex-wrap items-center gap-3">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              <DatePicker
-                picker="month"
-                value={dayjs(`${month}-01`)}
-                onChange={(d) => d && setDate(d.format('YYYY-MM-DD'))}
-                allowClear={false}
-                className="w-[150px]"
+              <Segmented<PlanPeriod>
+                value={period}
+                onChange={setPeriod}
+                options={[
+                  {
+                    value: 'daily',
+                    label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }),
+                  },
+                  {
+                    value: 'monthly',
+                    label: t({ uz: 'Oylik', en: 'Monthly', ru: 'Мес.' }),
+                  },
+                  {
+                    value: 'yearly',
+                    label: t({ uz: 'Yillik', en: 'Yearly', ru: 'Год' }),
+                  },
+                ]}
               />
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              {period === 'yearly' ? (
+                <DatePicker
+                  picker="year"
+                  value={dayjs(`${year}-01-01`)}
+                  onChange={(d) => d && setYear(d.format('YYYY'))}
+                  allowClear={false}
+                  className="w-[120px]"
+                />
+              ) : (
+                <DatePicker
+                  picker="month"
+                  value={dayjs(`${month}-01`)}
+                  onChange={(d) => d && setDate(d.format('YYYY-MM-DD'))}
+                  allowClear={false}
+                  className="w-[150px]"
+                />
+              )}
               <Building2 className="h-4 w-4 text-muted-foreground" />
               <Select
                 allowClear
@@ -268,7 +358,7 @@ export default function ReportsPage() {
                   ru: 'Все филиалы',
                 })}
                 value={orgFilter || undefined}
-                onChange={(v) => setOrgFilter(v ?? '')}
+                onChange={(v) => setOrg(v ?? '')}
                 className="min-w-[220px]"
                 options={orgOptions}
               />
@@ -369,7 +459,72 @@ export default function ReportsPage() {
             </p>
           </Card>
 
-          {matrixLoading ? (
+          {period === 'yearly' ? (
+            yearLoading ? (
+              <Skeleton active paragraph={{ rows: 8 }} />
+            ) : (
+              <>
+                <Row gutter={[16, 16]} className="mb-6">
+                  <Col xs={24} sm={8}>
+                    <Card className="!rounded-xl border-l-4 border-l-blue-500">
+                      <Text type="secondary" className="text-xs">
+                        {t({ uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' })}
+                      </Text>
+                      <Title level={3} className="!mb-0">
+                        {formatNumber(yearMatrix.totalEmployees)}
+                      </Title>
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Card className="!rounded-xl border-l-4 border-l-emerald-500">
+                      <Text type="secondary" className="text-xs">
+                        {t({
+                          uz: 'O‘rtacha yillik %',
+                          en: 'Avg yearly %',
+                          ru: 'Средний год %',
+                        })}
+                      </Text>
+                      <Title level={3} className="!mb-0">
+                        {yearMatrix.averageYearlyPercent}%
+                      </Title>
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Card className="!rounded-xl border-l-4 border-l-violet-500">
+                      <Text type="secondary" className="text-xs">
+                        {orgFilter
+                          ? yearMatrix.orgName || '—'
+                          : t({
+                              uz: 'Barcha filiallar',
+                              en: 'All branches',
+                              ru: 'Все филиалы',
+                            })}
+                      </Text>
+                      <Title level={4} className="!mb-0 !mt-1">
+                        {yearMatrix.year}
+                      </Title>
+                    </Card>
+                  </Col>
+                </Row>
+
+                <Card
+                  title={t({
+                    uz: 'Xodimlar — yillik reja (oylik %)',
+                    en: 'Employees — yearly plan (monthly %)',
+                    ru: 'Сотрудники — годовой план',
+                  })}
+                  className="!rounded-xl"
+                >
+                  <PlanMatrixTable
+                    data={filteredYearMatrix}
+                    period="yearly"
+                    hideOrgColumn={Boolean(orgFilter)}
+                    pageSize={50}
+                  />
+                </Card>
+              </>
+            )
+          ) : matrixLoading ? (
             <Skeleton active paragraph={{ rows: 8 }} />
           ) : (
             <>
@@ -419,16 +574,26 @@ export default function ReportsPage() {
 
               <Card
                 title={t({
-                  uz: 'Xodimlar — kunlik reja (oy)',
-                  en: 'Employees — daily plan (month)',
-                  ru: 'Сотрудники — дневной план (месяц)',
+                  uz:
+                    period === 'daily'
+                      ? 'Xodimlar — kunlik reja'
+                      : 'Xodimlar — oylik reja',
+                  en:
+                    period === 'daily'
+                      ? 'Employees — daily plan'
+                      : 'Employees — monthly plan',
+                  ru:
+                    period === 'daily'
+                      ? 'Сотрудники — дневной план'
+                      : 'Сотрудники — месячный план',
                 })}
                 className="!rounded-xl"
               >
                 <PlanMatrixTable
                   data={filteredMatrix}
+                  period={period}
                   highlightDate={date}
-                  forceOrgColumn={!orgFilter}
+                  hideOrgColumn={Boolean(orgFilter)}
                   pageSize={50}
                 />
               </Card>

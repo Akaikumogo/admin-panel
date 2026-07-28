@@ -172,14 +172,20 @@ function buildFixedOffsets<T>(columns: ColumnType<T>[]) {
   let right = 0;
   const leftOffsets = new Map<string, number>();
   const rightOffsets = new Map<string, number>();
+  const leftZ = new Map<string, number>();
+  const rightZ = new Map<string, number>();
   const defaultWidth = 160;
+  let leftCount = 0;
+  let rightCount = 0;
 
   for (const col of leaf) {
     const id = getColumnId(col);
     const w = parseColumnWidth(col.width) ?? defaultWidth;
     if (col.fixed === 'left') {
       leftOffsets.set(id, left);
+      leftZ.set(id, 30 + leftCount);
       left += w;
+      leftCount += 1;
     }
   }
   for (let i = leaf.length - 1; i >= 0; i--) {
@@ -188,10 +194,12 @@ function buildFixedOffsets<T>(columns: ColumnType<T>[]) {
     const w = parseColumnWidth(col.width) ?? 120;
     if (col.fixed === 'right') {
       rightOffsets.set(id, right);
+      rightZ.set(id, 30 + rightCount);
       right += w;
+      rightCount += 1;
     }
   }
-  return { leftOffsets, rightOffsets };
+  return { leftOffsets, rightOffsets, leftZ, rightZ };
 }
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -224,7 +232,7 @@ export function DataTable<T extends Record<string, unknown>>({
     },
     [],
   );
-  const { leftOffsets, rightOffsets } = React.useMemo(
+  const { leftOffsets, rightOffsets, leftZ, rightZ } = React.useMemo(
     () => buildFixedOffsets(columns),
     [columns],
   );
@@ -356,7 +364,7 @@ export function DataTable<T extends Record<string, unknown>>({
           meta.align === 'right' && 'text-right',
           stickyCellClass(fixed, true),
         )}
-        style={stickyStyle(colId, fixed, meta.width)}
+        style={stickyStyle(colId, fixed, meta.width, true)}
       >
         {canSort ? (
           <button
@@ -382,29 +390,40 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const stickyCellClass = (fixed?: 'left' | 'right', isHeader?: boolean) =>
     cn(
-      fixed === 'left' && 'sticky z-20 border-r border-border shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.45)]',
-      fixed === 'right' && 'sticky z-20 border-l border-border shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)]',
-      fixed === 'left' && (isHeader ? 'bg-muted/95 dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
-      fixed === 'right' && (isHeader ? 'bg-muted/95 dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
+      fixed === 'left' &&
+        'sticky border-r border-border shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.45)] overflow-hidden',
+      fixed === 'right' &&
+        'sticky border-l border-border shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)] overflow-hidden',
+      fixed === 'left' &&
+        (isHeader ? 'bg-muted dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
+      fixed === 'right' &&
+        (isHeader ? 'bg-muted dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
+      isHeader && fixed && 'z-40',
     );
 
   const stickyStyle = (
     colId: string,
     fixed?: 'left' | 'right',
     width?: number | string,
+    isHeader?: boolean,
   ): React.CSSProperties | undefined => {
+    const resolvedWidth = width ?? (fixed === 'right' ? 120 : 160);
     if (fixed === 'left') {
       return {
         left: leftOffsets.get(colId) ?? 0,
-        minWidth: width ?? 160,
-        width: width,
+        width: resolvedWidth,
+        minWidth: resolvedWidth,
+        maxWidth: resolvedWidth,
+        zIndex: isHeader ? 50 : (leftZ.get(colId) ?? 30),
       };
     }
     if (fixed === 'right') {
       return {
         right: rightOffsets.get(colId) ?? 0,
-        minWidth: width ?? 120,
-        width: width,
+        width: resolvedWidth,
+        minWidth: resolvedWidth,
+        maxWidth: resolvedWidth,
+        zIndex: isHeader ? 50 : (rightZ.get(colId) ?? 30),
       };
     }
     return width != null ? { width, minWidth: width } : undefined;
@@ -426,16 +445,22 @@ export function DataTable<T extends Record<string, unknown>>({
         className="w-full overflow-auto"
         style={{
           maxHeight: scroll?.y,
-          minWidth: typeof scroll?.x === 'number' ? scroll.x : undefined,
         }}
       >
         <UITable
           className={cn(
             'w-full',
-            scroll?.x ? 'min-w-max table-auto' : 'min-w-full table-fixed',
+            scroll?.x ? 'table-auto' : 'min-w-full table-fixed',
           )}
+          style={
+            typeof scroll?.x === 'number'
+              ? { minWidth: scroll.x }
+              : scroll?.x
+                ? { minWidth: 'max-content' }
+                : undefined
+          }
         >
-          <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-sm dark:bg-[#111318]">
+          <TableHeader className="sticky top-0 z-[45] bg-muted dark:bg-[#111318]">
             {groupedHeaders ? (
               <>
                 <TableRow className="border-border hover:bg-transparent">
@@ -495,7 +520,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           meta?.align === 'right' && 'text-right',
                           stickyCellClass(fixed, true),
                         )}
-                        style={stickyStyle(header.column.id, fixed, meta?.width)}
+                        style={stickyStyle(header.column.id, fixed, meta?.width, true)}
                       >
                         {header.isPlaceholder ? null : (
                           <button
@@ -547,7 +572,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         meta?.align === 'right' && 'text-right',
                         stickyCellClass(fixed, true),
                       )}
-                      style={stickyStyle(colId, fixed, meta?.width)}
+                      style={stickyStyle(colId, fixed, meta?.width, true)}
                     >
                       {meta?.filterable ? (
                         <div className="relative">
@@ -607,7 +632,7 @@ export function DataTable<T extends Record<string, unknown>>({
                             meta?.ellipsis && 'truncate',
                             stickyCellClass(fixed, false),
                           )}
-                          style={stickyStyle(cell.column.id, fixed, meta?.width)}
+                          style={stickyStyle(cell.column.id, fixed, meta?.width, false)}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>

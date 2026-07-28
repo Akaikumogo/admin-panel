@@ -28,12 +28,51 @@ function DatePickerBase({
   placeholder?: string;
   className?: string;
   allowClear?: boolean;
-  picker?: 'date' | 'month';
+  picker?: 'date' | 'month' | 'year';
   showTime?: boolean;
   style?: React.CSSProperties;
   disabledDate?: (current: Dayjs) => boolean;
 }) {
   const [open, setOpen] = React.useState(false);
+
+  if (picker === 'year') {
+    const year = value?.year() ?? dayjs().year();
+    const start = year - 6;
+    const years = Array.from({ length: 12 }, (_, i) => start + i);
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !value && 'text-muted-foreground', className)}>
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? value.format('YYYY') : placeholder}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3" align="start">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <Button variant="outline" size="sm" onClick={() => onChange?.(dayjs(`${year - 12}-01-01`))}>‹</Button>
+            <span className="text-sm font-medium">{start}–{start + 11}</span>
+            <Button variant="outline" size="sm" onClick={() => onChange?.(dayjs(`${year + 12}-01-01`))}>›</Button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {years.map((y) => {
+              const d = dayjs(`${y}-01-01`);
+              const active = value?.year() === y;
+              return (
+                <Button
+                  key={y}
+                  variant={active ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { onChange?.(d); setOpen(false); }}
+                >
+                  {y}
+                </Button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
 
   if (picker === 'month') {
     const months = Array.from({ length: 12 }, (_, i) => i);
