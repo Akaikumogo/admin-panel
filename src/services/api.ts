@@ -273,6 +273,9 @@ export type MonthlyPlanMatrixDayCell = {
   day: number;
   rawCorrect: number;
   planCorrect: number;
+  extraCorrect?: number;
+  attempts?: number;
+  wrong?: number;
   completed: boolean;
   label: string;
 };
@@ -286,6 +289,8 @@ export type MonthlyPlanMatrixEmployee = {
   daysCompleted: number;
   monthlyPercent: number;
   extraCorrectTotal: number;
+  attemptsTotal?: number;
+  wrongTotal?: number;
   dayResults: MonthlyPlanMatrixDayCell[];
 };
 
@@ -300,6 +305,44 @@ export type MonthlyPlanMatrix = {
   averageMonthlyPercent: number;
   fullCompletedEmployees: number;
   employees: MonthlyPlanMatrixEmployee[];
+};
+
+export type YearlyPlanMatrixMonthCell = {
+  month: string;
+  daysInMonth: number;
+  daysCompleted: number;
+  percent: number;
+  attempts: number;
+  wrong: number;
+  extraCorrect: number;
+  label: string;
+  percentLabel: string;
+};
+
+export type YearlyPlanMatrixEmployee = {
+  userId: string;
+  orgId?: string;
+  orgName?: string;
+  fullName: string;
+  email: string;
+  daysCompleted: number;
+  daysInYear: number;
+  yearlyPercent: number;
+  extraCorrectTotal: number;
+  attemptsTotal: number;
+  wrongTotal: number;
+  monthResults: YearlyPlanMatrixMonthCell[];
+};
+
+export type YearlyPlanMatrix = {
+  orgId: string;
+  orgName: string;
+  year: string;
+  months: string[];
+  dailyGoalCorrect: number;
+  totalEmployees: number;
+  averageYearlyPercent: number;
+  employees: YearlyPlanMatrixEmployee[];
 };
 
 export type BranchComparisonRow = {
@@ -900,44 +943,6 @@ export type LostQuestion = {
 export type ActivityDay = {
   date: string;
   count: number;
-};
-
-export type EmployeeCertificate = {
-  id: string;
-  userId: string;
-  organizationId: string;
-  positionTitle: string;
-  certificateNumber: string;
-  presentedByFullName: string;
-  createdByUserId: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type EmployeeCheckType =
-  | 'GENERAL_KNOWLEDGE'
-  | 'SAFETY_TECHNIQUE'
-  | 'SPECIAL_WORK_PERMIT'
-  | 'RESUSCITATION_TRAINING'
-  | 'MEDICAL_EXAM';
-
-export type EmployeeCheck = {
-  id: string;
-  userId: string;
-  type: EmployeeCheckType;
-  checkDate: string;
-  reason: string | null;
-  grade: string | null;
-  nextCheckDate: string | null;
-  commissionLeaderSignature: string | null;
-  qualificationGroup: string | null;
-  ruleName: string | null;
-  conclusion: string | null;
-  doctorConclusion: string | null;
-  responsibleSignature: string | null;
-  createdByUserId: string | null;
-  createdAt: string;
-  updatedAt: string;
 };
 
 // ─── Audio Library (Admin) ────────────────────────────────────────────────
@@ -1727,6 +1732,17 @@ class ApiService {
   }): Promise<MonthlyPlanMatrix> {
     const response = await this.api.get<MonthlyPlanMatrix>(
       '/admin/branch-analytics/monthly-plan-matrix',
+      { params },
+    );
+    return response.data;
+  }
+
+  async getYearlyPlanMatrix(params: {
+    orgId?: string;
+    year?: string;
+  }): Promise<YearlyPlanMatrix> {
+    const response = await this.api.get<YearlyPlanMatrix>(
+      '/admin/branch-analytics/yearly-plan-matrix',
       { params },
     );
     return response.data;
@@ -2984,77 +3000,6 @@ class ApiService {
       `/admin/employees/${id}/activity`
     );
     return response.data;
-  }
-
-  async getEmployeeCertificate(
-    studentId: string
-  ): Promise<EmployeeCertificate | null> {
-    const response = await this.api.get<EmployeeCertificate | null>(
-      `/admin/employees/${studentId}/employee-certificate`
-    );
-    return response.data;
-  }
-
-  async upsertEmployeeCertificate(
-    studentId: string,
-    data: {
-      organizationId: string;
-      positionTitle: string;
-      certificateNumber: string;
-      presentedByFullName: string;
-    }
-  ): Promise<EmployeeCertificate> {
-    const response = await this.api.put<EmployeeCertificate>(
-      `/admin/employees/${studentId}/employee-certificate`,
-      data
-    );
-    return response.data;
-  }
-
-  async listEmployeeChecks(
-    studentId: string,
-    params?: { type?: EmployeeCheckType }
-  ): Promise<EmployeeCheck[]> {
-    const response = await this.api.get<EmployeeCheck[]>(
-      `/admin/employees/${studentId}/checks`,
-      { params }
-    );
-    return response.data;
-  }
-
-  async createEmployeeCheck(
-    studentId: string,
-    data: Omit<
-      EmployeeCheck,
-      'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'
-    >
-  ): Promise<EmployeeCheck> {
-    const response = await this.api.post<EmployeeCheck>(
-      `/admin/employees/${studentId}/checks`,
-      data
-    );
-    return response.data;
-  }
-
-  async updateEmployeeCheck(
-    studentId: string,
-    checkId: string,
-    data: Partial<
-      Omit<
-        EmployeeCheck,
-        'id' | 'userId' | 'createdAt' | 'updatedAt' | 'createdByUserId'
-      >
-    >
-  ): Promise<EmployeeCheck> {
-    const response = await this.api.put<EmployeeCheck>(
-      `/admin/employees/${studentId}/checks/${checkId}`,
-      data
-    );
-    return response.data;
-  }
-
-  async deleteEmployeeCheck(studentId: string, checkId: string): Promise<void> {
-    await this.api.delete(`/admin/employees/${studentId}/checks/${checkId}`);
   }
 
   // ─── Audio Library (Admin CRUD) ─────────────────────────────────────────
