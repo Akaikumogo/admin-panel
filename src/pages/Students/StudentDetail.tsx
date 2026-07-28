@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Progress, Segmented, Spin, Table, Tag, Tooltip, DatePicker, Skeleton } from '@/components/ui';
+import { Avatar, Button, Progress, Spin, Table, Tag, Tooltip } from '@/components/ui';
 import { ArrowLeft, CheckCircle2, Zap, Trophy, XCircle, Mail, Calendar, CalendarDays } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
@@ -11,12 +11,8 @@ import type {
   StudentXpHistoryResponse,
   LostQuestion,
   ActivityDay,
-  MonthlyPlanMatrix,
-  YearlyPlanMatrix,
 } from '@/services/api';
-import { PlanMatrixTable, type PlanPeriod } from '@/pages/Reports/PlanMatrixTable';
-import { todayStr } from '@/pages/Analytics/analytics-utils';
-import dayjs from 'dayjs';
+import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
 
 const T = {
   back: { uz: 'Orqaga', en: 'Back', ru: 'Назад' },
@@ -69,9 +65,6 @@ const StudentDetailPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [xpPage, setXpPage] = useState(1);
-  const [planPeriod, setPlanPeriod] = useState<PlanPeriod>('monthly');
-  const [planMonth, setPlanMonth] = useState(todayStr().slice(0, 7));
-  const [planYear, setPlanYear] = useState(todayStr().slice(0, 4));
 
   const { data: student, initialLoading } = useFetch<StudentDetailType | null>(
     ['student-detail', id],
@@ -80,54 +73,6 @@ const StudentDetailPage = () => {
   );
 
   const studentOrgId = student?.organizations?.[0]?.id;
-
-  const emptyMatrix: MonthlyPlanMatrix = {
-    orgId: '',
-    orgName: '',
-    month: planMonth,
-    daysInMonth: 30,
-    dailyGoalCorrect: 10,
-    days: [],
-    totalEmployees: 0,
-    averageMonthlyPercent: 0,
-    fullCompletedEmployees: 0,
-    employees: [],
-  };
-
-  const emptyYearMatrix: YearlyPlanMatrix = {
-    orgId: '',
-    orgName: '',
-    year: planYear,
-    months: [],
-    dailyGoalCorrect: 10,
-    totalEmployees: 0,
-    averageYearlyPercent: 0,
-    employees: [],
-  };
-
-  const { data: studentPlanMatrix, initialLoading: planLoading } =
-    useFetch<MonthlyPlanMatrix>(
-      ['student-plan-matrix', id, studentOrgId, planMonth],
-      () =>
-        apiService.getMonthlyPlanMatrix({
-          orgId: studentOrgId,
-          month: planMonth,
-        }),
-      emptyMatrix,
-      { enabled: !!id && !!studentOrgId && planPeriod !== 'yearly' },
-    );
-
-  const { data: studentYearMatrix, initialLoading: yearPlanLoading } =
-    useFetch<YearlyPlanMatrix>(
-      ['student-year-matrix', id, studentOrgId, planYear],
-      () =>
-        apiService.getYearlyPlanMatrix({
-          orgId: studentOrgId,
-          year: planYear,
-        }),
-      emptyYearMatrix,
-      { enabled: !!id && !!studentOrgId && planPeriod === 'yearly' },
-    );
 
   const { data: xpHistory, initialLoading: xpLoading } = useFetch<StudentXpHistoryResponse | null>(
     ['student-xp-history', id, xpPage],
@@ -319,45 +264,7 @@ const StudentDetailPage = () => {
       </div>
 
       {/* Personal plan matrix */}
-      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-            <CalendarDays size={16} className="text-[var(--shell-rail)]" />
-            {t({
-              uz: 'Shaxsiy reja natijalari',
-              en: 'Personal plan results',
-              ru: 'Личные результаты плана',
-            })}
-          </h3>
-          <div className="flex flex-wrap items-center gap-2">
-            <Segmented<PlanPeriod>
-              value={planPeriod}
-              onChange={setPlanPeriod}
-              options={[
-                { value: 'daily', label: t({ uz: 'Kunlik', en: 'Daily', ru: 'День' }) },
-                { value: 'monthly', label: t({ uz: 'Oylik', en: 'Monthly', ru: 'Мес.' }) },
-                { value: 'yearly', label: t({ uz: 'Yillik', en: 'Yearly', ru: 'Год' }) },
-              ]}
-            />
-            {planPeriod === 'yearly' ? (
-              <DatePicker
-                picker="year"
-                value={dayjs(`${planYear}-01-01`)}
-                onChange={(d) => d && setPlanYear(d.format('YYYY'))}
-                allowClear={false}
-                className="w-[110px]"
-              />
-            ) : (
-              <DatePicker
-                picker="month"
-                value={dayjs(`${planMonth}-01`)}
-                onChange={(d) => d && setPlanMonth(d.format('YYYY-MM'))}
-                allowClear={false}
-                className="w-[140px]"
-              />
-            )}
-          </div>
-        </div>
+      <div className="bg-card border border-border rounded-lg p-6 min-w-0 overflow-hidden">
         {!studentOrgId ? (
           <NoData
             text={t({
@@ -366,28 +273,22 @@ const StudentDetailPage = () => {
               ru: 'Организация не назначена',
             })}
           />
-        ) : planPeriod === 'yearly' ? (
-          yearPlanLoading ? (
-            <Skeleton active paragraph={{ rows: 4 }} />
-          ) : (
-            <PlanMatrixTable
-              data={studentYearMatrix}
-              period="yearly"
-              hideOrgColumn
-              userId={id}
-              pageSize={5}
-            />
-          )
-        ) : planLoading ? (
-          <Skeleton active paragraph={{ rows: 4 }} />
         ) : (
-          <PlanMatrixTable
-            data={studentPlanMatrix}
-            period={planPeriod}
-            highlightDate={todayStr()}
-            hideOrgColumn
+          <PlanResultsTable
+            showFilial={false}
+            orgId={studentOrgId}
             userId={id}
             pageSize={5}
+            title={
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <CalendarDays size={16} className="text-[var(--shell-rail)]" />
+                {t({
+                  uz: 'Shaxsiy reja natijalari',
+                  en: 'Personal plan results',
+                  ru: 'Личные результаты плана',
+                })}
+              </h3>
+            }
           />
         )}
       </div>

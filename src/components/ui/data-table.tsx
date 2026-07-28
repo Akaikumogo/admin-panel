@@ -432,7 +432,7 @@ export function DataTable<T extends Record<string, unknown>>({
   return (
     <div
       className={cn(
-        'enterprise-table relative w-full rounded-xl border border-border bg-card dark:bg-[#0c0e14]',
+        'enterprise-table relative w-full min-w-0 max-w-full rounded-xl border border-border bg-card dark:bg-[#0c0e14]',
         className,
       )}
     >
@@ -442,7 +442,7 @@ export function DataTable<T extends Record<string, unknown>>({
         </div>
       ) : null}
       <div
-        className="w-full overflow-auto"
+        className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto"
         style={{
           maxHeight: scroll?.y,
         }}
