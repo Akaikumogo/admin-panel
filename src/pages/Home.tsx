@@ -512,7 +512,7 @@ export default function HomePage() {
         </div>
       </Card>
 
-      <Card className="!border-border !shadow-none min-w-0 overflow-hidden">
+      <Card className="!border-border !shadow-none min-w-0 max-w-full overflow-hidden">
         <PlanResultsTable
           showFilial={!orgFilter}
           orgId={orgFilter || undefined}

@@ -6,7 +6,7 @@ const CardBase = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('rounded-2xl border bg-card text-card-foreground shadow-sm', className)}
+      className={cn('min-w-0 rounded-2xl border bg-card text-card-foreground shadow-sm', className)}
       {...props}
     />
   ),
@@ -43,7 +43,7 @@ function Card({
           {extra}
         </div>
       )}
-      <div className={cn('p-6', loading && 'opacity-60')} style={bodyStyle}>{children}</div>
+      <div className={cn('min-w-0 p-6', loading && 'opacity-60')} style={bodyStyle}>{children}</div>
     </CardBase>
   );
 }

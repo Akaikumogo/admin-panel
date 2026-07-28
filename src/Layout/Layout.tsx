@@ -379,10 +379,10 @@ const Layout = () => {
   };
 
   return (
-    <div className="flex min-h-dvh bg-background">
+    <div className="flex min-h-dvh max-w-[100vw] overflow-x-hidden bg-background">
       <aside
         className={cn(
-          'sticky top-0 flex h-dvh shrink-0 flex-col border-r border-border bg-[var(--shell-sidebar)] transition-[width] duration-300 ease-out',
+          'sticky top-0 z-30 flex h-dvh shrink-0 flex-col border-r border-border bg-[var(--shell-sidebar)] transition-[width] duration-300 ease-out',
           isCollapsed ? 'w-[72px]' : 'w-[272px]',
         )}
       >
@@ -436,7 +436,7 @@ const Layout = () => {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-card/90 px-5 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
@@ -524,8 +524,8 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto bg-background">
-          <div className="w-full p-2 md:p-2">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background">
+          <div className="w-full min-w-0 max-w-full p-2 md:p-2">
             {me?.role !== 'USER' && !isModeratorForbiddenRoute ? (
               <Outlet />
             ) : null}

@@ -145,7 +145,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 max-w-full overflow-x-hidden">
       <PageHeader
         title={t({ uz: 'Hisobotlar', en: 'Reports', ru: 'Отчёты' })}
         description={t({
@@ -265,7 +265,7 @@ export default function ReportsPage() {
             </div>
           </Card>
 
-          <Card className="!rounded-xl min-w-0 overflow-hidden">
+          <Card className="!rounded-xl min-w-0 max-w-full overflow-hidden">
             <PlanResultsTable
               showFilial={!orgFilter}
               orgId={orgFilter || undefined}
