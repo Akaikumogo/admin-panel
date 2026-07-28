@@ -702,6 +702,10 @@ export type StudentSummary = {
   email: string;
   avatarUrl: string | null;
   personnelNumber: string | null;
+  /** Energo ID bo‘lim (division) */
+  division?: string | null;
+  /** Energo ID lavozim (post) */
+  post?: string | null;
   completedLevels: number;
   totalXp: number;
   currentLevelId: string | null;
@@ -2945,10 +2949,16 @@ class ApiService {
     search?: string;
     page?: number;
     limit?: number;
+    light?: boolean;
   }): Promise<PaginatedResponse<StudentSummary>> {
     const response = await this.api.get<PaginatedResponse<StudentSummary>>(
       '/admin/employees',
-      { params: filters }
+      {
+        params: {
+          ...filters,
+          light: filters?.light ? '1' : undefined,
+        },
+      },
     );
     return response.data;
   }
