@@ -63,7 +63,6 @@ export function Collapse({
   onChange?: (key: string | string[]) => void;
   className?: string;
 }) {
-  void ghost;
   const defaultValue = Array.isArray(defaultActiveKey)
     ? defaultActiveKey
     : defaultActiveKey
@@ -80,6 +79,13 @@ export function Collapse({
     onChange(value);
   };
 
+  const shell = cn(
+    ghost
+      ? 'border-0 bg-transparent px-0 shadow-none'
+      : 'rounded-xl border border-border px-3',
+    className,
+  );
+
   if (accordion) {
     return (
       <Accordion
@@ -87,12 +93,18 @@ export function Collapse({
         collapsible
         defaultValue={defaultValue[0]}
         onValueChange={handleValueChange}
-        className={cn('rounded-xl border px-4', className)}
+        className={shell}
       >
         {items.map((item) => (
-          <AccordionItem key={item.key} value={item.key}>
-            <AccordionTrigger>{item.label}</AccordionTrigger>
-            <AccordionContent>{item.children}</AccordionContent>
+          <AccordionItem
+            key={item.key}
+            value={item.key}
+            className={cn(ghost && 'border-border/60')}
+          >
+            <AccordionTrigger className="py-3 hover:no-underline">
+              {item.label}
+            </AccordionTrigger>
+            <AccordionContent className="pb-3">{item.children}</AccordionContent>
           </AccordionItem>
         ))}
       </Accordion>
@@ -104,12 +116,18 @@ export function Collapse({
       type="multiple"
       defaultValue={defaultValue}
       onValueChange={handleValueChange}
-      className={cn('rounded-xl border px-4', className)}
+      className={shell}
     >
       {items.map((item) => (
-        <AccordionItem key={item.key} value={item.key}>
-          <AccordionTrigger>{item.label}</AccordionTrigger>
-          <AccordionContent>{item.children}</AccordionContent>
+        <AccordionItem
+          key={item.key}
+          value={item.key}
+          className={cn(ghost && 'border-border/60')}
+        >
+          <AccordionTrigger className="py-3 hover:no-underline">
+            {item.label}
+          </AccordionTrigger>
+          <AccordionContent className="pb-3">{item.children}</AccordionContent>
         </AccordionItem>
       ))}
     </Accordion>
