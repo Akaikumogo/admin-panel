@@ -80,10 +80,13 @@ export function EmployeeAvatarUpload({
   const initials =
     (firstName?.[0] || '') + (lastName?.[0] || '');
 
+  const stopRowNav = useCallback((e: MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
   const handlePick = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
-      e.preventDefault();
       if (uploading) return;
       inputRef.current?.click();
     },
@@ -137,9 +140,12 @@ export function EmployeeAvatarUpload({
     <>
       <button
         type="button"
+        data-stop-row-click
         title={t(T.hint)}
         aria-label={t(T.hint)}
         onClick={handlePick}
+        onMouseDown={stopRowNav}
+        onPointerDown={stopRowNav}
         disabled={uploading}
         className={cn(
           'group relative inline-flex shrink-0 cursor-pointer rounded-full',

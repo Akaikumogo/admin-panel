@@ -63,7 +63,10 @@ export type DataTableProps<T extends Record<string, unknown>> = {
   };
   size?: 'small' | 'middle' | 'large';
   scroll?: { x?: number | string | boolean; y?: number | string };
-  onRow?: (record: T) => { onClick?: () => void; style?: React.CSSProperties };
+  onRow?: (record: T) => {
+    onClick?: (e?: React.MouseEvent) => void;
+    style?: React.CSSProperties;
+  };
   className?: string;
   emptyText?: React.ReactNode;
   locale?: Record<string, unknown>;
@@ -603,7 +606,17 @@ export function DataTable<T extends Record<string, unknown>>({
                 return (
                   <TableRow
                     key={getRowKey(record, rowKey, row.index)}
-                    onClick={rowProps.onClick}
+                    onClick={(e) => {
+                      const el = e.target as HTMLElement | null;
+                      if (
+                        el?.closest(
+                          'button, a, input, label, textarea, select, [data-stop-row-click]',
+                        )
+                      ) {
+                        return;
+                      }
+                      rowProps.onClick?.(e);
+                    }}
                     style={rowProps.style}
                     className={cn(
                       'border-border dark:border-slate-800 dark:hover:bg-[#151820]',
