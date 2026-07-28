@@ -706,12 +706,14 @@ export type StudentSummary = {
   division?: string | null;
   /** Energo ID lavozim (post) */
   post?: string | null;
+  /** KPI/hisobot soft-exclusion (DELETE emas) */
+  reportActive?: boolean;
   completedLevels: number;
   totalXp: number;
   currentLevelId: string | null;
   currentLevelTitle: string | null;
   badge: StudentBadge;
-  organizations: { id: string; name: string }[];
+  organizations: { id: string; name: string; reportActive?: boolean }[];
 };
 
 export type LevelProgress = {
@@ -2751,6 +2753,59 @@ class ApiService {
 
   async removeUserFromOrg(orgId: string, userId: string): Promise<void> {
     await this.api.delete(`/admin/organizations/${orgId}/users/${userId}`);
+  }
+
+  // ===== Reporting activation (soft exclusion from KPI) =====
+  async getReportingActivation(orgId?: string): Promise<{
+    organizations: Array<{ id: string; reportActive: boolean }>;
+    divisions: Array<{
+      organizationId: string;
+      division: string;
+      isActive: boolean;
+    }>;
+  }> {
+    const response = await this.api.get('/admin/reporting-activation', {
+      params: orgId ? { orgId } : undefined,
+    });
+    return response.data;
+  }
+
+  async setOrganizationReportActive(
+    orgId: string,
+    isActive: boolean,
+  ): Promise<{ id: string; reportActive: boolean }> {
+    const response = await this.api.patch(
+      `/admin/reporting-activation/organizations/${orgId}`,
+      { isActive },
+    );
+    return response.data;
+  }
+
+  async setDivisionReportActive(
+    organizationId: string,
+    division: string,
+    isActive: boolean,
+  ): Promise<{
+    organizationId: string;
+    division: string;
+    isActive: boolean;
+  }> {
+    const response = await this.api.patch(
+      '/admin/reporting-activation/divisions',
+      { organizationId, division, isActive },
+    );
+    return response.data;
+  }
+
+  async setEmployeeReportActive(
+    userId: string,
+    isActive: boolean,
+  ): Promise<{ id: string; reportActive: boolean }> {
+    const response = await this.api.patch(
+      `/admin/reporting-activation/employees/${userId}`,
+      { isActive },
+    );
+    return response.data;
   }
 
   // ===== Users / Moderators =====

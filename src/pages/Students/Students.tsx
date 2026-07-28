@@ -27,6 +27,7 @@ import { FilterBar, ContentCard } from '@/components/FilterBar';
 import { downloadCsv } from '@/lib/csv';
 import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
+import { isSuperAdmin } from '@/utils/isSuperAdmin';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
 
 const T = {
@@ -97,6 +98,7 @@ const Students = () => {
     data: treeStudents,
     initialLoading: treeLoading,
     loading: treeFetching,
+    refetch: refetchTree,
   } = useFetch<StudentSummary[]>(
     ['students-tree', qp.orgId, qp.levelId, columnSearch],
     async () => {
@@ -110,6 +112,23 @@ const Students = () => {
     },
     [],
     { enabled: viewMode === 'tree', keepPrevious: true },
+  );
+
+  const {
+    data: reportingActivation,
+    refetch: refetchActivation,
+  } = useFetch<{
+    organizations: Array<{ id: string; reportActive: boolean }>;
+    divisions: Array<{
+      organizationId: string;
+      division: string;
+      isActive: boolean;
+    }>;
+  }>(
+    ['reporting-activation', qp.orgId],
+    () => apiService.getReportingActivation(qp.orgId),
+    { organizations: [], divisions: [] },
+    { enabled: viewMode === 'tree' },
   );
 
   const { data: orgs } = useFetch<Organization[]>(
@@ -350,7 +369,16 @@ const Students = () => {
         <NoData text={t(T.noData)} />
       ) : showTree ? (
         <ContentCard loading={treeFetching && !treeLoading}>
-          <EmployeesHierarchy students={treeStudents} />
+          <EmployeesHierarchy
+            students={treeStudents}
+            organizations={reportingActivation.organizations}
+            divisions={reportingActivation.divisions}
+            canEdit={isSuperAdmin()}
+            onActivationChange={() => {
+              void refetchTree();
+              void refetchActivation();
+            }}
+          />
         </ContentCard>
       ) : (
         <ContentCard loading={loading}>
