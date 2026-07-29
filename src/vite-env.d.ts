@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL?: string;
+  readonly VITE_API_FALLBACK_URL?: string;
+}
+
 import type { ThreeElements } from '@react-three/fiber';
 
 declare global {

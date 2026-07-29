@@ -1,11 +1,82 @@
 import axios from 'axios';
 import { notification } from '@/lib/toast';
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  '/api';
+const API_BASE_STORAGE_KEY = 'elektrolearn_api_base';
 
-export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
+function normalizeApiBase(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, '');
+  if (!trimmed) return '/api';
+  return /\/api$/i.test(trimmed) ? trimmed : `${trimmed}/api`;
+}
+
+const PRIMARY_API_BASE_URL = normalizeApiBase(
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+    'https://elektrolearn-api.uzbekistonmet.uz/api',
+);
+
+/** Asosiy domen ishlamasa ishlatiladigan rezerv backend. */
+const FALLBACK_API_BASE_URL = normalizeApiBase(
+  (import.meta.env.VITE_API_FALLBACK_URL as string | undefined)?.trim() ||
+    'http://192.0.6.7:15162/api',
+);
+
+function readStoredApiBase(): string | null {
+  try {
+    const raw = sessionStorage.getItem(API_BASE_STORAGE_KEY)?.trim();
+    return raw ? normalizeApiBase(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistApiBase(url: string) {
+  try {
+    sessionStorage.setItem(API_BASE_STORAGE_KEY, url);
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+let activeApiBaseUrl = readStoredApiBase() || PRIMARY_API_BASE_URL;
+
+/** Joriy backend origin (media, socket). Failoverda yangilanadi. */
+export let BACKEND_ORIGIN = activeApiBaseUrl.replace(/\/api\/?$/, '');
+
+function setActiveApiBaseUrl(url: string) {
+  activeApiBaseUrl = normalizeApiBase(url);
+  BACKEND_ORIGIN = activeApiBaseUrl.replace(/\/api\/?$/, '');
+  persistApiBase(activeApiBaseUrl);
+}
+
+function otherApiBaseUrl(current: string): string | null {
+  const cur = normalizeApiBase(current);
+  if (cur === PRIMARY_API_BASE_URL && PRIMARY_API_BASE_URL !== FALLBACK_API_BASE_URL) {
+    return FALLBACK_API_BASE_URL;
+  }
+  if (cur === FALLBACK_API_BASE_URL && PRIMARY_API_BASE_URL !== FALLBACK_API_BASE_URL) {
+    return PRIMARY_API_BASE_URL;
+  }
+  if (cur !== FALLBACK_API_BASE_URL) return FALLBACK_API_BASE_URL;
+  if (cur !== PRIMARY_API_BASE_URL) return PRIMARY_API_BASE_URL;
+  return null;
+}
+
+function shouldFailoverToReserve(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  if (error.code === 'ERR_CANCELED') return false;
+  if (error.config?.headers?.['X-Skip-Api-Failover'] === '1') return false;
+  const status = error.response?.status;
+  if (status === 502 || status === 503 || status === 504) return true;
+  if (error.response) return false;
+  const code = error.code;
+  return (
+    code === 'ERR_NETWORK' ||
+    code === 'ECONNABORTED' ||
+    code === 'ETIMEDOUT' ||
+    code === 'ECONNREFUSED' ||
+    !code
+  );
+}
 
 /** WebSocket + Socket.IO base (global prefix `/api` is HTTP-only). */
 export function getExamLiveSocketUrl(): string {
@@ -1333,7 +1404,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: activeApiBaseUrl,
       // 60s — odatdagi data so'rovlar uchun. Fayl yuklash uchun
       // call-site da timeout override qilinishi kerak (uploadFile).
       timeout: 60_000,
@@ -1348,6 +1419,7 @@ class ApiService {
     // Request interceptor - Add token to headers
     this.api.interceptors.request.use(
       (config) => {
+        config.baseURL = activeApiBaseUrl;
         const accessToken = localStorage.getItem('accessToken');
         if (accessToken) {
           config.headers.Authorization = `Bearer ${accessToken}`;
@@ -1371,11 +1443,25 @@ class ApiService {
       (response) => response,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       async (error: any) => {
-        const originalRequest = error.config;
+        const originalRequest = error.config as
+          | (typeof error.config & { _retry?: boolean; _apiFailover?: boolean })
+          | undefined;
         const status = error.response?.status;
 
+        // Asosiy domen ishlamasa — rezerv IP ga o‘tish
+        if (originalRequest && !originalRequest._apiFailover && shouldFailoverToReserve(error)) {
+          const nextBase = otherApiBaseUrl(originalRequest.baseURL || activeApiBaseUrl);
+          if (nextBase) {
+            originalRequest._apiFailover = true;
+            setActiveApiBaseUrl(nextBase);
+            this.api.defaults.baseURL = nextBase;
+            originalRequest.baseURL = nextBase;
+            return this.api(originalRequest);
+          }
+        }
+
         // 401 — try refresh token first
-        if (status === 401 && !originalRequest?._retry) {
+        if (status === 401 && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
           try {
             const accessToken = await this.refreshAccessToken();
