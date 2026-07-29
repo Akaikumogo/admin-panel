@@ -17,8 +17,6 @@ import { can } from '@/utils/can';
 
 // ─── Module-level constants (zero per-render allocation) ──────
 
-const BACKEND_BASE = BACKEND_ORIGIN;
-
 const ROLE_COLOR_MAP: Record<string, string> = {
   SUPERADMIN: 'red',
   MODERATOR: 'blue',
@@ -565,7 +563,7 @@ export default function ProfilePage() {
   }, []);
 
   const avatarSrc = useMemo(
-    () => (me?.avatarUrl ? `${BACKEND_BASE}${me.avatarUrl}` : null),
+    () => (me?.avatarUrl ? `${BACKEND_ORIGIN}${me.avatarUrl}` : null),
     [me?.avatarUrl]
   );
 
