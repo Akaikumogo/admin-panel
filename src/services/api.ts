@@ -3,9 +3,32 @@ import { notification } from '@/lib/toast';
 
 const API_BASE_STORAGE_KEY = 'elektrolearn_api_base';
 
+function isIpAddress(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, '');
+  if (host.includes(':')) return true;
+  const parts = host.split('.');
+  return (
+    parts.length === 4 &&
+    parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255)
+  );
+}
+
 function normalizeApiBase(url: string): string {
-  const trimmed = url.trim().replace(/\/+$/, '');
+  let trimmed = url.trim().replace(/\/+$/, '');
   if (!trimmed) return '/api';
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    const parsed = new URL(trimmed);
+    const isLocalhost =
+      parsed.hostname === 'localhost' || parsed.hostname.endsWith('.localhost');
+    parsed.protocol = isIpAddress(parsed.hostname)
+      ? 'http:'
+      : isLocalhost
+        ? parsed.protocol
+        : 'https:';
+    trimmed = parsed.toString().replace(/\/+$/, '');
+  }
+
   return /\/api$/i.test(trimmed) ? trimmed : `${trimmed}/api`;
 }
 
@@ -37,7 +60,31 @@ function persistApiBase(url: string) {
   }
 }
 
-let activeApiBaseUrl = readStoredApiBase() || PRIMARY_API_BASE_URL;
+function defaultApiBaseForCurrentHost(): string {
+  return typeof window !== 'undefined' && isIpAddress(window.location.hostname)
+    ? FALLBACK_API_BASE_URL
+    : PRIMARY_API_BASE_URL;
+}
+
+function isStoredApiBaseCompatible(url: string): boolean {
+  if (typeof window === 'undefined') return true;
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const pageUsesIp = isIpAddress(window.location.hostname);
+    return pageUsesIp
+      ? parsed.protocol === 'http:' && isIpAddress(parsed.hostname)
+      : parsed.protocol === 'https:' && !isIpAddress(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+const storedApiBaseUrl = readStoredApiBase();
+let activeApiBaseUrl =
+  storedApiBaseUrl && isStoredApiBaseCompatible(storedApiBaseUrl)
+    ? storedApiBaseUrl
+    : defaultApiBaseForCurrentHost();
 
 /** Joriy backend origin (media, socket). Failoverda yangilanadi. */
 export let BACKEND_ORIGIN = activeApiBaseUrl.replace(/\/api\/?$/, '');
