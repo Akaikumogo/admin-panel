@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { notification } from '@/lib/toast';
 
-const API_BASE_STORAGE_KEY = 'elektrolearn_api_base';
+const API_BASE_STORAGE_KEY = 'elektrolearn_api_base_v2';
 
 function isIpAddress(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, '');
@@ -34,13 +34,13 @@ function normalizeApiBase(url: string): string {
 
 const PRIMARY_API_BASE_URL = normalizeApiBase(
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-    'https://elektrolearn-api.uzbekistonmet.uz/api',
+    '/api',
 );
 
 /** Asosiy domen ishlamasa ishlatiladigan rezerv backend. */
 const FALLBACK_API_BASE_URL = normalizeApiBase(
   (import.meta.env.VITE_API_FALLBACK_URL as string | undefined)?.trim() ||
-    'http://192.0.6.7:15162/api',
+    PRIMARY_API_BASE_URL,
 );
 
 function readStoredApiBase(): string | null {
