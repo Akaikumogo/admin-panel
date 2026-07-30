@@ -1630,6 +1630,7 @@ class ApiService {
   ): Promise<{ success: boolean; avatarUrl: string }> {
     const form = new FormData();
     form.append('file', file);
+    form.append('hasFace', 'true');
     const response = await this.api.post<{
       success: boolean;
       avatarUrl: string;
