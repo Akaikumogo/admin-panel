@@ -2680,6 +2680,33 @@ class ApiService {
     return response.data;
   }
 
+  async importModuleDocx(
+    file: File,
+    opts?: { dryRun?: boolean; latinize?: boolean },
+  ): Promise<{
+    success: boolean;
+    dryRun: boolean;
+    moduleTitle: string;
+    theories: Array<{
+      title: string;
+      contentLength: number;
+      questionsCount: number;
+    }>;
+    totalQuestions: number;
+    errors: string[];
+    createdLevelId: string | null;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('dryRun', opts?.dryRun ? 'true' : 'false');
+    form.append('latinize', opts?.latinize === false ? 'false' : 'true');
+    const response = await this.api.post('/admin/levels/import-docx', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
+    });
+    return response.data;
+  }
+
   async updateLevel(
     id: string,
     data: {

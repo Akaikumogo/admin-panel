@@ -207,6 +207,31 @@ const Levels = () => {
     importing: false,
     preview: null,
   });
+  const [moduleDocxImport, setModuleDocxImport] = useState<{
+    open: boolean;
+    file: File | null;
+    latinize: boolean;
+    previewing: boolean;
+    importing: boolean;
+    preview: {
+      success: boolean;
+      moduleTitle: string;
+      theories: Array<{
+        title: string;
+        contentLength: number;
+        questionsCount: number;
+      }>;
+      totalQuestions: number;
+      errors: string[];
+    } | null;
+  }>({
+    open: false,
+    file: null,
+    latinize: true,
+    previewing: false,
+    importing: false,
+    preview: null,
+  });
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
   const [theories, setTheories] = useState<Record<string, Theory[]>>({});
   const [questions, setQuestions] = useState<Record<string, Question[]>>({});
@@ -607,6 +632,94 @@ const Levels = () => {
     }
   };
 
+  const openModuleDocxImport = () => {
+    if (!can('contentLevels', 'create')) return;
+    setModuleDocxImport({
+      open: true,
+      file: null,
+      latinize: true,
+      previewing: false,
+      importing: false,
+      preview: null,
+    });
+  };
+
+  const closeModuleDocxImport = () => {
+    setModuleDocxImport((state) => ({
+      ...state,
+      open: false,
+      file: null,
+      preview: null,
+      previewing: false,
+      importing: false,
+    }));
+  };
+
+  const runModuleDocxPreview = async () => {
+    const file = moduleDocxImport.file;
+    if (!file) {
+      message.warning('Avval modul DOCX faylini tanlang');
+      return;
+    }
+    try {
+      setModuleDocxImport((state) => ({ ...state, previewing: true }));
+      const result = await apiService.importModuleDocx(file, {
+        dryRun: true,
+        latinize: moduleDocxImport.latinize,
+      });
+      setModuleDocxImport((state) => ({
+        ...state,
+        previewing: false,
+        preview: {
+          success: result.success,
+          moduleTitle: result.moduleTitle,
+          theories: result.theories,
+          totalQuestions: result.totalQuestions,
+          errors: result.errors,
+        },
+      }));
+      if (result.success) {
+        message.success(
+          `${result.theories.length} ta nazariya, ${result.totalQuestions} ta savol topildi`,
+        );
+      } else {
+        message.warning('Shablonda xatolar bor — ro‘yxatni tekshiring');
+      }
+    } catch (err: unknown) {
+      setModuleDocxImport((state) => ({ ...state, previewing: false }));
+      const msg =
+        (err as { response?: { data?: { message?: string | string[] } } })
+          ?.response?.data?.message;
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'DOCX parse xatosi');
+    }
+  };
+
+  const runModuleDocxImport = async () => {
+    const file = moduleDocxImport.file;
+    if (!file || !moduleDocxImport.preview?.success) {
+      message.warning('Avval xatosiz preview qiling');
+      return;
+    }
+    try {
+      setModuleDocxImport((state) => ({ ...state, importing: true }));
+      const result = await apiService.importModuleDocx(file, {
+        dryRun: false,
+        latinize: moduleDocxImport.latinize,
+      });
+      message.success(
+        `"${result.moduleTitle}" yaratildi: ${result.theories.length} nazariya, ${result.totalQuestions} savol`,
+      );
+      closeModuleDocxImport();
+      refetchLevels();
+    } catch (err: unknown) {
+      setModuleDocxImport((state) => ({ ...state, importing: false }));
+      const msg =
+        (err as { response?: { data?: { message?: string | string[] } } })
+          ?.response?.data?.message;
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Modul import xatosi');
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -646,7 +759,14 @@ const Levels = () => {
             { value: 'inactive', label: t(T.inactiveOnly) }
           ]}
         />
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            icon={<FileUp size={16} />}
+            onClick={openModuleDocxImport}
+            disabled={!can('contentLevels', 'create')}
+          >
+            Modul DOCX import
+          </Button>
           <Button
             type="primary"
             icon={<Plus size={16} />}
@@ -1073,6 +1193,135 @@ const Levels = () => {
             ))}
         </div>
       )}
+
+      {/* Full module DOCX import */}
+      <Modal
+        title="Modulni DOCX dan yaratish"
+        open={moduleDocxImport.open}
+        onCancel={closeModuleDocxImport}
+        width={760}
+        footer={[
+          <Button key="cancel" onClick={closeModuleDocxImport}>
+            {t(T.cancel)}
+          </Button>,
+          <Button
+            key="preview"
+            loading={moduleDocxImport.previewing}
+            disabled={!moduleDocxImport.file}
+            onClick={runModuleDocxPreview}
+          >
+            Preview
+          </Button>,
+          <Button
+            key="import"
+            type="primary"
+            loading={moduleDocxImport.importing}
+            disabled={!moduleDocxImport.preview?.success}
+            onClick={runModuleDocxImport}
+          >
+            Modulni yaratish
+          </Button>,
+        ]}
+      >
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+          Qat’iy shablon: <code>[MODULE]</code>, <code>[THEORY]</code>,{' '}
+          <code>[CONTENT]</code>, <code>[QUESTION]</code>,{' '}
+          <code>[OPTION]</code> va <code>[CORRECT]</code>. Bitta fayldan modul,
+          nazariyalar, savollar va variantlar yaratiladi.
+        </p>
+
+        <Upload
+          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          maxCount={1}
+          beforeUpload={(file) => {
+            setModuleDocxImport((state) => ({
+              ...state,
+              file,
+              preview: null,
+            }));
+            return false;
+          }}
+          onRemove={() =>
+            setModuleDocxImport((state) => ({
+              ...state,
+              file: null,
+              preview: null,
+            }))
+          }
+          fileList={
+            moduleDocxImport.file
+              ? ([
+                  {
+                    uid: '-module-docx',
+                    name: moduleDocxImport.file.name,
+                    status: 'done',
+                  },
+                ] as UploadFile[])
+              : []
+          }
+        >
+          <Button icon={<FileUp size={14} />}>Modul .docx faylini tanlash</Button>
+        </Upload>
+
+        <div className="mt-3">
+          <Checkbox
+            checked={moduleDocxImport.latinize}
+            onChange={(event) =>
+              setModuleDocxImport((state) => ({
+                ...state,
+                latinize: event.target.checked,
+                preview: null,
+              }))
+            }
+          >
+            Kirill → lotin
+          </Checkbox>
+        </div>
+
+        {moduleDocxImport.preview ? (
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Tag color={moduleDocxImport.preview.success ? 'green' : 'red'}>
+                {moduleDocxImport.preview.moduleTitle || 'Modul nomi topilmadi'}
+              </Tag>
+              <Tag color="blue">
+                Nazariyalar: {moduleDocxImport.preview.theories.length}
+              </Tag>
+              <Tag color="purple">
+                Savollar: {moduleDocxImport.preview.totalQuestions}
+              </Tag>
+            </div>
+
+            {moduleDocxImport.preview.errors.length > 0 ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                <p className="mb-1 font-semibold">Importdan oldin tuzating:</p>
+                <ul className="list-disc space-y-1 pl-5">
+                  {moduleDocxImport.preview.errors.map((error) => (
+                    <li key={error}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+              {moduleDocxImport.preview.theories.map((theory, index) => (
+                <div
+                  key={`${index}-${theory.title}`}
+                  className="rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-slate-800/50"
+                >
+                  <p className="font-medium">
+                    {index + 1}. {theory.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Nazariya matni: {theory.contentLength} belgi · Savollar:{' '}
+                    {theory.questionsCount}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {/* Level Modal */}
       <Modal
