@@ -22,6 +22,7 @@ import apiService, {
   getExamLiveSocketUrl,
   type ExamLiveAwaitingOralRow,
   type ExamLivePendingSession,
+  type Organization,
   type OralResult,
   type PaginatedResponse,
   type UpcomingExamAssignment,
@@ -32,6 +33,11 @@ import { can } from '@/utils/can';
 export default function ExamSchedulePage() {
   const { t } = useTranslation();
   const { data: me } = useFetch<UserProfile | null>(['me'], () => apiService.me(), null);
+  const { data: organizations } = useFetch(
+    ['organizations-for-exam-schedule'],
+    () => apiService.getOrganizations(),
+    [] as Organization[],
+  );
 
   const { data: rows, loading, initialLoading, refetch } = useFetch(
     ['upcoming-exams'],
@@ -153,8 +159,7 @@ export default function ExamSchedulePage() {
       transports: ['websocket', 'polling'],
     });
 
-    const orgs = me.organizations ?? [];
-    for (const o of orgs) {
+    for (const o of organizations) {
       socket.emit('join_org', { organizationId: o.id });
     }
 
@@ -180,7 +185,7 @@ export default function ExamSchedulePage() {
       socket.disconnect();
       window.clearInterval(interval);
     };
-  }, [me, refetchPending, refetchOral, t]);
+  }, [me, organizations, refetchPending, refetchOral, t]);
 
   const approveSession = async (sessionId: string) => {
     if (!can('exams', 'update')) return;
@@ -662,7 +667,7 @@ export default function ExamSchedulePage() {
           </Form.Item>
           <Form.Item name="organizationId" label={t({ uz: 'Tashkilot', en: 'Organization', ru: 'Организация' })} rules={[{ required: true }]}>
             <Select
-              options={(me?.organizations ?? []).map((o) => ({ value: o.id, label: o.name }))}
+              options={organizations.map((o) => ({ value: o.id, label: o.name }))}
             />
           </Form.Item>
           <Form.Item name="includesPt" label="PT" valuePropName="checked">

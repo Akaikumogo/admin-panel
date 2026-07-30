@@ -27,8 +27,10 @@ export default function LeaderboardPage() {
     [] as Organization[],
   );
 
+  const canSelectAnyOrganization =
+    me?.role === 'SUPERADMIN' || me?.organizations?.some((o) => o.isDefault === true);
   const effectiveOrgId =
-    me?.role === 'SUPERADMIN' ? (orgId === 'all' ? undefined : orgId) : undefined;
+    canSelectAnyOrganization ? (orgId === 'all' ? undefined : orgId) : undefined;
 
   const { data, loading, initialLoading } = useFetch(
     ['leaderboard', scope, effectiveOrgId],
@@ -133,7 +135,7 @@ export default function LeaderboardPage() {
               { value: 'organization', label: t(T.org) },
             ]}
           />
-          {me.role === 'SUPERADMIN' && scope === 'organization' ? (
+          {canSelectAnyOrganization && scope === 'organization' ? (
             <Select
               value={orgId}
               style={{ width: 320 }}
