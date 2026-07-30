@@ -2,9 +2,10 @@ export type AvatarValidationResult =
   | { ok: true; hasFace: boolean; faceConfidence: number; whiteBgRatio: number }
   | { ok: false; reason: 'no_face' | 'not_white_bg' | 'load_error' };
 
-const WHITE_THRESHOLD = 235; // near-white RGB channel min
-const WHITE_EDGE_RATIO = 0.72; // border pixels that must be near-white
-const BORDER_FRAC = 0.12; // sample outer 12% as "background"
+// JPEG "white" often lands ~210–245; passport photos fill the bottom with shoulders.
+const WHITE_THRESHOLD = 210;
+const WHITE_EDGE_RATIO = 0.55;
+const BORDER_FRAC = 0.1;
 
 function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -100,8 +101,11 @@ function measureWhiteBackground(imgEl: HTMLImageElement): number {
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
+      // Skip bottom edge — shoulders/suit usually cover it in ID photos.
       const onEdge =
-        x < border || y < border || x >= size - border || y >= size - border;
+        y < border ||
+        x < border ||
+        x >= size - border;
       if (!onEdge) continue;
       edge += 1;
       const i = (y * size + x) * 4;
