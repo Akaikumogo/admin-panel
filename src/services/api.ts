@@ -2835,6 +2835,46 @@ class ApiService {
     await this.api.delete(`/admin/question-options/${id}`);
   }
 
+  /** DOCX dan darsga savol import (dryRun=true → preview). */
+  async importQuestionsDocx(
+    file: File,
+    opts: {
+      levelId: string;
+      theoryId: string;
+      dryRun?: boolean;
+      latinize?: boolean;
+    },
+  ): Promise<{
+    success: boolean;
+    dryRun: boolean;
+    levelId: string;
+    theoryId: string;
+    parsed: number;
+    created: number;
+    skipped: number;
+    warnings: number;
+    questions: Array<{
+      sourceIndex: number;
+      prompt: string;
+      optionsCount: number;
+      correctCount: number;
+      warnings: string[];
+    }>;
+    skippedDetails: string[];
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('levelId', opts.levelId);
+    form.append('theoryId', opts.theoryId);
+    form.append('dryRun', opts.dryRun ? 'true' : 'false');
+    form.append('latinize', opts.latinize === false ? 'false' : 'true');
+    const response = await this.api.post('/admin/questions/import-docx', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
+    });
+    return response.data;
+  }
+
   /** Savolga biriktirish uchun lavozimlar (barcha moderatorlarga ochiq). */
   async getContentPositions(): Promise<Position[]> {
     const response = await this.api.get<Position[]>('/admin/content-positions');

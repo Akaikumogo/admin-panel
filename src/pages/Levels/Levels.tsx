@@ -11,8 +11,11 @@ import {
   Collapse,
   message,
   Popconfirm,
-  Spin
+  Spin,
+  Upload,
+  Checkbox,
 } from '@/components/ui';
+import type { UploadFile } from '@/components/ui';
 import {
   Plus,
   Pencil,
@@ -22,7 +25,8 @@ import {
   HelpCircle,
   GripVertical,
   Filter,
-  Search
+  Search,
+  FileUp,
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -93,6 +97,11 @@ const T = {
     uz: 'Savol qo`shish',
     en: 'Add Question',
     ru: 'Добавить вопрос'
+  },
+  importDocx: {
+    uz: 'DOCX import',
+    en: 'Import DOCX',
+    ru: 'Импорт DOCX'
   },
   editQuestion: {
     uz: 'Savolni tahrirlash',
@@ -165,6 +174,39 @@ const Levels = () => {
     kind: 'lesson'
   });
   const [questionModal, setQuestionModal] = useState<{ open: boolean; editing: Question | null; levelId: string; theoryId: string }>({ open: false, editing: null, levelId: '', theoryId: '' });
+  const [docxImport, setDocxImport] = useState<{
+    open: boolean;
+    levelId: string;
+    theoryId: string;
+    lessonTitle: string;
+    file: File | null;
+    latinize: boolean;
+    previewing: boolean;
+    importing: boolean;
+    preview: {
+      parsed: number;
+      skipped: number;
+      warnings: number;
+      questions: Array<{
+        sourceIndex: number;
+        prompt: string;
+        optionsCount: number;
+        correctCount: number;
+        warnings: string[];
+      }>;
+      skippedDetails: string[];
+    } | null;
+  }>({
+    open: false,
+    levelId: '',
+    theoryId: '',
+    lessonTitle: '',
+    file: null,
+    latinize: true,
+    previewing: false,
+    importing: false,
+    preview: null,
+  });
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
   const [theories, setTheories] = useState<Record<string, Theory[]>>({});
   const [questions, setQuestions] = useState<Record<string, Question[]>>({});
@@ -474,6 +516,95 @@ const Levels = () => {
     await apiService.deleteQuestion(id);
     message.success('Savol o`chirildi');
     fetchQuestions(theoryId);
+  };
+
+  const openDocxImport = (levelId: string, theoryId: string, lessonTitle: string) => {
+    if (!can('contentQuestions', 'create')) return;
+    setDocxImport({
+      open: true,
+      levelId,
+      theoryId,
+      lessonTitle,
+      file: null,
+      latinize: true,
+      previewing: false,
+      importing: false,
+      preview: null,
+    });
+  };
+
+  const closeDocxImport = () => {
+    setDocxImport((s) => ({
+      ...s,
+      open: false,
+      file: null,
+      preview: null,
+      previewing: false,
+      importing: false,
+    }));
+  };
+
+  const runDocxPreview = async () => {
+    if (!docxImport.file) {
+      message.warning('Avval .docx fayl tanlang');
+      return;
+    }
+    try {
+      setDocxImport((s) => ({ ...s, previewing: true }));
+      const res = await apiService.importQuestionsDocx(docxImport.file, {
+        levelId: docxImport.levelId,
+        theoryId: docxImport.theoryId,
+        dryRun: true,
+        latinize: docxImport.latinize,
+      });
+      setDocxImport((s) => ({
+        ...s,
+        previewing: false,
+        preview: {
+          parsed: res.parsed,
+          skipped: res.skipped,
+          warnings: res.warnings,
+          questions: res.questions,
+          skippedDetails: res.skippedDetails,
+        },
+      }));
+      message.success(`${res.parsed} ta savol topildi`);
+    } catch (err: unknown) {
+      setDocxImport((s) => ({ ...s, previewing: false }));
+      const msg =
+        (err as { response?: { data?: { message?: string | string[] } } })
+          ?.response?.data?.message;
+      message.error(
+        Array.isArray(msg) ? msg.join(', ') : msg || 'DOCX parse xatosi',
+      );
+    }
+  };
+
+  const runDocxImport = async () => {
+    if (!docxImport.file || !docxImport.preview) {
+      message.warning('Avval preview qiling');
+      return;
+    }
+    try {
+      setDocxImport((s) => ({ ...s, importing: true }));
+      const res = await apiService.importQuestionsDocx(docxImport.file, {
+        levelId: docxImport.levelId,
+        theoryId: docxImport.theoryId,
+        dryRun: false,
+        latinize: docxImport.latinize,
+      });
+      message.success(`${res.created} ta savol import qilindi`);
+      fetchQuestions(docxImport.theoryId);
+      closeDocxImport();
+    } catch (err: unknown) {
+      setDocxImport((s) => ({ ...s, importing: false }));
+      const msg =
+        (err as { response?: { data?: { message?: string | string[] } } })
+          ?.response?.data?.message;
+      message.error(
+        Array.isArray(msg) ? msg.join(', ') : msg || 'DOCX import xatosi',
+      );
+    }
   };
 
   if (initialLoading) {
@@ -797,16 +928,32 @@ const Levels = () => {
                                       <h5 className="text-sm font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-2">
                                         <HelpCircle size={14} /> {t(T.questions)}
                                       </h5>
-                                      <Button
-                                        size="small"
-                                        icon={<Plus size={12} />}
-                                        onClick={() =>
-                                          openQuestionModal(level.id, lesson.id)
-                                        }
-                                        disabled={!can('contentQuestions', 'create')}
-                                      >
-                                        {t(T.addQuestion)}
-                                      </Button>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          size="small"
+                                          icon={<FileUp size={12} />}
+                                          onClick={() =>
+                                            openDocxImport(
+                                              level.id,
+                                              lesson.id,
+                                              lesson.title,
+                                            )
+                                          }
+                                          disabled={!can('contentQuestions', 'create')}
+                                        >
+                                          {t(T.importDocx)}
+                                        </Button>
+                                        <Button
+                                          size="small"
+                                          icon={<Plus size={12} />}
+                                          onClick={() =>
+                                            openQuestionModal(level.id, lesson.id)
+                                          }
+                                          disabled={!can('contentQuestions', 'create')}
+                                        >
+                                          {t(T.addQuestion)}
+                                        </Button>
+                                      </div>
                                     </div>
                                     {!questions[lesson.id] ? (
                                       <Spin size="small" />
@@ -1161,6 +1308,117 @@ const Levels = () => {
             )}
           </Form.List>
         </Form>
+      </Modal>
+
+      {/* DOCX Import Modal */}
+      <Modal
+        title={`DOCX import — ${docxImport.lessonTitle || 'Dars'}`}
+        open={docxImport.open}
+        onCancel={closeDocxImport}
+        width={720}
+        footer={[
+          <Button key="cancel" onClick={closeDocxImport}>
+            {t(T.cancel)}
+          </Button>,
+          <Button
+            key="preview"
+            loading={docxImport.previewing}
+            disabled={!docxImport.file}
+            onClick={runDocxPreview}
+          >
+            Preview
+          </Button>,
+          <Button
+            key="import"
+            type="primary"
+            loading={docxImport.importing}
+            disabled={!docxImport.preview || docxImport.preview.parsed === 0}
+            onClick={runDocxImport}
+          >
+            Import ({docxImport.preview?.parsed ?? 0})
+          </Button>,
+        ]}
+      >
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+          Format: <code>1-savol. …</code> va <code>a) …*</code> (yulduzcha =
+          to‘g‘ri javob). Savollar shu darsga qo‘shiladi.
+        </p>
+
+        <Upload
+          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          maxCount={1}
+          beforeUpload={(file) => {
+            setDocxImport((s) => ({ ...s, file, preview: null }));
+            return false;
+          }}
+          onRemove={() =>
+            setDocxImport((s) => ({ ...s, file: null, preview: null }))
+          }
+          fileList={
+            docxImport.file
+              ? ([
+                  {
+                    uid: '-docx',
+                    name: docxImport.file.name,
+                    status: 'done',
+                  },
+                ] as UploadFile[])
+              : []
+          }
+        >
+          <Button icon={<FileUp size={14} />}>.docx tanlash</Button>
+        </Upload>
+
+        <div className="mt-3">
+          <Checkbox
+            checked={docxImport.latinize}
+            onChange={(e) =>
+              setDocxImport((s) => ({
+                ...s,
+                latinize: e.target.checked,
+                preview: null,
+              }))
+            }
+          >
+            Kirill → lotin
+          </Checkbox>
+        </div>
+
+        {docxImport.preview ? (
+          <div className="mt-4 space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Tag color="blue">Topildi: {docxImport.preview.parsed}</Tag>
+              <Tag color={docxImport.preview.warnings ? 'orange' : 'green'}>
+                Ogohlantirish: {docxImport.preview.warnings}
+              </Tag>
+              <Tag>O‘tkazib yuborilgan: {docxImport.preview.skipped}</Tag>
+            </div>
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 p-2 space-y-2">
+              {docxImport.preview.questions.slice(0, 40).map((q) => (
+                <div
+                  key={`${q.sourceIndex}-${q.prompt.slice(0, 24)}`}
+                  className="text-xs border-b border-slate-100 dark:border-slate-800 pb-2"
+                >
+                  <p className="font-medium text-slate-800 dark:text-slate-100">
+                    {q.sourceIndex}. {q.prompt.slice(0, 160)}
+                    {q.prompt.length > 160 ? '…' : ''}
+                  </p>
+                  <p className="text-slate-500 mt-0.5">
+                    {q.optionsCount} variant / {q.correctCount} to‘g‘ri
+                    {q.warnings.length
+                      ? ` — ${q.warnings.join('; ')}`
+                      : ''}
+                  </p>
+                </div>
+              ))}
+              {docxImport.preview.questions.length > 40 ? (
+                <p className="text-xs text-slate-400">
+                  … va yana {docxImport.preview.questions.length - 40} ta
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </div>
   );

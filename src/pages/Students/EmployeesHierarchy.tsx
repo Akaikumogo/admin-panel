@@ -431,14 +431,18 @@ export function EmployeesHierarchy({
   students,
   divisions,
   organizations,
-  canEdit = false,
+  canEditOrg = false,
+  canEditEmployee = false,
   className,
   onActivationChange,
 }: {
   students: StudentSummary[];
   divisions?: DivisionActivation[];
   organizations?: Array<{ id: string; reportActive: boolean }>;
-  canEdit?: boolean;
+  /** Filial / bo‘lim switch — organizations.update */
+  canEditOrg?: boolean;
+  /** Xodim switch — students.update */
+  canEditEmployee?: boolean;
   className?: string;
   onActivationChange?: () => void;
 }) {
@@ -497,7 +501,9 @@ export function EmployeesHierarchy({
 
   const requestSwitch = useCallback(
     (next: boolean, draft: PendingOff) => {
-      if (!canEdit || busyKey) return;
+      const allowed =
+        draft.kind === 'employee' ? canEditEmployee : canEditOrg;
+      if (!allowed || busyKey) return;
       if (!next) {
         setPendingOff(draft);
         return;
@@ -527,7 +533,7 @@ export function EmployeesHierarchy({
         }
       })();
     },
-    [busyKey, canEdit, onActivationChange, t],
+    [busyKey, canEditEmployee, canEditOrg, onActivationChange, t],
   );
 
   const confirmOff = async () => {
@@ -616,7 +622,7 @@ export function EmployeesHierarchy({
                   meta={t({ uz: 'Filial', en: 'Branch', ru: 'Филиал' })}
                   count={org.total}
                   switchChecked={orgOn}
-                  canEditSwitch={canEdit && !busyKey}
+                  canEditSwitch={canEditOrg && !busyKey}
                   onSwitch={(next) =>
                     requestSwitch(next, {
                       kind: 'org',
@@ -657,7 +663,7 @@ export function EmployeesHierarchy({
                             })}
                             count={dept.total}
                             switchChecked={dOn}
-                            canEditSwitch={canEdit && !busyKey}
+                            canEditSwitch={canEditOrg && !busyKey}
                             onSwitch={(next) =>
                               requestSwitch(next, {
                                 kind: 'division',
@@ -702,7 +708,7 @@ export function EmployeesHierarchy({
                                       <div className="px-3 pb-2 pl-10">
                                         <EmployeePanel
                                           people={pos.employees}
-                                          canEdit={canEdit && !busyKey}
+                                          canEdit={canEditEmployee && !busyKey}
                                           empActive={empActive}
                                           onToggleEmp={(
                                             userId,
@@ -764,7 +770,7 @@ export function EmployeesHierarchy({
                               switchChecked={
                                 divActive.get(divKey(org.id, '')) ?? true
                               }
-                              canEditSwitch={canEdit && !busyKey}
+                              canEditSwitch={canEditOrg && !busyKey}
                               onSwitch={(next) =>
                                 requestSwitch(next, {
                                   kind: 'division',
@@ -789,7 +795,7 @@ export function EmployeesHierarchy({
                                 <EmployeePanel
                                   people={org.noDivision}
                                   warn
-                                  canEdit={canEdit && !busyKey}
+                                  canEdit={canEditEmployee && !busyKey}
                                   empActive={empActive}
                                   onToggleEmp={(userId, next, name) =>
                                     requestSwitch(next, {
@@ -834,7 +840,7 @@ export function EmployeesHierarchy({
                                 <EmployeePanel
                                   people={org.noPost}
                                   warn
-                                  canEdit={canEdit && !busyKey}
+                                  canEdit={canEditEmployee && !busyKey}
                                   empActive={empActive}
                                   onToggleEmp={(userId, next, name) =>
                                     requestSwitch(next, {

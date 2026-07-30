@@ -27,7 +27,7 @@ import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
 import { downloadCsv } from '@/lib/csv';
 import apiService from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
-import { isSuperAdmin } from '@/utils/isSuperAdmin';
+import { can } from '@/utils/can';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
 
 const T = {
@@ -375,7 +375,8 @@ const Students = () => {
             students={treeStudents}
             organizations={reportingActivation.organizations}
             divisions={reportingActivation.divisions}
-            canEdit={isSuperAdmin()}
+            canEditOrg={can('organizations', 'update')}
+            canEditEmployee={can('students', 'update')}
             onActivationChange={() => {
               void refetchTree();
               void refetchActivation();
