@@ -33,7 +33,7 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
-import apiService, { BACKEND_ORIGIN, type Organization, type UserProfile } from '@/services/api';
+import apiService, { resolveAssetUrl, type Organization, type UserProfile } from '@/services/api';
 import { filterSelectOption } from '@/utils/selectSearch.util';
 
 const T = {
@@ -479,7 +479,7 @@ const Moderators = () => {
             <Avatar
               size={36}
               src={
-                mod.avatarUrl ? `${BACKEND_ORIGIN}${mod.avatarUrl}` : undefined
+                mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : undefined
               }
               className="flex-shrink-0 bg-gradient-to-br from-slate-600 to-slate-800"
             >

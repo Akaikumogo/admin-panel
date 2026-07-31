@@ -14,6 +14,7 @@ import type {
   ActivityDay,
 } from '@/services/api';
 import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
+import { EmployeeCertificateSection } from './EmployeeCertificateSection';
 
 const T = {
   back: { uz: 'Orqaga', en: 'Back', ru: 'Назад' },
@@ -315,6 +316,12 @@ const StudentDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Guvohnoma */}
+      <EmployeeCertificateSection
+        userId={student.id}
+        avatarUrl={student.avatarUrl}
+      />
 
       {/* Personal plan matrix */}
       <div className="bg-card border border-border rounded-lg p-6 min-w-0 overflow-hidden">
