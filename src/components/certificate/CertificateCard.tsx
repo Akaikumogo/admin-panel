@@ -5,11 +5,24 @@ import { CertificateRibbons } from './CertificateRibbons';
 import { tierFaceStyle } from './certificate-theme';
 import { isGoldTier, resolvePositionTier, type PositionTier } from './position-tier';
 import type { EmployeeCertificate } from './types';
-import { UmetLogo } from './UmetLogo';
-
-const CERT_TITLE = 'Xodimning bilim sinovi guvohnomasi';
+import { UmetSeal } from './UmetSeal';
 
 export type CertificateCardSize = 'sm' | 'md' | 'lg';
+
+/**
+ * NES dan keladigan nomlarda tashkiliy-huquqiy shakl "AO"/"АО" ko'rinishida keladi.
+ * Guvohnomada u doim "AJ" bo'lishi kerak.
+ */
+function normalizeOrgForm(name: string) {
+  return name.replace(/(^|[\s(«"'])(AO|АО)(?=[\s.,)»"']|$)/gu, (_m, lead: string) => `${lead}AJ`);
+}
+
+/** Guvohnoma sarlavhasi — filialning to'liq nomi (bo'lmasa tashkilot nomi). */
+function cardTitle(certificate: EmployeeCertificate) {
+  return normalizeOrgForm(
+    certificate.branchName?.trim() || certificate.organizationTitle?.trim() || '',
+  );
+}
 
 /** Guvohnoma gorizontal (landscape) — sahna kengligi. */
 const SCENE_SIZE: Record<CertificateCardSize, string> = {
@@ -162,32 +175,20 @@ export function CertificateCardFront({
       />
 
       {/* Logotip — o'ng yuqori burchak */}
-      <div
-        className="absolute top-[3cqw] right-[3.4cqw] z-[3] flex items-center justify-center w-[12cqw] h-[12cqw] rounded-[1.4cqw] border border-white/20 bg-white/10 p-[0.9cqw] backdrop-blur-[1px]"
-        aria-hidden
-      >
-        <UmetLogo size="100%" variant={gold ? 'gold' : 'light'} />
-      </div>
+      <UmetSeal className="absolute top-[2.8cqw] right-[3.4cqw] z-[3] w-[12cqw]" />
 
       <StatusStamp status={certificate.status} />
 
       <div className={FACE_INNER}>
-        <header className="relative z-[2] shrink-0 pt-[3.4cqw] pr-[13cqw] text-center">
+        {/* Sarlavha — filialning to'liq nomi */}
+        <header className="relative z-[2] shrink-0 pt-[3.4cqw] pr-[13cqw] text-left">
           <p
             className={cn(
-              'm-0 text-[3.35cqw] font-extrabold leading-tight tracking-tight line-clamp-1',
+              'm-0 text-[3.1cqw] font-extrabold uppercase leading-snug tracking-tight line-clamp-2',
               gold && 'text-[var(--card-accent-2)]',
             )}
           >
-            {certificate.organizationTitle}
-          </p>
-          {certificate.branchName && (
-            <p className="mt-[0.7cqw] mb-0 text-[2.6cqw] font-semibold leading-tight text-[var(--card-muted)] line-clamp-1">
-              {certificate.branchName}
-            </p>
-          )}
-          <p className="mt-[0.9cqw] mb-0 text-[2.9cqw] font-bold leading-tight text-[var(--card-accent-2)] line-clamp-1">
-            {CERT_TITLE}
+            {cardTitle(certificate)}
           </p>
         </header>
 
@@ -196,11 +197,11 @@ export function CertificateCardFront({
           aria-hidden
         />
 
-        {/* Asosiy qism: rasm | maydonlar | raqam + QR */}
-        <div className="relative z-[2] flex flex-1 min-h-0 gap-[3cqw] pt-[2.4cqw]">
+        {/* Asosiy qism: rasm | maydonlar | QR */}
+        <div className="relative z-[2] flex flex-1 min-h-0 gap-[3.6cqw] pt-[2.4cqw]">
           <CardPhoto avatarUrl={avatarUrl} tier={tier} />
 
-          <dl className="m-0 flex flex-1 min-w-0 flex-col justify-between py-[0.3cqw]">
+          <dl className="m-0 flex flex-1 min-w-0 flex-col justify-center gap-[3cqw] py-[0.3cqw] text-left">
             <CardField
               labelUz="Familiyasi"
               labelEn="Surname"
@@ -216,31 +217,12 @@ export function CertificateCardFront({
               labelEn="Patronymic"
               value={certificate.middleName || '—'}
             />
-            <CardField
-              labelUz="Lavozimi"
-              labelEn="Position"
-              value={certificate.positionTitle || '—'}
-              accent
-            />
           </dl>
 
-          <div className="flex w-[22cqw] shrink-0 flex-col items-center text-center">
-            <span className="text-[1.95cqw] font-semibold leading-tight text-[var(--card-muted)]">
-              Guvohnoma raqami
-            </span>
-            <span className="text-[1.7cqw] italic leading-tight text-[var(--card-muted)] opacity-80">
-              Certificate number
-            </span>
-            <span className="mt-[0.6cqw] text-[4.7cqw] font-black leading-none tracking-wide text-[var(--card-number)] [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
-              {certificate.certificateNumber}
-            </span>
-
-            <div className="mt-[1.4cqw] h-[17cqw] w-[17cqw] rounded-[1cqw] bg-white p-[0.8cqw] shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+          <div className="flex w-[21cqw] shrink-0 items-center justify-center">
+            <div className="h-[20cqw] w-[20cqw] rounded-[1cqw] bg-white p-[0.9cqw] shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
               <CertificateQr value={certificate.verifyUrl} />
             </div>
-            <span className="mt-[0.7cqw] text-[1.7cqw] leading-tight text-[var(--card-muted)]">
-              Scan to verify
-            </span>
           </div>
         </div>
       </div>
@@ -270,53 +252,13 @@ export function CertificateCardBack({
         aria-hidden
       />
 
-      <div className={FACE_INNER}>
-        <div className="relative z-[3] flex shrink-0 items-baseline justify-between gap-[2cqw] pt-[3.4cqw]">
-          <span className="text-[2.6cqw] font-extrabold uppercase tracking-[0.16em] text-[var(--card-accent-2)]">
-            Guvohnoma / Certificate
-          </span>
-          <span className="text-[2.8cqw] font-black text-[var(--card-number)]">
-            № {certificate.certificateNumber}
-          </span>
-        </div>
-
-        <div
-          className="relative z-[3] mt-[1.6cqw] h-px w-full shrink-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-          aria-hidden
-        />
-
-        <div className="relative z-[3] flex flex-1 min-h-0 gap-[3.5cqw] pt-[2.6cqw]">
-          <dl className="m-0 flex flex-1 min-w-0 flex-col justify-between py-[0.4cqw]">
-            <BackRow label="F.I.Sh" value={certificate.fullName || '—'} />
-            <BackRow label="Lavozim" value={certificate.positionTitle || '—'} />
-            {certificate.personnelNumber && (
-              <BackRow label="Tabel №" value={certificate.personnelNumber} />
-            )}
-            <BackRow
-              label="Berilgan"
-              value={formatCertificateDate(certificate.issuedAt)}
-            />
-            <BackRow
-              label="Amal muddati"
-              value={formatCertificateDate(certificate.validUntil)}
-            />
-          </dl>
-
-          <div className="flex w-[27cqw] shrink-0 flex-col items-center justify-end pb-[1.4cqw]">
-            <div
-              className="w-full border-b border-dashed border-white/40"
-              aria-hidden
-            />
-            <span className="mt-[0.9cqw] text-[1.9cqw] leading-tight text-[var(--card-muted)]">
-              Imzo / Signature
-            </span>
-          </div>
-        </div>
-
-        <p className="relative z-[3] m-0 shrink-0 pt-[1.4cqw] text-center text-[1.8cqw] leading-snug text-[var(--card-muted)]">
-          Haqiqiyligini QR kod orqali tekshiring.
-        </p>
+      <div className={cn(FACE_INNER, 'items-center justify-center')}>
+        <UmetSeal className="relative z-[3] w-[32cqw]" />
       </div>
+
+      <span className="absolute bottom-[3cqw] right-[3.8cqw] z-[3] text-[2.2cqw] font-semibold tracking-[0.06em] text-[var(--card-muted)]">
+        № {certificate.certificateNumber}
+      </span>
     </div>
   );
 }
@@ -372,19 +314,6 @@ function CardField({
         )}
         title={value}
       >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function BackRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[17cqw_1fr] items-start gap-[1.4cqw]">
-      <dt className="m-0 text-[1.75cqw] font-bold uppercase leading-tight tracking-wide text-[var(--card-muted)] opacity-85">
-        {label}
-      </dt>
-      <dd className="m-0 text-[2.15cqw] font-bold leading-tight text-[var(--card-text)] line-clamp-2 break-words">
         {value}
       </dd>
     </div>
