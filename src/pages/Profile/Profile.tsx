@@ -11,7 +11,7 @@ import {
   UserCircle,
   X
 } from 'lucide-react';
-import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
+import apiService, { resolveAssetUrl, type UserProfile } from '@/services/api';
 import { useTranslation } from '@/hooks/useTranslation';
 import { can } from '@/utils/can';
 
@@ -563,7 +563,7 @@ export default function ProfilePage() {
   }, []);
 
   const avatarSrc = useMemo(
-    () => (me?.avatarUrl ? `${BACKEND_ORIGIN}${me.avatarUrl}` : null),
+    () => (me?.avatarUrl ? resolveAssetUrl(me.avatarUrl) : null),
     [me?.avatarUrl]
   );
 

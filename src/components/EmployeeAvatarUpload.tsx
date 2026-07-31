@@ -4,7 +4,7 @@ import { Avatar, message } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { validateEmployeeAvatar } from '@/lib/avatar-validation';
-import apiService, { BACKEND_ORIGIN } from '@/services/api';
+import apiService, { resolveAssetUrl } from '@/services/api';
 
 const T = {
   imagesOnly: {
@@ -75,7 +75,7 @@ export function EmployeeAvatarUpload({
 
   const displaySrc =
     localUrl ??
-    (avatarUrl ? `${BACKEND_ORIGIN}${avatarUrl}` : undefined);
+    (avatarUrl ? resolveAssetUrl(avatarUrl) : undefined);
 
   const initials =
     (firstName?.[0] || '') + (lastName?.[0] || '');
@@ -123,7 +123,7 @@ export function EmployeeAvatarUpload({
           hasFace: true,
           faceConfidence: validation.faceConfidence,
         });
-        setLocalUrl(`${BACKEND_ORIGIN}${result.avatarUrl}`);
+        setLocalUrl(resolveAssetUrl(result.avatarUrl));
         onUploaded?.(result.avatarUrl);
         void message.success(t(T.ok));
       } catch {

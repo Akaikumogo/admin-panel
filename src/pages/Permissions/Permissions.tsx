@@ -17,7 +17,7 @@ import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
-import apiService, { BACKEND_ORIGIN } from '@/services/api';
+import apiService, { resolveAssetUrl } from '@/services/api';
 import type {
   CrudPermissions,
   ModeratorPermissions,
@@ -266,7 +266,7 @@ const PermissionsPage = () => {
           <Avatar
             size={40}
             src={
-              mod.avatarUrl ? `${BACKEND_ORIGIN}${mod.avatarUrl}` : undefined
+              mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : undefined
             }
             className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
           >

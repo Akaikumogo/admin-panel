@@ -35,7 +35,7 @@ import { fmtHeaderDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Button, Select, Spin } from '@/components/ui';
 import { Sidebar, type NavGroup, type NavItem } from './SideBar';
-import apiService, { BACKEND_ORIGIN, type UserProfile } from '@/services/api';
+import apiService, { resolveAssetUrl, type UserProfile } from '@/services/api';
 import { cacheModeratorPermissions } from '@/utils/permissions';
 import { can } from '@/utils/can';
 import { userActivitySocket } from '@/services/userActivitySocket';
@@ -511,7 +511,7 @@ const Layout = () => {
               <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-primary">
                 {me?.avatarUrl ? (
                   <img
-                    src={`${BACKEND_ORIGIN}${me.avatarUrl}`}
+                    src={resolveAssetUrl(me.avatarUrl)}
                     alt=""
                     className="h-full w-full object-cover"
                   />

@@ -1,5 +1,16 @@
 import axios from 'axios';
 import { notification } from '@/lib/toast';
+import type {
+  CertificateEligibility,
+  CertificateVerification,
+  EmployeeCertificate,
+} from '@/components/certificate/types';
+
+export type {
+  CertificateEligibility,
+  CertificateVerification,
+  EmployeeCertificate,
+};
 
 const API_BASE_STORAGE_KEY = 'elektrolearn_api_base_v2';
 
@@ -88,6 +99,22 @@ let activeApiBaseUrl =
 
 /** Joriy backend origin (media, socket). Failoverda yangilanadi. */
 export let BACKEND_ORIGIN = activeApiBaseUrl.replace(/\/api\/?$/, '');
+
+/**
+ * Nisbiy `/uploads/...` yoki absolyut Energo ID URL (`https://.../images/{id}`).
+ */
+export function resolveAssetUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith('//')) {
+    const protocol = BACKEND_ORIGIN.startsWith('http://') ? 'http:' : 'https:';
+    return `${protocol}${trimmed}`;
+  }
+  if (trimmed.startsWith('/')) return `${BACKEND_ORIGIN}${trimmed}`;
+  return `${BACKEND_ORIGIN}/${trimmed}`;
+}
 
 function setActiveApiBaseUrl(url: string) {
   activeApiBaseUrl = normalizeApiBase(url);
@@ -849,8 +876,13 @@ export type StudentDetail = {
   email: string;
   firstName: string;
   lastName: string;
+  /** NES sinxronidan — guvohnomada "Otasining ismi" */
+  middleName: string | null;
   avatarUrl: string | null;
   role: string;
+  personnelNumber: string | null;
+  division: string | null;
+  post: string | null;
   organizations: { id: string; name: string }[];
   totalXp: number;
   /** To‘g‘ri javob urinishlari soni (XP = correctAnswers * 10) */
@@ -3330,6 +3362,57 @@ class ApiService {
   async getStudentActivity(id: string): Promise<ActivityDay[]> {
     const response = await this.api.get<ActivityDay[]>(
       `/admin/employees/${id}/activity`
+    );
+    return response.data;
+  }
+
+  // ─── Guvohnomalar ───────────────────────────────────────────────────────
+  async getEmployeeCertificates(
+    userId: string,
+  ): Promise<EmployeeCertificate[]> {
+    const response = await this.api.get<EmployeeCertificate[]>(
+      `/admin/certificates/employees/${userId}`,
+    );
+    return response.data;
+  }
+
+  async getCertificateEligibility(
+    userId: string,
+  ): Promise<CertificateEligibility> {
+    const response = await this.api.get<CertificateEligibility>(
+      `/admin/certificates/employees/${userId}/eligibility`,
+    );
+    return response.data;
+  }
+
+  async issueCertificate(
+    userId: string,
+    data?: { examAttemptId?: string },
+  ): Promise<EmployeeCertificate> {
+    const response = await this.api.post<EmployeeCertificate>(
+      `/admin/certificates/employees/${userId}`,
+      data ?? {},
+    );
+    return response.data;
+  }
+
+  async revokeCertificate(
+    id: string,
+    reason?: string,
+  ): Promise<EmployeeCertificate> {
+    const response = await this.api.post<EmployeeCertificate>(
+      `/admin/certificates/${id}/revoke`,
+      reason ? { reason } : {},
+    );
+    return response.data;
+  }
+
+  /** Ochiq tekshiruv — QR kod havolasi shu yerga olib keladi (auth talab qilinmaydi). */
+  async verifyCertificate(
+    certificateNumber: string,
+  ): Promise<CertificateVerification> {
+    const response = await this.api.get<CertificateVerification>(
+      `/public/certificates/verify/${encodeURIComponent(certificateNumber)}`,
     );
     return response.data;
   }

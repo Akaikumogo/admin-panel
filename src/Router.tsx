@@ -9,6 +9,7 @@ import AnimateWrapper from './components/AnimateWrapper';
 
 const LoginPage = lazy(() => import('./pages/Login/Login'));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallback/OAuthCallback'));
+const VerifyCertificatePage = lazy(() => import('./pages/Verify/VerifyCertificate'));
 const HomePage = lazy(() => import('./pages/Home'));
 const ProfilePage = lazy(() => import('./pages/Profile/Profile'));
 const LevelsPage = lazy(() => import('./pages/Levels/Levels'));
@@ -237,6 +238,11 @@ export const routes: RouteObject[] = [
   {
     path: 'oauth/callback',
     element: withSuspense(OAuthCallbackPage)
+  },
+  // Guvohnoma QR kodi shu yerga olib keladi — autentifikatsiya talab qilinmaydi.
+  {
+    path: 'verify/:number',
+    element: withSuspense(VerifyCertificatePage)
   },
 
   {

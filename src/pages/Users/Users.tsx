@@ -7,7 +7,7 @@ import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
-import apiService, { BACKEND_ORIGIN } from '@/services/api';
+import apiService, { resolveAssetUrl } from '@/services/api';
 import type { UserProfile } from '@/services/api';
 import { can } from '@/utils/can';
 
@@ -127,7 +127,7 @@ const Users = () => {
             size={36}
             src={
               record.avatarUrl
-                ? `${BACKEND_ORIGIN}${record.avatarUrl}`
+                ? resolveAssetUrl(record.avatarUrl)
                 : undefined
             }
             className="bg-gradient-to-br from-slate-500 to-slate-700 dark:from-slate-600 dark:to-slate-800 flex-shrink-0"
