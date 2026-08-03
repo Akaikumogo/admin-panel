@@ -25,8 +25,10 @@ import { PercentBar } from '@/pages/Analytics/components/PercentBar';
 import { shortBranchName } from '@/pages/Home/branchName';
 import { todayStr } from '@/pages/Analytics/analytics-utils';
 import { cn } from '@/lib/utils';
+import { PlanResultsFilterBar } from './PlanResultsFilterBar';
+import { PLAN_QP_DEFAULTS, type PlanPeriod } from './planResultsQuery';
 
-export type PlanPeriod = 'daily' | 'monthly' | 'yearly';
+export type { PlanPeriod } from './planResultsQuery';
 
 /** showFilial=true → filial ustuni ko‘rinadi; false → ko‘rinmaydi (shaxsiy/filial). */
 export type PlanResultsSharedProps = {
@@ -36,24 +38,13 @@ export type PlanResultsSharedProps = {
   pageSize?: number;
   reportsHref?: string;
   className?: string;
-  /** Tashqi period control o‘rniga ichki filter. */
+  /** true → ichki filter; false → tashqi PlanResultsFilterBar (Home/Hisobotlar). */
   embeddedControls?: boolean;
   title?: ReactNode;
   defaultPeriod?: PlanPeriod;
   /** URL query paramlariga yozish (Hisobotlar/Home). Student detailda o‘chirish mumkin. */
   syncUrl?: boolean;
 };
-
-const PLAN_QP_DEFAULTS = {
-  period: 'monthly',
-  day: undefined as string | undefined,
-  month: undefined as string | undefined,
-  year: undefined as string | undefined,
-  page: undefined as string | undefined,
-  limit: undefined as string | undefined,
-  fullName: undefined as string | undefined,
-  orgName: undefined as string | undefined,
-} as const;
 
 const MONTH_SHORT = [
   'Yan',
@@ -640,7 +631,10 @@ function PlanResultsTableInner({
   };
   const setYear = (value: string) => {
     if (syncUrl) setParams({ year: value, page: undefined });
-    else setLocalYear(value);
+    else {
+      setLocalYear(value);
+      setLocalPage(1);
+    }
   };
   const setPage = (value: number) => {
     if (syncUrl) setParams({ page: value <= 1 ? undefined : String(value) });
@@ -687,19 +681,31 @@ function PlanResultsTableInner({
     return parts.join(' ').trim() || undefined;
   }, [columnFilters.orgName, columnFilters.fullName]);
 
-  const { data: planMatrix, loading: monthFetching } =
-    useFetch<MonthlyPlanMatrix>(
+  const monthQueryKey = useMemo(
+    () =>
       [
         'plan-results-month',
-        orgId ?? '',
+        orgId ?? 'all',
         userId ?? '',
         monthForFetch,
         period,
-        period === 'daily' ? day : '',
-        page,
-        limit,
+        period === 'daily' ? day : monthForFetch,
+        String(page),
+        String(limit),
         search ?? '',
-      ],
+      ] as const,
+    [orgId, userId, monthForFetch, period, day, page, limit, search],
+  );
+
+  const yearQueryKey = useMemo(
+    () =>
+      ['plan-results-year', orgId ?? 'all', userId ?? '', year] as const,
+    [orgId, userId, year],
+  );
+
+  const { data: planMatrix, loading: monthFetching } =
+    useFetch<MonthlyPlanMatrix>(
+      monthQueryKey,
       () =>
         apiService.getMonthlyPlanMatrix({
           orgId: orgId || undefined,
@@ -711,19 +717,19 @@ function PlanResultsTableInner({
           date: period === 'daily' ? day : undefined,
         }),
       emptyMonth(monthForFetch),
-      { enabled: period !== 'yearly' },
+      { enabled: period !== 'yearly', keepPrevious: true },
     );
 
   const { data: yearMatrix, loading: yearFetching } =
     useFetch<YearlyPlanMatrix>(
-      ['plan-results-year', orgId ?? '', userId ?? '', year],
+      yearQueryKey,
       () =>
         apiService.getYearlyPlanMatrix({
           orgId: orgId || undefined,
           year,
         }),
       emptyYear(year),
-      { enabled: period === 'yearly' },
+      { enabled: period === 'yearly', keepPrevious: true },
     );
 
   const tableBusy =
@@ -777,7 +783,15 @@ function PlanResultsTableInner({
       {(title || embeddedControls) && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {title ? <div className="min-w-0">{title}</div> : <div />}
-          {embeddedControls ? (
+          {embeddedControls && syncUrl ? (
+            <PlanResultsFilterBar
+              orgId={orgId}
+              userId={userId}
+              showFilial={showFilial}
+              className="flex flex-wrap items-center gap-2 shrink-0"
+            />
+          ) : null}
+          {embeddedControls && !syncUrl ? (
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <Segmented<PlanPeriod>
                 value={period}
@@ -808,9 +822,7 @@ function PlanResultsTableInner({
               ) : period === 'daily' ? (
                 <DatePicker
                   value={dayjs(day)}
-                  onChange={(d) => {
-                    if (d) setDay(d.format('YYYY-MM-DD'));
-                  }}
+                  onChange={(d) => d && setDay(d.format('YYYY-MM-DD'))}
                   allowClear={false}
                   className="w-[150px]"
                 />
@@ -818,9 +830,7 @@ function PlanResultsTableInner({
                 <DatePicker
                   picker="month"
                   value={dayjs(`${month}-01`)}
-                  onChange={(d) => {
-                    if (d) setMonth(d.format('YYYY-MM'));
-                  }}
+                  onChange={(d) => d && setMonth(d.format('YYYY-MM'))}
                   allowClear={false}
                   className="w-[140px]"
                 />
@@ -838,7 +848,6 @@ function PlanResultsTableInner({
         </div>
       )}
 
-      {/* Filter o‘zgaganda skeleton bilan jadvalni yo‘qotmaymiz — loading overlay. */}
       {period === 'yearly' ? (
         <PlanMatrixTable
           data={yearMatrix}

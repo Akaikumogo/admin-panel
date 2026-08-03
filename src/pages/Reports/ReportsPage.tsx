@@ -1,14 +1,5 @@
-import { Building2, Download, GitCompareArrows, Upload as UploadIcon } from 'lucide-react';
-import dayjs from 'dayjs';
-import {
-  Button,
-  Card,
-  DatePicker,
-  Select,
-  Typography,
-  Upload,
-  message,
-} from '@/components/ui';
+import { GitCompareArrows } from 'lucide-react';
+import { Button, Card, Typography, message } from '@/components/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { useFetch } from '@/hooks/useFetch';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -18,32 +9,31 @@ import type { UserProfile } from '@/services/api';
 import { todayStr } from '@/pages/Analytics/analytics-utils';
 import { ReportCompareSection } from './ReportCompareSection';
 import { PlanResultsTable } from './PlanMatrixTable';
+import { PlanResultsFilterBar } from './PlanResultsFilterBar';
+import { PLAN_QP_DEFAULTS } from './planResultsQuery';
 import { useState } from 'react';
 
 const { Text } = Typography;
 
 type PageTab = 'grid' | 'compare';
-type DownloadKind = 'daily' | 'monthly' | null;
 
 const REPORTS_QP_DEFAULTS = {
   tab: 'grid',
   orgId: undefined as string | undefined,
-  date: undefined as string | undefined,
-  day: undefined as string | undefined,
-  month: undefined as string | undefined,
   page: undefined as string | undefined,
 } as const;
 
 export default function ReportsPage() {
   const { t } = useTranslation();
   const { params: qp, setParam, setParams } = useQueryParams(REPORTS_QP_DEFAULTS);
-  const [downloading, setDownloading] = useState<DownloadKind>(null);
+  const { params: planQp, setParams: setPlanParams } =
+    useQueryParams(PLAN_QP_DEFAULTS);
   const [uploadingReport, setUploadingReport] = useState(false);
 
   const tab = (qp.tab === 'compare' ? 'compare' : 'grid') as PageTab;
   const orgFilter = qp.orgId ?? '';
-  const date = qp.date || todayStr();
-  const month = date.slice(0, 7);
+  const today = todayStr();
+  const month = planQp.month || today.slice(0, 7);
 
   const setTab = (next: PageTab) => {
     setParam('tab', next === 'grid' ? undefined : next);
@@ -51,15 +41,6 @@ export default function ReportsPage() {
 
   const setOrg = (v: string) => {
     setParams({ orgId: v || undefined, page: undefined });
-  };
-
-  const setDate = (v: string) => {
-    setParams({
-      date: v === todayStr() ? undefined : v,
-      day: v,
-      month: v.slice(0, 7),
-      page: undefined,
-    });
   };
 
   const { data: me } = useFetch<UserProfile | null>(
@@ -79,31 +60,6 @@ export default function ReportsPage() {
     Boolean(me?.organizations?.some((o) => o.isDefault));
 
   const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
-
-  const runDownload = async (kind: Exclude<DownloadKind, null>) => {
-    setDownloading(kind);
-    try {
-      if (kind === 'daily') {
-        const scope = orgFilter ? 'filial' : 'barcha';
-        await apiService.downloadDailyReportExcel({
-          date,
-          orgId: orgFilter || undefined,
-          filename: `kunlik-${date}-${scope}.xlsx`,
-        });
-      } else {
-        const scope = orgFilter ? 'filial' : 'barcha';
-        await apiService.downloadMonthlyReportExcel({
-          month,
-          orgId: orgFilter || undefined,
-          filename: `oylik-${month}-${scope}.xlsx`,
-        });
-      }
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : 'Yuklab olishda xato');
-    } finally {
-      setDownloading(null);
-    }
-  };
 
   const handleSubmitBranchExcel = async (file: File) => {
     setUploadingReport(true);
@@ -189,7 +145,7 @@ export default function ReportsPage() {
             organizations={organizations}
             month={month}
             orgId={orgFilter}
-            onMonthChange={(m) => setDate(`${m}-01`)}
+            onMonthChange={(m) => setPlanParams({ month: m, page: undefined })}
             onOrgChange={setOrg}
           />
         ) : (
@@ -206,73 +162,16 @@ export default function ReportsPage() {
       ) : (
         <>
           <Card className="mb-6 !rounded-xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <Select
-                allowClear
-                showSearch
-                placeholder={t({
-                  uz: 'Barcha filiallar',
-                  en: 'All branches',
-                  ru: 'Все филиалы',
-                })}
-                value={orgFilter || undefined}
-                onChange={(v) => setOrg(v ?? '')}
-                className="min-w-[220px]"
-                options={orgOptions}
-              />
-              <DatePicker
-                value={dayjs(date)}
-                onChange={(d) => d && setDate(d.format('YYYY-MM-DD'))}
-                allowClear={false}
-                className="w-[150px]"
-              />
-              <Button
-                type="primary"
-                icon={<Download className="h-4 w-4" />}
-                loading={downloading === 'daily'}
-                disabled={!!downloading && downloading !== 'daily'}
-                onClick={() => void runDownload('daily')}
-              >
-                {t({
-                  uz: 'Kunlik Excel',
-                  en: 'Daily Excel',
-                  ru: 'День Excel',
-                })}
-              </Button>
-              <Button
-                icon={<Download className="h-4 w-4" />}
-                loading={downloading === 'monthly'}
-                disabled={!!downloading && downloading !== 'monthly'}
-                onClick={() => void runDownload('monthly')}
-              >
-                {t({
-                  uz: 'Oylik Excel',
-                  en: 'Monthly Excel',
-                  ru: 'Месяц Excel',
-                })}
-              </Button>
-              {orgFilter ? (
-                <Upload
-                  accept=".xlsx,.xls"
-                  beforeUpload={(file) => {
-                    void handleSubmitBranchExcel(file);
-                    return false;
-                  }}
-                >
-                  <Button
-                    icon={<UploadIcon className="h-4 w-4" />}
-                    loading={uploadingReport}
-                  >
-                    {t({
-                      uz: 'Excelni taqdim etish',
-                      en: 'Submit Excel',
-                      ru: 'Отправить Excel',
-                    })}
-                  </Button>
-                </Upload>
-              ) : null}
-            </div>
+            <PlanResultsFilterBar
+              showOrgFilter
+              orgId={orgFilter || undefined}
+              orgOptions={orgOptions}
+              onOrgChange={setOrg}
+              showFilial={!orgFilter}
+              showUpload
+              onUpload={handleSubmitBranchExcel}
+              uploading={uploadingReport}
+            />
           </Card>
 
           <Card className="!rounded-xl min-w-0 max-w-full overflow-hidden">
@@ -280,6 +179,7 @@ export default function ReportsPage() {
               showFilial={!orgFilter}
               orgId={orgFilter || undefined}
               pageSize={50}
+              embeddedControls={false}
               title={
                 <span className="text-sm font-semibold">
                   {t({

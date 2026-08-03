@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Users,
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
+import { useQueryParams } from '@/hooks/useQueryParams';
 import apiService from '@/services/api';
 import type {
   AnalyticsSummary,
@@ -48,10 +49,15 @@ import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
 import { MiniSparkline } from './Home/MiniSparkline';
 import { formatDelta, shortBranchName } from './Home/branchName';
 import { PlanResultsTable } from './Reports/PlanMatrixTable';
+import { PlanResultsFilterBar } from './Reports/PlanResultsFilterBar';
 import { PageHeader } from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 
 const { Title, Text } = Typography;
+
+const HOME_ORG_QP = {
+  orgId: undefined as string | undefined,
+} as const;
 
 type KpiTone = {
   accent: string;
@@ -302,8 +308,17 @@ export default function HomePage() {
     { enabled: ready },
   );
 
-  const [searchParams] = useSearchParams();
-  const orgFilter = searchParams.get('orgId') ?? '';
+  const { data: organizations } = useFetch(
+    ['home-orgs'],
+    () => apiService.getOrganizations(),
+    [],
+    { enabled: ready },
+  );
+
+  const { params: orgQp, setParams: setOrgParams } =
+    useQueryParams(HOME_ORG_QP);
+  const orgFilter = orgQp.orgId ?? '';
+  const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
 
   const insight = homeOverview?.insight;
   const weekSpark = useMemo(() => {
@@ -512,11 +527,19 @@ export default function HomePage() {
         </div>
       </Card>
 
-      <Card className="!border-border !shadow-none min-w-0 max-w-full overflow-hidden">
+      <Card className="!border-border !shadow-none min-w-0 max-w-full overflow-hidden space-y-4">
+        <PlanResultsFilterBar
+          showOrgFilter
+          orgId={orgFilter || undefined}
+          orgOptions={orgOptions}
+          onOrgChange={(v) => setOrgParams({ orgId: v || undefined })}
+          showFilial={!orgFilter}
+        />
         <PlanResultsTable
           showFilial={!orgFilter}
           orgId={orgFilter || undefined}
           pageSize={30}
+          embeddedControls={false}
           reportsHref={
             orgFilter
               ? `/dashboard/reports?orgId=${orgFilter}`
