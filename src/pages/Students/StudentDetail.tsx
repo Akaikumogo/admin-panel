@@ -339,6 +339,7 @@ const StudentDetailPage = () => {
             orgId={studentOrgId}
             userId={id}
             pageSize={5}
+            syncUrl={false}
             title={
               <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 <CalendarDays size={16} className="text-[var(--shell-rail)]" />
