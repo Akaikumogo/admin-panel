@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -6,7 +6,6 @@ import {
   Button,
   DatePicker,
   Segmented,
-  Skeleton,
   Table,
   Tag,
   Tooltip,
@@ -14,6 +13,7 @@ import {
 } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
+import { useQueryParams } from '@/hooks/useQueryParams';
 import apiService from '@/services/api';
 import type {
   MonthlyPlanMatrix,
@@ -40,7 +40,20 @@ export type PlanResultsSharedProps = {
   embeddedControls?: boolean;
   title?: ReactNode;
   defaultPeriod?: PlanPeriod;
+  /** URL query paramlariga yozish (Hisobotlar/Home). Student detailda o‘chirish mumkin. */
+  syncUrl?: boolean;
 };
+
+const PLAN_QP_DEFAULTS = {
+  period: 'monthly',
+  day: undefined as string | undefined,
+  month: undefined as string | undefined,
+  year: undefined as string | undefined,
+  page: undefined as string | undefined,
+  limit: undefined as string | undefined,
+  fullName: undefined as string | undefined,
+  orgName: undefined as string | undefined,
+} as const;
 
 const MONTH_SHORT = [
   'Yan',
@@ -567,19 +580,104 @@ function PlanResultsTableInner({
   embeddedControls = true,
   title,
   defaultPeriod = 'monthly',
+  syncUrl = true,
 }: PlanResultsSharedProps & { showFilial: boolean }) {
   const { t } = useTranslation();
   const today = todayStr();
-  const [period, setPeriod] = useState<PlanPeriod>(defaultPeriod);
-  const [day, setDay] = useState(today);
-  const [month, setMonth] = useState(today.slice(0, 7));
-  const [year, setYear] = useState(today.slice(0, 4));
+  const { params: qp, setParams } = useQueryParams(PLAN_QP_DEFAULTS);
+
+  const [localPeriod, setLocalPeriod] = useState<PlanPeriod>(defaultPeriod);
+  const [localDay, setLocalDay] = useState(today);
+  const [localMonth, setLocalMonth] = useState(today.slice(0, 7));
+  const [localYear, setLocalYear] = useState(today.slice(0, 4));
+  const [localPage, setLocalPage] = useState(1);
+  const [localLimit, setLocalLimit] = useState(pageSize);
+  const [localColumnFilters, setLocalColumnFilters] = useState<
+    Record<string, string>
+  >({});
   const [exporting, setExporting] = useState(false);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(pageSize);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>(
-    {},
-  );
+
+  const period: PlanPeriod = syncUrl
+    ? ((qp.period as PlanPeriod) || defaultPeriod)
+    : localPeriod;
+  const day = syncUrl ? qp.day || today : localDay;
+  const month = syncUrl ? qp.month || today.slice(0, 7) : localMonth;
+  const year = syncUrl ? qp.year || today.slice(0, 4) : localYear;
+  const page = syncUrl
+    ? Math.max(1, parseInt(qp.page || '1', 10) || 1)
+    : localPage;
+  const limit = syncUrl
+    ? Math.max(1, parseInt(qp.limit || String(pageSize), 10) || pageSize)
+    : localLimit;
+  const columnFilters = syncUrl
+    ? {
+        fullName: qp.fullName || '',
+        orgName: qp.orgName || '',
+      }
+    : localColumnFilters;
+
+  const setPeriod = (value: PlanPeriod) => {
+    if (syncUrl) setParams({ period: value, page: undefined });
+    else {
+      setLocalPeriod(value);
+      setLocalPage(1);
+    }
+  };
+  const setDay = (value: string) => {
+    if (syncUrl)
+      setParams({ day: value, month: value.slice(0, 7), page: undefined });
+    else {
+      setLocalDay(value);
+      setLocalPage(1);
+    }
+  };
+  const setMonth = (value: string) => {
+    if (syncUrl) setParams({ month: value, page: undefined });
+    else {
+      setLocalMonth(value);
+      setLocalPage(1);
+    }
+  };
+  const setYear = (value: string) => {
+    if (syncUrl) setParams({ year: value, page: undefined });
+    else setLocalYear(value);
+  };
+  const setPage = (value: number) => {
+    if (syncUrl) setParams({ page: value <= 1 ? undefined : String(value) });
+    else setLocalPage(value);
+  };
+  const setLimit = (value: number) => {
+    if (syncUrl)
+      setParams({
+        limit: value === pageSize ? undefined : String(value),
+        page: undefined,
+      });
+    else {
+      setLocalLimit(value);
+      setLocalPage(1);
+    }
+  };
+  const setColumnFilters = (next: Record<string, string>) => {
+    if (syncUrl) {
+      setParams({
+        fullName: next.fullName?.trim() || undefined,
+        orgName: next.orgName?.trim() || undefined,
+        page: undefined,
+      });
+    } else {
+      setLocalColumnFilters(next);
+      setLocalPage(1);
+    }
+  };
+
+  const prevScope = useRef({ orgId, userId });
+  useEffect(() => {
+    const prev = prevScope.current;
+    if (prev.orgId === orgId && prev.userId === userId) return;
+    prevScope.current = { orgId, userId };
+    if (syncUrl) setParams({ page: undefined });
+    else setLocalPage(1);
+  }, [orgId, userId, syncUrl, setParams]);
 
   const monthForFetch = period === 'daily' ? day.slice(0, 7) : month;
   const search = useMemo(() => {
@@ -589,12 +687,7 @@ function PlanResultsTableInner({
     return parts.join(' ').trim() || undefined;
   }, [columnFilters.orgName, columnFilters.fullName]);
 
-  // Period/filter o‘zgaganda 1-sahifaga
-  useEffect(() => {
-    setPage(1);
-  }, [orgId, userId, monthForFetch, period, day, search]);
-
-  const { data: planMatrix, initialLoading: monthLoading, loading: monthFetching } =
+  const { data: planMatrix, loading: monthFetching } =
     useFetch<MonthlyPlanMatrix>(
       [
         'plan-results-month',
@@ -618,10 +711,10 @@ function PlanResultsTableInner({
           date: period === 'daily' ? day : undefined,
         }),
       emptyMonth(monthForFetch),
-      { enabled: period !== 'yearly', keepPrevious: true },
+      { enabled: period !== 'yearly' },
     );
 
-  const { data: yearMatrix, initialLoading: yearLoading } =
+  const { data: yearMatrix, loading: yearFetching } =
     useFetch<YearlyPlanMatrix>(
       ['plan-results-year', orgId ?? '', userId ?? '', year],
       () =>
@@ -633,8 +726,8 @@ function PlanResultsTableInner({
       { enabled: period === 'yearly' },
     );
 
-  const loading = period === 'yearly' ? yearLoading : monthLoading;
-  const tableBusy = period !== 'yearly' && monthFetching && !monthLoading;
+  const tableBusy =
+    period === 'yearly' ? yearFetching : monthFetching;
 
   const onExport = async () => {
     setExporting(true);
@@ -673,8 +766,8 @@ function PlanResultsTableInner({
           pageSize: limit,
           total: planMatrix.total ?? planMatrix.totalEmployees ?? 0,
           onChange: (p: number, ps: number) => {
-            setPage(p);
-            setLimit(ps);
+            if (ps !== limit) setLimit(ps);
+            else setPage(p);
           },
         }
       : undefined;
@@ -688,10 +781,7 @@ function PlanResultsTableInner({
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <Segmented<PlanPeriod>
                 value={period}
-                onChange={(v) => {
-                  setPeriod(v);
-                  setPage(1);
-                }}
+                onChange={(v) => setPeriod(v)}
                 options={[
                   {
                     value: 'daily',
@@ -719,10 +809,7 @@ function PlanResultsTableInner({
                 <DatePicker
                   value={dayjs(day)}
                   onChange={(d) => {
-                    if (d) {
-                      setDay(d.format('YYYY-MM-DD'));
-                      setPage(1);
-                    }
+                    if (d) setDay(d.format('YYYY-MM-DD'));
                   }}
                   allowClear={false}
                   className="w-[150px]"
@@ -732,10 +819,7 @@ function PlanResultsTableInner({
                   picker="month"
                   value={dayjs(`${month}-01`)}
                   onChange={(d) => {
-                    if (d) {
-                      setMonth(d.format('YYYY-MM'));
-                      setPage(1);
-                    }
+                    if (d) setMonth(d.format('YYYY-MM'));
                   }}
                   allowClear={false}
                   className="w-[140px]"
@@ -754,12 +838,12 @@ function PlanResultsTableInner({
         </div>
       )}
 
-      {loading ? (
-        <Skeleton active paragraph={{ rows: 6 }} />
-      ) : period === 'yearly' ? (
+      {/* Filter o‘zgaganda skeleton bilan jadvalni yo‘qotmaymiz — loading overlay. */}
+      {period === 'yearly' ? (
         <PlanMatrixTable
           data={yearMatrix}
           period="yearly"
+          loading={tableBusy}
           showFilial={showFilial}
           userId={userId}
           pageSize={pageSize}
@@ -778,12 +862,7 @@ function PlanResultsTableInner({
           serverPagination={serverPagination}
           columnFilters={serverPagination ? columnFilters : undefined}
           onColumnFiltersChange={
-            serverPagination
-              ? (next) => {
-                  setColumnFilters(next);
-                  setPage(1);
-                }
-              : undefined
+            serverPagination ? setColumnFilters : undefined
           }
         />
       )}

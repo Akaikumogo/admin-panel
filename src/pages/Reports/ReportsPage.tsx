@@ -1,12 +1,5 @@
-import { useEffect, useState } from 'react';
-import {
-  Building2,
-  Download,
-  GitCompareArrows,
-  Upload as UploadIcon,
-} from 'lucide-react';
+import { Building2, Download, GitCompareArrows, Upload as UploadIcon } from 'lucide-react';
 import dayjs from 'dayjs';
-import { useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -18,40 +11,55 @@ import {
 } from '@/components/ui';
 import { PageHeader } from '@/components/PageHeader';
 import { useFetch } from '@/hooks/useFetch';
+import { useQueryParams } from '@/hooks/useQueryParams';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
 import type { UserProfile } from '@/services/api';
 import { todayStr } from '@/pages/Analytics/analytics-utils';
 import { ReportCompareSection } from './ReportCompareSection';
 import { PlanResultsTable } from './PlanMatrixTable';
+import { useState } from 'react';
 
 const { Text } = Typography;
 
 type PageTab = 'grid' | 'compare';
 type DownloadKind = 'daily' | 'monthly' | null;
 
+const REPORTS_QP_DEFAULTS = {
+  tab: 'grid',
+  orgId: undefined as string | undefined,
+  date: undefined as string | undefined,
+  day: undefined as string | undefined,
+  month: undefined as string | undefined,
+  page: undefined as string | undefined,
+} as const;
+
 export default function ReportsPage() {
   const { t } = useTranslation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTab] = useState<PageTab>('grid');
-  const [date, setDate] = useState(todayStr());
-  const [orgFilter, setOrgFilter] = useState(searchParams.get('orgId') ?? '');
+  const { params: qp, setParam, setParams } = useQueryParams(REPORTS_QP_DEFAULTS);
   const [downloading, setDownloading] = useState<DownloadKind>(null);
   const [uploadingReport, setUploadingReport] = useState(false);
 
+  const tab = (qp.tab === 'compare' ? 'compare' : 'grid') as PageTab;
+  const orgFilter = qp.orgId ?? '';
+  const date = qp.date || todayStr();
   const month = date.slice(0, 7);
 
-  useEffect(() => {
-    const fromUrl = searchParams.get('orgId') ?? '';
-    setOrgFilter(fromUrl);
-  }, [searchParams]);
+  const setTab = (next: PageTab) => {
+    setParam('tab', next === 'grid' ? undefined : next);
+  };
 
   const setOrg = (v: string) => {
-    setOrgFilter(v);
-    const next = new URLSearchParams(searchParams);
-    if (v) next.set('orgId', v);
-    else next.delete('orgId');
-    setSearchParams(next, { replace: true });
+    setParams({ orgId: v || undefined, page: undefined });
+  };
+
+  const setDate = (v: string) => {
+    setParams({
+      date: v === todayStr() ? undefined : v,
+      day: v,
+      month: v.slice(0, 7),
+      page: undefined,
+    });
   };
 
   const { data: me } = useFetch<UserProfile | null>(
@@ -180,7 +188,9 @@ export default function ReportsPage() {
           <ReportCompareSection
             organizations={organizations}
             month={month}
+            orgId={orgFilter}
             onMonthChange={(m) => setDate(`${m}-01`)}
+            onOrgChange={setOrg}
           />
         ) : (
           <Card className="!rounded-xl">

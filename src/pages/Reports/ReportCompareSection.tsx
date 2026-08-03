@@ -39,16 +39,21 @@ const STATUS_LABEL: Record<string, { uz: string; en: string; ru: string }> = {
 type Props = {
   organizations: Array<{ id: string; name: string }>;
   month: string;
+  orgId?: string;
   onMonthChange: (month: string) => void;
+  onOrgChange?: (orgId: string) => void;
 };
 
 export function ReportCompareSection({
   organizations,
   month,
+  orgId = '',
   onMonthChange,
+  onOrgChange,
 }: Props) {
   const { t } = useTranslation();
-  const [orgFilter, setOrgFilter] = useState('');
+  const orgFilter = orgId;
+  const setOrgFilter = (v: string) => onOrgChange?.(v);
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [comparingId, setComparingId] = useState<string | null>(null);
