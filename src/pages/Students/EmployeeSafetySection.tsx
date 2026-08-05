@@ -101,7 +101,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
 
   const role: Role | undefined = me?.role;
   const canEdit = role === 'SUPERADMIN' || role === 'MODERATOR';
-  const canApprove = role === 'SUPERADMIN' || role === 'DIRECTOR';
+  const canApprove = role === 'SUPERADMIN' || role === 'APPROVER';
 
   const load = useCallback(async () => {
     setLoading(true);

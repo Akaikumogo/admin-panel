@@ -29,6 +29,7 @@ import {
   Archive,
   AlertTriangle,
   Bell,
+  BadgeCheck,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -77,6 +78,15 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/moderators',
         label: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
         icon: Shield,
+      },
+      {
+        path: '/dashboard/approvers',
+        label: {
+          uz: 'Tasdiqlovchilar',
+          en: 'Approvers',
+          ru: 'Утверждающие',
+        },
+        icon: BadgeCheck,
       },
       {
         path: '/dashboard/permissions',
@@ -306,7 +316,7 @@ const Layout = () => {
   const visibleNavGroups = useMemo((): NavGroup[] => {
     if (!me) return [];
 
-    if (me.role === 'DIRECTOR') {
+    if (me.role === 'APPROVER') {
       const allowed = new Set([
         '/dashboard/home',
         '/dashboard/notifications',
@@ -334,6 +344,7 @@ const Layout = () => {
       return items.filter(
         (item) =>
           item.path !== '/dashboard/moderators' &&
+          item.path !== '/dashboard/approvers' &&
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
           item.path !== '/dashboard/exam-analysis' &&
@@ -357,6 +368,7 @@ const Layout = () => {
   const isModeratorForbiddenRoute =
     me?.role === 'MODERATOR' &&
     (location.pathname === '/dashboard/moderators' ||
+      location.pathname === '/dashboard/approvers' ||
       location.pathname === '/dashboard/permissions' ||
       location.pathname === '/dashboard/import-export' ||
       location.pathname === '/dashboard/anomaloz' ||
@@ -370,7 +382,7 @@ const Layout = () => {
         )));
 
   const isDirectorForbiddenRoute =
-    me?.role === 'DIRECTOR' &&
+    me?.role === 'APPROVER' &&
     !location.pathname.startsWith('/dashboard/employees') &&
     !location.pathname.startsWith('/dashboard/students') &&
     location.pathname !== '/dashboard/home' &&
