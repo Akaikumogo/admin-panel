@@ -30,6 +30,7 @@ const OrganizationDetailPage = lazy(
 );
 const StudentsPage = lazy(() => import('./pages/Students/Students'));
 const StudentDetailPage = lazy(() => import('./pages/Students/StudentDetail'));
+const NotificationsPage = lazy(() => import('./pages/Notifications/Notifications'));
 const ViolationsPage = lazy(() => import('./pages/Violations/Violations'));
 const LogsPage = lazy(() => import('./pages/Logs/Logs'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
@@ -77,6 +78,10 @@ export const routes: RouteObject[] = [
           {
             path: 'home',
             element: withSuspense(HomePage)
+          },
+          {
+            path: 'notifications',
+            element: withSuspense(NotificationsPage)
           },
           {
             path: 'moderators',

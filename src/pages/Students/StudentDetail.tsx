@@ -15,6 +15,8 @@ import type {
 } from '@/services/api';
 import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
 import { EmployeeCertificateSection } from './EmployeeCertificateSection';
+import { EmployeeSafetySection } from './EmployeeSafetySection';
+import type { UserProfile } from '@/services/api';
 
 const T = {
   back: { uz: 'Orqaga', en: 'Back', ru: 'Назад' },
@@ -78,6 +80,21 @@ const StudentDetailPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [xpPage, setXpPage] = useState(1);
+  const [me, setMe] = useState<UserProfile | null>(() => {
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? (JSON.parse(raw) as UserProfile) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    apiService
+      .me()
+      .then(setMe)
+      .catch(() => undefined);
+  }, []);
 
   const { data: student, initialLoading, refetch } = useFetch<StudentDetailType | null>(
     ['student-detail', id],
@@ -322,6 +339,9 @@ const StudentDetailPage = () => {
         userId={student.id}
         avatarUrl={student.avatarUrl}
       />
+
+      {/* Safety / certification (manual) */}
+      <EmployeeSafetySection userId={student.id} me={me} />
 
       {/* Personal plan matrix */}
       <div className="bg-card border border-border rounded-lg p-6 min-w-0 overflow-hidden">

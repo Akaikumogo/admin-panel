@@ -28,6 +28,7 @@ import {
   BriefcaseBusiness,
   Archive,
   AlertTriangle,
+  Bell,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -57,6 +58,15 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/home',
         label: { uz: 'Bosh sahifa', en: 'Dashboard', ru: 'Главная' },
         icon: Home,
+      },
+      {
+        path: '/dashboard/notifications',
+        label: {
+          uz: 'Bildirishnomalar',
+          en: 'Notifications',
+          ru: 'Уведомления',
+        },
+        icon: Bell,
       },
     ],
   },
@@ -296,6 +306,21 @@ const Layout = () => {
   const visibleNavGroups = useMemo((): NavGroup[] => {
     if (!me) return [];
 
+    if (me.role === 'DIRECTOR') {
+      const allowed = new Set([
+        '/dashboard/home',
+        '/dashboard/notifications',
+        '/dashboard/employees',
+        '/dashboard/profile',
+      ]);
+      return navGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => allowed.has(item.path)),
+        }))
+        .filter((group) => group.items.length > 0);
+    }
+
     const filterItems = (items: NavItem[]) => {
       if (me.role === 'SUPERADMIN') return items;
       if (me.role !== 'MODERATOR') return [];
@@ -344,13 +369,26 @@ const Layout = () => {
           can('audioLibrary', 'delete')
         )));
 
+  const isDirectorForbiddenRoute =
+    me?.role === 'DIRECTOR' &&
+    !location.pathname.startsWith('/dashboard/employees') &&
+    !location.pathname.startsWith('/dashboard/students') &&
+    location.pathname !== '/dashboard/home' &&
+    location.pathname !== '/dashboard/notifications' &&
+    location.pathname !== '/dashboard/profile';
+
   useEffect(() => {
     if (meLoading || !me) return;
-    // Moderatorlar uchun /dashboard/moderators va /dashboard/users yo'q.
-    if (isModeratorForbiddenRoute) {
+    if (isModeratorForbiddenRoute || isDirectorForbiddenRoute) {
       navigate('/dashboard/home');
     }
-  }, [meLoading, me, isModeratorForbiddenRoute, navigate]);
+  }, [
+    meLoading,
+    me,
+    isModeratorForbiddenRoute,
+    isDirectorForbiddenRoute,
+    navigate,
+  ]);
 
   const initials = useMemo(() => {
     const first = (me?.firstName || '').trim();

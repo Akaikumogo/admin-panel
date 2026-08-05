@@ -74,6 +74,14 @@ const MODULES: {
   { key: 'logs', label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' } },
   { key: 'nesSync', label: { uz: '1C sync', en: '1C sync', ru: '1C синх.' } },
   { key: 'aiAssistant', label: { uz: 'AI yordamchi', en: 'AI', ru: 'ИИ' } },
+  {
+    key: 'safetyRecords',
+    label: {
+      uz: 'Xavfsizlik yozuvlari',
+      en: 'Safety records',
+      ru: 'Записи безопасности',
+    },
+  },
 ];
 
 const CRUD_ORDER: (keyof CrudPermissions)[] = ['view', 'create', 'update', 'delete'];
