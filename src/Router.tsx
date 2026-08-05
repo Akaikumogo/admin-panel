@@ -21,6 +21,7 @@ const LevelDetailPage = lazy(() => import('./pages/Levels/LevelDetail'));
 const TheoryDetailPage = lazy(() => import('./pages/Theories/TheoryDetail'));
 const QuestionDetailPage = lazy(() => import('./pages/Questions/QuestionDetail'));
 const ModeratorsPage = lazy(() => import('./pages/Moderators/Moderators'));
+const ApproversPage = lazy(() => import('./pages/Approvers/Approvers'));
 const PermissionsPage = lazy(() => import('./pages/Permissions/Permissions'));
 const OrganizationsPage = lazy(
   () => import('./pages/Organizations/Organizations')
@@ -86,6 +87,10 @@ export const routes: RouteObject[] = [
           {
             path: 'moderators',
             element: withSuspense(ModeratorsPage)
+          },
+          {
+            path: 'approvers',
+            element: withSuspense(ApproversPage)
           },
           {
             path: 'permissions',

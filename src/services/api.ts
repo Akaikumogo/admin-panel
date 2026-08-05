@@ -199,7 +199,7 @@ function showErrorNotification(error: unknown) {
   });
 }
 
-export type Role = 'SUPERADMIN' | 'MODERATOR' | 'DIRECTOR' | 'USER';
+export type Role = 'SUPERADMIN' | 'MODERATOR' | 'APPROVER' | 'USER';
 
 export type SafetyUserBrief = {
   id: string;
@@ -3180,6 +3180,46 @@ class ApiService {
           limit: filters?.limit,
         },
       }
+    );
+    return response.data;
+  }
+
+  async getApprovers(filters?: {
+    search?: string;
+    organizationId?: string;
+    organizationMode?: 'include' | 'exclude';
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<UserProfile>> {
+    const response = await this.api.get<PaginatedResponse<UserProfile>>(
+      '/admin/users/approvers',
+      {
+        params: {
+          search: filters?.search,
+          orgId: filters?.organizationId,
+          orgMode: filters?.organizationMode,
+          page: filters?.page,
+          limit: filters?.limit,
+        },
+      },
+    );
+    return response.data;
+  }
+
+  async promoteApprover(data: {
+    userId: string;
+    organizationId: string;
+  }): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      '/admin/users/approvers/promote',
+      data,
+    );
+    return response.data;
+  }
+
+  async demoteApprover(id: string): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      `/admin/users/approvers/${id}/demote`,
     );
     return response.data;
   }
