@@ -199,7 +199,104 @@ function showErrorNotification(error: unknown) {
   });
 }
 
-export type Role = 'SUPERADMIN' | 'MODERATOR' | 'USER';
+export type Role = 'SUPERADMIN' | 'MODERATOR' | 'DIRECTOR' | 'USER';
+
+export type SafetyUserBrief = {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+};
+
+export type SafetyRecordType = {
+  id: string;
+  code: string;
+  titleUz: string;
+  titleRu: string;
+  titleEn: string;
+  sectionSlug: string;
+  sortOrder: number;
+};
+
+export type EmployeeSafetyRecord = {
+  id: string;
+  userId: string;
+  organizationId: string;
+  recordTypeId: string;
+  recordTypeCode: string | null;
+  sectionSlug: string | null;
+  examDate: string | null;
+  examReason: string | null;
+  grade: string | null;
+  qualificationGroup: string | null;
+  nextExamDate: string | null;
+  ruleName: string | null;
+  commissionDecision: string | null;
+  protocolNumber: string | null;
+  protocolDate: string | null;
+  doctorConclusion: string | null;
+  isLatest: boolean;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdBy: SafetyUserBrief | null;
+  updatedBy: SafetyUserBrief | null;
+  approvedBy: SafetyUserBrief | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EmployeeSafetyChange = {
+  id: string;
+  recordId: string;
+  userId: string;
+  organizationId: string;
+  recordTypeCode: string;
+  sectionSlug: string;
+  action: string;
+  oldData: Record<string, unknown> | null;
+  newData: Record<string, unknown> | null;
+  changedBy: SafetyUserBrief | { id: string };
+  changedAt: string;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedBy: SafetyUserBrief | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  notificationId: string | null;
+};
+
+export type EmployeeSafetySection = {
+  type: SafetyRecordType;
+  record: EmployeeSafetyRecord | null;
+  pendingChange: EmployeeSafetyChange | null;
+};
+
+export type EmployeeSafetyHistory = {
+  type: SafetyRecordType;
+  records: EmployeeSafetyRecord[];
+  changes: EmployeeSafetyChange[];
+};
+
+export type UpsertSafetyRecordPayload = {
+  examDate?: string | null;
+  examReason?: string | null;
+  grade?: string | null;
+  qualificationGroup?: string | null;
+  nextExamDate?: string | null;
+  ruleName?: string | null;
+  commissionDecision?: string | null;
+  protocolNumber?: string | null;
+  protocolDate?: string | null;
+  doctorConclusion?: string | null;
+};
+
+export type AppNotification = {
+  id: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown> | null;
+  isRead: boolean;
+  createdAt: string;
+};
 
 export type UserProfile = {
   id: string;
@@ -1171,6 +1268,7 @@ export type ModeratorPermissions = {
   logs: CrudPermissions;
   nesSync: CrudPermissions;
   aiAssistant: CrudPermissions;
+  safetyRecords: CrudPermissions;
 };
 
 export type ModeratorPermissionRecord = {
@@ -3263,6 +3361,70 @@ class ApiService {
   async getStudent(id: string): Promise<StudentDetail> {
     const response = await this.api.get<StudentDetail>(
       `/admin/employees/${id}`
+    );
+    return response.data;
+  }
+
+  // ===== Safety / certification records =====
+  async getEmployeeSafetyRecords(
+    userId: string,
+  ): Promise<EmployeeSafetySection[]> {
+    const response = await this.api.get<EmployeeSafetySection[]>(
+      `/admin/students/${userId}/safety-records`,
+    );
+    return response.data;
+  }
+
+  async upsertEmployeeSafetyRecord(
+    userId: string,
+    typeCode: string,
+    payload: UpsertSafetyRecordPayload,
+  ): Promise<{ record: EmployeeSafetyRecord; change: EmployeeSafetyChange }> {
+    const response = await this.api.put(
+      `/admin/students/${userId}/safety-records/${typeCode}`,
+      payload,
+    );
+    return response.data;
+  }
+
+  async getEmployeeSafetyHistory(
+    userId: string,
+    typeCode: string,
+  ): Promise<EmployeeSafetyHistory> {
+    const response = await this.api.get<EmployeeSafetyHistory>(
+      `/admin/students/${userId}/safety-records/${typeCode}/history`,
+    );
+    return response.data;
+  }
+
+  async approveSafetyChange(
+    changeId: string,
+  ): Promise<{ record: EmployeeSafetyRecord; change: EmployeeSafetyChange }> {
+    const response = await this.api.post(
+      `/admin/safety-changes/${changeId}/approve`,
+    );
+    return response.data;
+  }
+
+  async rejectSafetyChange(
+    changeId: string,
+    reviewNote?: string,
+  ): Promise<{ record: EmployeeSafetyRecord; change: EmployeeSafetyChange }> {
+    const response = await this.api.post(
+      `/admin/safety-changes/${changeId}/reject`,
+      { reviewNote },
+    );
+    return response.data;
+  }
+
+  async getMyNotifications(): Promise<AppNotification[]> {
+    const response = await this.api.get<AppNotification[]>('/notifications/me');
+    return response.data;
+  }
+
+  async markNotificationRead(id: string): Promise<AppNotification | null> {
+    const response = await this.api.patch<AppNotification | null>(
+      `/notifications/${id}/read`,
     );
     return response.data;
   }
