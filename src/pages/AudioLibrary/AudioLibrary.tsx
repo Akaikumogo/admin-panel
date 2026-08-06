@@ -16,6 +16,9 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { can } from '@/utils/can';
 import MediaUploader from '@/components/MediaUploader';
 import WaveformBars from '@/components/WaveformBars';
+import LibraryDocumentsPanel from './LibraryDocumentsPanel';
+
+type LibraryTab = 'documents' | 'audio';
 
 function AudioField({
   value,
@@ -57,6 +60,7 @@ function resolveUrl(url: string | null | undefined) {
 
 export default function AudioLibraryPage() {
   const { t } = useTranslation();
+  const [tab, setTab] = useState<LibraryTab>('documents');
   const {
     data: books,
     loading,
@@ -100,17 +104,38 @@ export default function AudioLibraryPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <Typography.Title level={3} className="!mb-0">
-            {t({ uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' })}
+            {t({ uz: 'Kutubxona', en: 'Library', ru: 'Библиотека' })}
           </Typography.Title>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {t({
-              uz: "Har bir kitobga to'g'ridan-to'g'ri audio fayl yuklang.",
-              en: 'Upload audio file directly to each book.',
-              ru: 'Загружайте аудиофайл напрямую в книгу.',
+              uz: 'Hujjatlar (PDF/Word) va audiokitoblar.',
+              en: 'Documents (PDF/Word) and audiobooks.',
+              ru: 'Документы (PDF/Word) и аудиокниги.',
             })}
           </p>
         </div>
-        <div className="flex gap-2">
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type={tab === 'documents' ? 'primary' : 'default'}
+          onClick={() => setTab('documents')}
+        >
+          {t({ uz: 'Hujjatlar', en: 'Documents', ru: 'Документы' })}
+        </Button>
+        <Button
+          type={tab === 'audio' ? 'primary' : 'default'}
+          onClick={() => setTab('audio')}
+        >
+          {t({ uz: 'Audio', en: 'Audio', ru: 'Аудио' })}
+        </Button>
+      </div>
+
+      {tab === 'documents' ? <LibraryDocumentsPanel /> : null}
+
+      {tab === 'audio' ? (
+        <>
+      <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
             icon={<RefreshCcw size={16} />}
             onClick={() => void refetch()}
@@ -125,7 +150,6 @@ export default function AudioLibraryPage() {
           >
             {t({ uz: "Kitob qo'shish", en: "Add book", ru: "Добавить" })}
           </Button>
-        </div>
       </div>
 
       {/* Book cards grid */}
@@ -325,6 +349,8 @@ export default function AudioLibraryPage() {
           </Form.Item>
         </Form>
       </Modal>
+        </>
+      ) : null}
     </div>
   );
 }

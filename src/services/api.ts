@@ -1218,6 +1218,23 @@ export type AdminAudioBookRow = {
   updatedAt: string;
 };
 
+export type LibraryDocumentKind = 'PDF' | 'DOCX' | 'DOC';
+
+export type LibraryDocumentRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  fileKind: LibraryDocumentKind;
+  fileUrl: string;
+  originalName: string | null;
+  mimeType: string | null;
+  fileSize: string | null;
+  orderIndex: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AdminAudioParagraph = {
   id: string;
   text: string;
@@ -1821,6 +1838,37 @@ class ApiService {
         if (!onProgress || !e.total) return;
         onProgress(Math.round((e.loaded / e.total) * 100));
       }
+    });
+    return response.data;
+  }
+
+  async adminUploadDocument(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<{
+    success: boolean;
+    url: string;
+    size: number;
+    mimeType: string;
+    originalName: string;
+    fileKind: LibraryDocumentKind;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.api.post<{
+      success: boolean;
+      url: string;
+      size: number;
+      mimeType: string;
+      originalName: string;
+      fileKind: LibraryDocumentKind;
+    }>('/admin/upload/document', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 15 * 60 * 1000,
+      onUploadProgress: (e) => {
+        if (!onProgress || !e.total) return;
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      },
     });
     return response.data;
   }
@@ -3769,6 +3817,63 @@ class ApiService {
   async adminDeleteAudioParagraph(paragraphId: string) {
     const response = await this.api.delete<{ ok: boolean }>(
       `/admin/audio-paragraphs/${paragraphId}`
+    );
+    return response.data;
+  }
+
+  // ─── Library documents (PDF / Word) ─────────────────────────────────────
+  async adminListLibraryDocuments(params?: {
+    search?: string;
+  }): Promise<LibraryDocumentRow[]> {
+    const response = await this.api.get<LibraryDocumentRow[]>(
+      '/admin/library-documents',
+      { params },
+    );
+    return response.data;
+  }
+
+  async adminCreateLibraryDocument(data: {
+    title: string;
+    description?: string | null;
+    fileKind: LibraryDocumentKind;
+    fileUrl: string;
+    originalName?: string | null;
+    mimeType?: string | null;
+    fileSize?: string | null;
+    orderIndex?: number;
+    isActive?: boolean;
+  }): Promise<LibraryDocumentRow> {
+    const response = await this.api.post<LibraryDocumentRow>(
+      '/admin/library-documents',
+      data,
+    );
+    return response.data;
+  }
+
+  async adminUpdateLibraryDocument(
+    id: string,
+    data: Partial<{
+      title: string;
+      description: string | null;
+      fileKind: LibraryDocumentKind;
+      fileUrl: string;
+      originalName: string | null;
+      mimeType: string | null;
+      fileSize: string | null;
+      orderIndex: number;
+      isActive: boolean;
+    }>,
+  ): Promise<LibraryDocumentRow> {
+    const response = await this.api.put<LibraryDocumentRow>(
+      `/admin/library-documents/${id}`,
+      data,
+    );
+    return response.data;
+  }
+
+  async adminDeleteLibraryDocument(id: string): Promise<LibraryDocumentRow> {
+    const response = await this.api.delete<LibraryDocumentRow>(
+      `/admin/library-documents/${id}`,
     );
     return response.data;
   }
