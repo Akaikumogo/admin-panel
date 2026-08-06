@@ -168,7 +168,7 @@ export default function ReportsPage() {
               orgOptions={orgOptions}
               onOrgChange={setOrg}
               showFilial={!orgFilter}
-              showUpload
+              showUpload={me?.role !== 'ACCOUNTING'}
               onUpload={handleSubmitBranchExcel}
               uploading={uploadingReport}
             />

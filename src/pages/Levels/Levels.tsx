@@ -427,6 +427,25 @@ const Levels = () => {
   };
 
   // Question CRUD
+  const fillQuestionForm = (question: Question) => {
+    const qType = (question.type || 'SINGLE_CHOICE') as QuestionType;
+    setSelectedQuestionType(qType);
+    // Form.List Modal ichida — avval reset, keyin to‘ldirish (aks holda
+    // variant matnlari bo‘sh qoladi, ayniqsa DOCX importdan keyin).
+    questionForm.resetFields();
+    questionForm.setFieldsValue({
+      prompt: question.prompt,
+      type: qType,
+      isActive: question.isActive,
+      options: (question.options ?? []).map((o) => ({
+        id: o.id,
+        optionText: o.optionText ?? '',
+        isCorrect: !!o.isCorrect,
+        matchText: o.matchText ?? '',
+      })),
+    });
+  };
+
   const openQuestionModal = (
     levelId: string,
     theoryId: string,
@@ -440,31 +459,7 @@ const Levels = () => {
       levelId,
       theoryId
     });
-    if (question) {
-      const qType = (question.type || 'SINGLE_CHOICE') as QuestionType;
-      setSelectedQuestionType(qType);
-      questionForm.setFieldsValue({
-        prompt: question.prompt,
-        type: qType,
-        isActive: question.isActive,
-        options: question.options.map((o) => ({
-          id: o.id,
-          optionText: o.optionText,
-          isCorrect: o.isCorrect,
-          matchText: o.matchText ?? ''
-        }))
-      });
-    } else {
-      setSelectedQuestionType('SINGLE_CHOICE');
-      questionForm.resetFields();
-      questionForm.setFieldsValue({
-        type: 'SINGLE_CHOICE',
-        options: [
-          { optionText: '', isCorrect: false, matchText: '' },
-          { optionText: '', isCorrect: false, matchText: '' }
-        ]
-      });
-    }
+    if (!question) setSelectedQuestionType('SINGLE_CHOICE');
   };
 
   const handleQuestionTypeChange = (val: QuestionType) => {
@@ -1433,25 +1428,44 @@ const Levels = () => {
             theoryId: ''
           })
         }
+        afterOpenChange={(open) => {
+          if (!open) return;
+          if (questionModal.editing) {
+            fillQuestionForm(questionModal.editing);
+          } else {
+            setSelectedQuestionType('SINGLE_CHOICE');
+            questionForm.resetFields();
+            questionForm.setFieldsValue({
+              type: 'SINGLE_CHOICE',
+              isActive: true,
+              options: [
+                { optionText: '', isCorrect: false, matchText: '' },
+                { optionText: '', isCorrect: false, matchText: '' },
+                { optionText: '', isCorrect: false, matchText: '' },
+                { optionText: '', isCorrect: false, matchText: '' },
+              ],
+            });
+          }
+        }}
         onOk={handleQuestionSave}
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
         width={640}
+        destroyOnClose
         okButtonProps={{
           disabled: questionModal.editing
             ? !can('contentQuestions', 'update')
             : !can('contentQuestions', 'create'),
         }}
       >
-        <Form form={questionForm} layout="vertical">
+        <Form form={questionForm} layout="vertical" preserve={false}>
           <Form.Item
             name="type"
             label={t({ uz: 'Savol turi', en: 'Question type', ru: 'Тип вопроса' })}
             rules={[{ required: true }]}
           >
             <Select
-              value={selectedQuestionType}
               onChange={(v) => handleQuestionTypeChange(v as QuestionType)}
               options={[
                 { value: 'SINGLE_CHOICE', label: t(QUESTION_TYPE_LABELS.SINGLE_CHOICE) },
@@ -1508,24 +1522,24 @@ const Levels = () => {
                       valuePropName="checked"
                       className="!mb-0"
                     >
-                      {selectedQuestionType === 'YES_NO' ? (
-                        <Switch
-                          checkedChildren={t(T.correct)}
-                          onChange={(checked) => {
-                            if (checked) {
-                              const opts = questionForm.getFieldValue('options');
-                              questionForm.setFieldsValue({
-                                options: opts.map((o: any, i: number) => ({
-                                  ...o,
-                                  isCorrect: i === name,
-                                })),
-                              });
-                            }
-                          }}
-                        />
-                      ) : (
-                        <Switch checkedChildren={t(T.correct)} />
-                      )}
+                      <Switch
+                        checkedChildren={t(T.correct)}
+                        onChange={(checked) => {
+                          if (
+                            checked &&
+                            (selectedQuestionType === 'YES_NO' ||
+                              selectedQuestionType === 'SINGLE_CHOICE')
+                          ) {
+                            const opts = questionForm.getFieldValue('options');
+                            questionForm.setFieldsValue({
+                              options: opts.map((o: any, i: number) => ({
+                                ...o,
+                                isCorrect: i === name,
+                              })),
+                            });
+                          }
+                        }}
+                      />
                     </Form.Item>
                     {selectedQuestionType !== 'YES_NO' && fields.length > 2 && (
                       <Button

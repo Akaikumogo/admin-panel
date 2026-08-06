@@ -331,6 +331,22 @@ const Layout = () => {
         .filter((group) => group.items.length > 0);
     }
 
+    if (me.role === 'ACCOUNTING') {
+      const allowed = new Set([
+        '/dashboard/home',
+        '/dashboard/analytics',
+        '/dashboard/reports',
+        '/dashboard/employees',
+        '/dashboard/profile',
+      ]);
+      return navGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => allowed.has(item.path)),
+        }))
+        .filter((group) => group.items.length > 0);
+    }
+
     const filterItems = (items: NavItem[]) => {
       if (me.role === 'SUPERADMIN') return items;
       if (me.role !== 'MODERATOR') return [];
@@ -389,9 +405,22 @@ const Layout = () => {
     location.pathname !== '/dashboard/notifications' &&
     location.pathname !== '/dashboard/profile';
 
+  const isAccountingForbiddenRoute =
+    me?.role === 'ACCOUNTING' &&
+    !location.pathname.startsWith('/dashboard/employees') &&
+    !location.pathname.startsWith('/dashboard/students') &&
+    location.pathname !== '/dashboard/home' &&
+    location.pathname !== '/dashboard/analytics' &&
+    location.pathname !== '/dashboard/reports' &&
+    location.pathname !== '/dashboard/profile';
+
   useEffect(() => {
     if (meLoading || !me) return;
-    if (isModeratorForbiddenRoute || isDirectorForbiddenRoute) {
+    if (
+      isModeratorForbiddenRoute ||
+      isDirectorForbiddenRoute ||
+      isAccountingForbiddenRoute
+    ) {
       navigate('/dashboard/home');
     }
   }, [
@@ -399,6 +428,7 @@ const Layout = () => {
     me,
     isModeratorForbiddenRoute,
     isDirectorForbiddenRoute,
+    isAccountingForbiddenRoute,
     navigate,
   ]);
 
@@ -579,7 +609,10 @@ const Layout = () => {
 
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background">
           <div className="w-full min-w-0 max-w-full p-2 md:p-2">
-            {me?.role !== 'USER' && !isModeratorForbiddenRoute ? (
+            {me?.role !== 'USER' &&
+            !isModeratorForbiddenRoute &&
+            !isDirectorForbiddenRoute &&
+            !isAccountingForbiddenRoute ? (
               <Outlet />
             ) : null}
           </div>
