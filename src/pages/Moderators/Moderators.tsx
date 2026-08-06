@@ -39,9 +39,27 @@ import { filterSelectOption } from '@/utils/selectSearch.util';
 const T = {
   title: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
   addModerator: {
-    uz: 'Xodimga moderator berish',
-    en: 'Promote employee',
-    ru: 'Назначить модератора',
+    uz: 'Rol berish',
+    en: 'Assign role',
+    ru: 'Назначить роль',
+  },
+  assignRole: { uz: 'Rol', en: 'Role', ru: 'Роль' },
+  roleModerator: { uz: 'Moderator', en: 'Moderator', ru: 'Модератор' },
+  roleApprover: {
+    uz: 'Tasdiqlovchi shaxs',
+    en: 'Approver',
+    ru: 'Утверждающий',
+  },
+  roleAccounting: {
+    uz: 'Hisob bo‘limi xodimi',
+    en: 'Accounting staff',
+    ru: 'Сотрудник бухгалтерии',
+  },
+  tabModerators: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
+  tabAccounting: {
+    uz: 'Hisob bo‘limi',
+    en: 'Accounting',
+    ru: 'Бухгалтерия',
   },
   organization: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
   filial: { uz: 'Filial', en: 'Branch', ru: 'Филиал' },
@@ -49,15 +67,15 @@ const T = {
   save: { uz: 'Saqlash', en: 'Save', ru: 'Сохранить' },
   cancel: { uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' },
   demoteConfirm: {
-    uz: 'Moderatorlikdan olib tashlansinmi? Xodim USER bo`lib qoladi.',
-    en: 'Remove moderator role? User becomes USER again.',
-    ru: 'Снять роль модератора?',
+    uz: 'Rol olib tashlansinmi? Xodim USER bo`lib qoladi.',
+    en: 'Remove role? User becomes USER again.',
+    ru: 'Снять роль?',
   },
   demote: { uz: 'Olib tashlash', en: 'Remove', ru: 'Снять' },
   noData: {
-    uz: 'Moderatorlar yo`q',
-    en: 'No moderators',
-    ru: 'Нет модераторов',
+    uz: 'Ro‘yxat bo‘sh',
+    en: 'No staff found',
+    ru: 'Список пуст',
   },
   search: {
     uz: 'Ism, login, email...',
@@ -87,6 +105,7 @@ const T = {
   },
   filterMode: { uz: 'Filtr rejimi', en: 'Filter mode', ru: 'Режим фильтра' },
   optional: { uz: 'Ixtiyoriy', en: 'Optional', ru: 'Необязательно' },
+  required: { uz: 'Majburiy', en: 'Required', ru: 'Обязательно' },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
   permissions: { uz: 'Ruxsatlar', en: 'Permissions', ru: 'Права' },
   actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
@@ -130,6 +149,9 @@ const T = {
   },
 } as const;
 
+type StaffRoleTab = 'MODERATOR' | 'ACCOUNTING';
+type AssignableRole = 'MODERATOR' | 'APPROVER' | 'ACCOUNTING';
+
 const PAGE_SIZE = 20;
 
 const QP_DEFAULTS = {
@@ -137,6 +159,7 @@ const QP_DEFAULTS = {
   orgMode: undefined,
   page: undefined,
   limit: undefined,
+  staffRole: undefined,
 } as const;
 
 type OrgRow = { id: string; name: string };
@@ -248,6 +271,9 @@ const Moderators = () => {
     [organizations],
   );
 
+  const staffRoleTab: StaffRoleTab =
+    qp.staffRole === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR';
+
   const {
     data: moderators,
     total,
@@ -255,18 +281,26 @@ const Moderators = () => {
     initialLoading,
     refetch,
   } = usePaginatedFetch(
-    ['moderators', qp.orgId, qp.orgMode],
-    () =>
-      apiService.getModerators({
+    ['staff-roles', staffRoleTab, qp.orgId, qp.orgMode],
+    () => {
+      const filters = {
         organizationId: qp.orgId || undefined,
-        organizationMode: qp.orgMode === 'exclude' ? 'exclude' : 'include',
+        organizationMode: (qp.orgMode === 'exclude' ? 'exclude' : 'include') as
+          | 'include'
+          | 'exclude',
         page: 1,
         limit: 500,
-      }),
+      };
+      return staffRoleTab === 'ACCOUNTING'
+        ? apiService.getAccountingStaff(filters)
+        : apiService.getModerators(filters);
+    },
   );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
+  const assignRole = (Form.useWatch('assignRole', form) as AssignableRole | undefined) ?? 'MODERATOR';
+  const orgRequired = assignRole === 'APPROVER' || assignRole === 'ACCOUNTING';
   const [saving, setSaving] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeOptions, setEmployeeOptions] = useState<UserProfile[]>([]);
@@ -401,6 +435,9 @@ const Moderators = () => {
 
   const openCreateModal = () => {
     form.resetFields();
+    form.setFieldsValue({
+      assignRole: staffRoleTab === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR',
+    });
     setEmployeeSearch('');
     void loadEmployees();
     setModalOpen(true);
@@ -410,11 +447,32 @@ const Moderators = () => {
     try {
       const values = await form.validateFields();
       setSaving(true);
-      await apiService.promoteModerator({
-        userId: values.userId,
-        organizationId: values.organizationId || undefined,
-      });
-      message.success('Xodimga moderator statusi berildi');
+      const role = values.assignRole as AssignableRole;
+      if (role === 'APPROVER') {
+        await apiService.promoteApprover({
+          userId: values.userId,
+          organizationId: values.organizationId,
+        });
+        message.success('Tasdiqlovchi shaxs tayinlandi');
+      } else if (role === 'ACCOUNTING') {
+        await apiService.promoteAccounting({
+          userId: values.userId,
+          organizationId: values.organizationId,
+        });
+        message.success('Hisob bo‘limi roli berildi');
+        if (staffRoleTab !== 'ACCOUNTING') {
+          setParams({ staffRole: 'ACCOUNTING', page: undefined });
+        }
+      } else {
+        await apiService.promoteModerator({
+          userId: values.userId,
+          organizationId: values.organizationId || undefined,
+        });
+        message.success('Xodimga moderator statusi berildi');
+        if (staffRoleTab !== 'MODERATOR') {
+          setParams({ staffRole: undefined, page: undefined });
+        }
+      }
       setModalOpen(false);
       form.resetFields();
       refetch();
@@ -429,11 +487,19 @@ const Moderators = () => {
     if (demotingId) return;
     setDemotingId(id);
     try {
-      await apiService.demoteModerator(id);
-      message.success({
-        content: 'Moderatorlik olib tashlandi',
-        key: 'demote-moderator',
-      });
+      if (staffRoleTab === 'ACCOUNTING') {
+        await apiService.demoteAccounting(id);
+        message.success({
+          content: 'Hisob bo‘limi roli olib tashlandi',
+          key: 'demote-staff',
+        });
+      } else {
+        await apiService.demoteModerator(id);
+        message.success({
+          content: 'Moderatorlik olib tashlandi',
+          key: 'demote-staff',
+        });
+      }
       setOrgOverrides((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -543,10 +609,10 @@ const Moderators = () => {
         width: 130,
         filterable: false,
         render: () => (
-          <Tag color="default">
+          <Tag color={staffRoleTab === 'ACCOUNTING' ? 'blue' : 'default'}>
             <span className="inline-flex items-center gap-1">
               <Shield size={13} />
-              MODERATOR
+              {staffRoleTab === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR'}
             </span>
           </Tag>
         ),
@@ -554,19 +620,21 @@ const Moderators = () => {
       {
         title: t(T.actions),
         key: 'actions',
-        width: 88,
+        width: staffRoleTab === 'MODERATOR' ? 88 : 48,
         align: 'right' as const,
         filterable: false,
         render: (_: unknown, mod: UserProfile) => (
           <div className="flex justify-end gap-1">
-            <Button
-              size="small"
-              icon={<Settings size={14} />}
-              title={t(T.permissions)}
-              onClick={() =>
-                void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
-              }
-            />
+            {staffRoleTab === 'MODERATOR' ? (
+              <Button
+                size="small"
+                icon={<Settings size={14} />}
+                title={t(T.permissions)}
+                onClick={() =>
+                  void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
+                }
+              />
+            ) : null}
             <Popconfirm
               title={t(T.demoteConfirm)}
               description={`${mod.lastName} ${mod.firstName}`}
@@ -596,6 +664,7 @@ const Moderators = () => {
       orgOptions,
       orgUpdating,
       demotingId,
+      staffRoleTab,
       t,
     ],
   );
@@ -606,21 +675,23 @@ const Moderators = () => {
         icon={Shield}
         title={t(T.title)}
         description={t({
-          uz: 'Moderatorlar ro‘yxati, filial biriktirish va ruxsat boshqaruvi',
-          en: 'Moderator list, branch assignment, and permission control',
-          ru: 'Список модераторов, филиалы и права доступа',
+          uz: 'Moderator, tasdiqlovchi yoki hisob bo‘limi rolini berish',
+          en: 'Assign moderator, approver, or accounting role',
+          ru: 'Назначение роли модератора, утверждающего или бухгалтерии',
         })}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Tag className="text-xs tabular-nums">
               {t(T.total)}: {total}
             </Tag>
-            <Button
-              icon={<Table2 size={16} />}
-              onClick={() => navigate('/dashboard/permissions')}
-            >
-              {t(T.permissionsPage)}
-            </Button>
+            {staffRoleTab === 'MODERATOR' ? (
+              <Button
+                icon={<Table2 size={16} />}
+                onClick={() => navigate('/dashboard/permissions')}
+              >
+                {t(T.permissionsPage)}
+              </Button>
+            ) : null}
             <Button
               type="primary"
               icon={<Plus size={16} />}
@@ -631,6 +702,21 @@ const Moderators = () => {
           </div>
         }
       />
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type={staffRoleTab === 'MODERATOR' ? 'primary' : 'default'}
+          onClick={() => setParams({ staffRole: undefined, page: undefined })}
+        >
+          {t(T.tabModerators)}
+        </Button>
+        <Button
+          type={staffRoleTab === 'ACCOUNTING' ? 'primary' : 'default'}
+          onClick={() => setParams({ staffRole: 'ACCOUNTING', page: undefined })}
+        >
+          {t(T.tabAccounting)}
+        </Button>
+      </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
@@ -714,7 +800,20 @@ const Moderators = () => {
         okText={t(T.save)}
         cancelText={t(T.cancel)}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={{ assignRole: 'MODERATOR' }}>
+          <Form.Item
+            name="assignRole"
+            label={t(T.assignRole)}
+            rules={[{ required: true, message: 'Rolni tanlang' }]}
+          >
+            <Select
+              options={[
+                { value: 'MODERATOR', label: t(T.roleModerator) },
+                { value: 'APPROVER', label: t(T.roleApprover) },
+                { value: 'ACCOUNTING', label: t(T.roleAccounting) },
+              ]}
+            />
+          </Form.Item>
           <Form.Item
             name="userId"
             label={t(T.employee)}
@@ -744,10 +843,22 @@ const Moderators = () => {
           </Form.Item>
           <Form.Item
             name="organizationId"
-            label={`${t(T.filial)} (${t(T.optional)})`}
+            label={`${t(T.filial)} (${orgRequired ? t(T.required) : t(T.optional)})`}
+            rules={
+              orgRequired
+                ? [{ required: true, message: 'Filialni tanlang' }]
+                : undefined
+            }
+            extra={
+              assignRole === 'ACCOUNTING'
+                ? 'Hisob bo‘limi: faqat Analitika, Hisobotlar va Xodimlar (read-only)'
+                : assignRole === 'APPROVER'
+                  ? 'Tasdiqlovchi uchun filial majburiy'
+                  : undefined
+            }
           >
             <Select
-              allowClear
+              allowClear={!orgRequired}
               showSearch
               optionFilterProp="label"
               filterOption={filterSelectOption}

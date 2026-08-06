@@ -199,7 +199,7 @@ function showErrorNotification(error: unknown) {
   });
 }
 
-export type Role = 'SUPERADMIN' | 'MODERATOR' | 'APPROVER' | 'USER';
+export type Role = 'SUPERADMIN' | 'MODERATOR' | 'APPROVER' | 'ACCOUNTING' | 'USER';
 
 export type SafetyUserBrief = {
   id: string;
@@ -3220,6 +3220,46 @@ class ApiService {
   async demoteApprover(id: string): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
       `/admin/users/approvers/${id}/demote`,
+    );
+    return response.data;
+  }
+
+  async getAccountingStaff(filters?: {
+    search?: string;
+    organizationId?: string;
+    organizationMode?: 'include' | 'exclude';
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<UserProfile>> {
+    const response = await this.api.get<PaginatedResponse<UserProfile>>(
+      '/admin/users/accounting',
+      {
+        params: {
+          search: filters?.search,
+          orgId: filters?.organizationId,
+          orgMode: filters?.organizationMode,
+          page: filters?.page,
+          limit: filters?.limit,
+        },
+      },
+    );
+    return response.data;
+  }
+
+  async promoteAccounting(data: {
+    userId: string;
+    organizationId: string;
+  }): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      '/admin/users/accounting/promote',
+      data,
+    );
+    return response.data;
+  }
+
+  async demoteAccounting(id: string): Promise<UserProfile> {
+    const response = await this.api.post<UserProfile>(
+      `/admin/users/accounting/${id}/demote`,
     );
     return response.data;
   }

@@ -137,39 +137,32 @@ const Questions = () => {
     return () => el.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
+  const fillQuestionForm = (question: Question) => {
+    const qType = question.type || 'SINGLE_CHOICE';
+    setSelectedType(qType);
+    form.resetFields();
+    form.setFieldsValue({
+      levelId: question.levelId,
+      theoryId: question.theoryId,
+      prompt: question.prompt,
+      type: qType,
+      isActive: question.isActive,
+      options: (question.options ?? []).map((o) => ({
+        id: o.id,
+        optionText: o.optionText ?? '',
+        isCorrect: !!o.isCorrect,
+        matchText: o.matchText ?? '',
+      })),
+    });
+  };
+
   const openModal = (question?: Question) => {
     if (question && !can('contentQuestions', 'update')) return;
     if (!question && !can('contentQuestions', 'create')) return;
     setEditing(question ?? null);
     setModalOpen(true);
-    if (question) {
-      const qType = question.type || 'SINGLE_CHOICE';
-      setSelectedType(qType);
-      form.setFieldsValue({
-        levelId: question.levelId,
-        theoryId: question.theoryId,
-        prompt: question.prompt,
-        type: qType,
-        isActive: question.isActive,
-        options: question.options.map((o) => ({
-          id: o.id,
-          optionText: o.optionText,
-          isCorrect: o.isCorrect,
-          matchText: o.matchText ?? '',
-        })),
-      });
-    } else {
+    if (!question) {
       setSelectedType('SINGLE_CHOICE');
-      form.resetFields();
-      form.setFieldsValue({
-        type: 'SINGLE_CHOICE',
-        isActive: true,
-        options: [
-          { optionText: '', isCorrect: false, matchText: '' },
-          { optionText: '', isCorrect: false, matchText: '' },
-          { optionText: '', isCorrect: false, matchText: '' },
-        ],
-      });
     }
   };
 
@@ -433,17 +426,36 @@ const Questions = () => {
         }
         open={modalOpen}
         onCancel={() => { setModalOpen(false); setEditing(null); }}
+        afterOpenChange={(open) => {
+          if (!open) return;
+          if (editing) {
+            fillQuestionForm(editing);
+          } else {
+            setSelectedType('SINGLE_CHOICE');
+            form.resetFields();
+            form.setFieldsValue({
+              type: 'SINGLE_CHOICE',
+              isActive: true,
+              options: [
+                { optionText: '', isCorrect: false, matchText: '' },
+                { optionText: '', isCorrect: false, matchText: '' },
+                { optionText: '', isCorrect: false, matchText: '' },
+              ],
+            });
+          }
+        }}
         onOk={handleSave}
         confirmLoading={saving}
         okText={t(T.save)}
         cancelText={t(T.cancel)}
         width={720}
+        destroyOnClose
         styles={{ body: { maxHeight: '75vh', overflowY: 'auto', paddingTop: 8 } }}
         okButtonProps={{
           disabled: editing ? !can('contentQuestions', 'update') : !can('contentQuestions', 'create'),
         }}
       >
-        <Form form={form} layout="vertical" size="middle">
+        <Form form={form} layout="vertical" size="middle" preserve={false}>
           {/* Module + Theory — only when creating */}
           {!editing && (
             <div className="grid grid-cols-2 gap-4">
