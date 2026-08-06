@@ -125,7 +125,7 @@ const navGroups: NavGroup[] = [
       },
       {
         path: '/dashboard/audio-library',
-        label: { uz: 'Audio kutubxona', en: 'Audio library', ru: 'Аудиотека' },
+        label: { uz: 'Kutubxona', en: 'Library', ru: 'Библиотека' },
         icon: LibraryBig,
       },
       {
