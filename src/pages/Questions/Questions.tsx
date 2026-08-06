@@ -607,6 +607,19 @@ const Questions = () => {
                                   size="small"
                                   checkedChildren={<CheckCircle2 size={11} />}
                                   unCheckedChildren={<XCircle size={11} />}
+                                  onChange={(checked) => {
+                                    if (checked) {
+                                      const opts = form.getFieldValue('options');
+                                      form.setFieldsValue({
+                                        options: opts.map(
+                                          (o: Record<string, unknown>, i: number) => ({
+                                            ...o,
+                                            isCorrect: i === name,
+                                          }),
+                                        ),
+                                      });
+                                    }
+                                  }}
                                 />
                               </Form.Item>
                             )}

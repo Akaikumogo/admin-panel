@@ -359,7 +359,23 @@ export default function QuestionDetail() {
                           valuePropName="checked"
                           className="!mb-0"
                         >
-                          <Switch checkedChildren={t(T.correct)} disabled={!editMode} />
+                          <Switch
+                            checkedChildren={t(T.correct)}
+                            disabled={!editMode}
+                            onChange={(checked) => {
+                              if (checked && selectedType !== 'MATCHING') {
+                                const opts = form.getFieldValue('options');
+                                form.setFieldsValue({
+                                  options: opts.map(
+                                    (o: Record<string, unknown>, i: number) => ({
+                                      ...o,
+                                      isCorrect: i === name,
+                                    }),
+                                  ),
+                                });
+                              }
+                            }}
+                          />
                         </Form.Item>
                       )}
 
