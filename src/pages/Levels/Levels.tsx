@@ -430,9 +430,6 @@ const Levels = () => {
   const fillQuestionForm = (question: Question) => {
     const qType = (question.type || 'SINGLE_CHOICE') as QuestionType;
     setSelectedQuestionType(qType);
-    // Form.List Modal ichida — avval reset, keyin to‘ldirish (aks holda
-    // variant matnlari bo‘sh qoladi, ayniqsa DOCX importdan keyin).
-    questionForm.resetFields();
     questionForm.setFieldsValue({
       prompt: question.prompt,
       type: qType,
@@ -459,7 +456,21 @@ const Levels = () => {
       levelId,
       theoryId
     });
-    if (!question) setSelectedQuestionType('SINGLE_CHOICE');
+    if (question) {
+      fillQuestionForm(question);
+    } else {
+      setSelectedQuestionType('SINGLE_CHOICE');
+      questionForm.setFieldsValue({
+        type: 'SINGLE_CHOICE',
+        isActive: true,
+        options: [
+          { optionText: '', isCorrect: false, matchText: '' },
+          { optionText: '', isCorrect: false, matchText: '' },
+          { optionText: '', isCorrect: false, matchText: '' },
+          { optionText: '', isCorrect: false, matchText: '' },
+        ],
+      });
+    }
   };
 
   const handleQuestionTypeChange = (val: QuestionType) => {
