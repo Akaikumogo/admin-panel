@@ -26,6 +26,7 @@ export type FormInstance<T extends FieldValues = FieldValues> = UseFormReturn<T>
 };
 
 const FormContext = React.createContext<{ layout?: 'vertical' | 'horizontal'; size?: string }>({});
+const FormListContext = React.createContext<string | null>(null);
 
 function normalizeRules(rules?: RegisterOptions | AntdRule[]): RegisterOptions | undefined {
   if (!rules) return undefined;
@@ -50,14 +51,20 @@ function normalizeRules(rules?: RegisterOptions | AntdRule[]): RegisterOptions |
 function wrapForm<T extends FieldValues>(form: UseFormReturn<T>): FormInstance<T> {
   return Object.assign(form, {
     resetFields: () => form.reset(),
+    // Field array (Form.List) uchun reset ishonchliroq — setValue yolg‘iz yetmaydi.
     setFieldsValue: (values: Partial<T>) => {
-      for (const [key, value] of Object.entries(values)) {
-        form.setValue(key as Path<T>, value as T[Path<T>]);
-      }
+      form.reset(
+        { ...(form.getValues() as object), ...(values as object) } as T,
+        { keepDefaultValues: false },
+      );
     },
     getFieldsValue: () => form.getValues(),
     getFieldValue: (name: string) => form.getValues(name as Path<T>),
-    setFieldValue: (name: string, value: unknown) => form.setValue(name as Path<T>, value as T[Path<T>]),
+    setFieldValue: (name: string, value: unknown) =>
+      form.setValue(name as Path<T>, value as T[Path<T>], {
+        shouldDirty: true,
+        shouldTouch: true,
+      }),
     validateFields: async (): Promise<any> => {
       const valid = await form.trigger();
       if (!valid) throw form.formState.errors;
@@ -70,7 +77,16 @@ function wrapForm<T extends FieldValues>(form: UseFormReturn<T>): FormInstance<T
 }
 
 function normalizeName(name: string | (string | number)[]): string {
-  return Array.isArray(name) ? name.join('.') : name;
+  return Array.isArray(name) ? name.join('.') : String(name);
+}
+
+function resolveFieldName(
+  name: string | (string | number)[],
+  listPrefix: string | null,
+): string {
+  const relative = normalizeName(name);
+  if (!listPrefix) return relative;
+  return `${listPrefix}.${relative}`;
 }
 
 function FormList({
@@ -79,14 +95,24 @@ function FormList({
 }: {
   name: string;
   children: (
-    fields: { key: number; name: number }[],
+    fields: { key: string; name: number }[],
     ops: { add: (defaultValue?: unknown) => void; remove: (i: number) => void },
   ) => React.ReactNode;
 }) {
   const { control } = useFormContext();
-  const { fields, append, remove } = useFieldArray({ control, name: name as never });
-  const mapped = fields.map((_, i) => ({ key: i, name: i }));
-  return <>{children(mapped, { add: (defaultValue?: unknown) => append((defaultValue ?? {}) as never), remove })}</>;
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: name as never,
+  });
+  const mapped = fields.map((field, i) => ({ key: field.id, name: i }));
+  return (
+    <FormListContext.Provider value={name}>
+      {children(mapped, {
+        add: (defaultValue?: unknown) => append((defaultValue ?? {}) as never),
+        remove,
+      })}
+    </FormListContext.Provider>
+  );
 }
 
 function FormItem({
@@ -112,16 +138,32 @@ function FormItem({
   extra?: React.ReactNode;
   noStyle?: boolean;
 }) {
+  const listPrefix = React.useContext(FormListContext);
   if (!name) return <div className={className}>{children}</div>;
-  const fieldName = normalizeName(name);
+  const fieldName = resolveFieldName(name, listPrefix);
   const { control } = useFormContext();
   const { layout } = React.useContext(FormContext);
-  const error = useFormContext().formState.errors[fieldName];
+  const errors = useFormContext().formState.errors;
+  const error = fieldName.split('.').reduce<unknown>((acc, key) => {
+    if (acc && typeof acc === 'object' && key in (acc as object)) {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, errors) as { message?: string } | undefined;
 
   if (hidden) return null;
 
   return (
-    <div className={cn(noStyle ? undefined : layout === 'vertical' ? 'space-y-2' : 'grid grid-cols-[120px_1fr] items-start gap-4', className)}>
+    <div
+      className={cn(
+        noStyle
+          ? undefined
+          : layout === 'vertical'
+            ? 'space-y-2'
+            : 'grid grid-cols-[120px_1fr] items-start gap-4',
+        className,
+      )}
+    >
       {label && !noStyle ? <Label htmlFor={fieldName}>{label}</Label> : null}
       <div className="space-y-1">
         <Controller
@@ -133,22 +175,40 @@ function FormItem({
             const childProps: Record<string, unknown> = { id: fieldName };
             if (valuePropName === 'checked') {
               childProps.checked = !!field.value;
-              childProps.onCheckedChange = field.onChange;
+              childProps.onCheckedChange = (checked: boolean) => {
+                field.onChange(checked);
+                (children.props as { onChange?: (v: boolean) => void }).onChange?.(
+                  checked,
+                );
+              };
+              childProps.onChange = (checked: boolean) => {
+                field.onChange(checked);
+                (children.props as { onChange?: (v: boolean) => void }).onChange?.(
+                  checked,
+                );
+              };
             } else {
-              childProps.value = field.value ?? '';
+              childProps.value =
+                field.value === undefined || field.value === null
+                  ? undefined
+                  : field.value;
               childProps.onChange = (e: unknown) => {
                 const val =
                   e && typeof e === 'object' && 'target' in (e as object)
                     ? (e as React.ChangeEvent<HTMLInputElement>).target.value
                     : e;
                 field.onChange(val);
-                (children.props as { onChange?: (v: unknown) => void }).onChange?.(val);
+                (children.props as { onChange?: (v: unknown) => void }).onChange?.(
+                  val,
+                );
               };
             }
             return React.cloneElement(children, childProps);
           }}
         />
-        {error?.message ? <p className="text-xs text-destructive">{String(error.message)}</p> : null}
+        {error?.message ? (
+          <p className="text-xs text-destructive">{String(error.message)}</p>
+        ) : null}
         {extra ? <p className="text-xs text-muted-foreground">{extra}</p> : null}
       </div>
     </div>
@@ -165,6 +225,7 @@ function FormComponent<T extends FieldValues>({
   className,
   initialValues,
   onFieldsChange,
+  preserve: _preserve,
   ...props
 }: {
   form?: FormInstance<T>;
@@ -176,9 +237,14 @@ function FormComponent<T extends FieldValues>({
   className?: string;
   initialValues?: Partial<T>;
   onFieldsChange?: () => void;
+  preserve?: boolean;
 } & Omit<React.FormHTMLAttributes<HTMLFormElement>, 'onSubmit'>) {
   void size;
-  const internalForm = wrapForm(useForm<T>({ defaultValues: initialValues as T }));
+  void onFieldsChange;
+  void _preserve;
+  const internalForm = wrapForm(
+    useForm<T>({ defaultValues: initialValues as T }),
+  );
   const form = externalForm ?? internalForm;
 
   return (
@@ -208,7 +274,11 @@ const Form = Object.assign(FormComponent, {
   List: FormList,
   useForm: useFormAntd,
   useWatch: (name: string, form?: FormInstance) => {
-    if (form) return useWatch({ control: form.control, name: name as Path<FieldValues> });
+    if (form)
+      return useWatch({
+        control: form.control,
+        name: name as Path<FieldValues>,
+      });
     return useWatch({ name: name as Path<FieldValues> });
   },
 });

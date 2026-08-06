@@ -140,7 +140,6 @@ const Questions = () => {
   const fillQuestionForm = (question: Question) => {
     const qType = question.type || 'SINGLE_CHOICE';
     setSelectedType(qType);
-    form.resetFields();
     form.setFieldsValue({
       levelId: question.levelId,
       theoryId: question.theoryId,
@@ -161,8 +160,19 @@ const Questions = () => {
     if (!question && !can('contentQuestions', 'create')) return;
     setEditing(question ?? null);
     setModalOpen(true);
-    if (!question) {
+    if (question) {
+      fillQuestionForm(question);
+    } else {
       setSelectedType('SINGLE_CHOICE');
+      form.setFieldsValue({
+        type: 'SINGLE_CHOICE',
+        isActive: true,
+        options: [
+          { optionText: '', isCorrect: false, matchText: '' },
+          { optionText: '', isCorrect: false, matchText: '' },
+          { optionText: '', isCorrect: false, matchText: '' },
+        ],
+      });
     }
   };
 

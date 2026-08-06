@@ -80,6 +80,7 @@ type ModalProps = {
   cancelText?: string;
   confirmLoading?: boolean;
   destroyOnClose?: boolean;
+  afterOpenChange?: (open: boolean) => void;
   okButtonProps?: { disabled?: boolean; danger?: boolean; loading?: boolean };
   styles?: { body?: React.CSSProperties; header?: React.CSSProperties };
 };
@@ -96,9 +97,21 @@ function ModalBase({
   cancelText = 'Bekor qilish',
   confirmLoading,
   destroyOnClose,
+  afterOpenChange,
   okButtonProps,
   styles,
 }: ModalProps) {
+  const wasOpen = React.useRef(false);
+
+  React.useEffect(() => {
+    if (open && !wasOpen.current) {
+      afterOpenChange?.(true);
+    } else if (!open && wasOpen.current) {
+      afterOpenChange?.(false);
+    }
+    wasOpen.current = !!open;
+  }, [open, afterOpenChange]);
+
   if (destroyOnClose && !open) return null;
 
   return (
