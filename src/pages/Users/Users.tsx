@@ -7,7 +7,7 @@ import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
-import apiService, { resolveAssetUrl } from '@/services/api';
+import apiService, { BACKEND_ORIGIN } from '@/services/api';
 import type { UserProfile } from '@/services/api';
 import { can } from '@/utils/can';
 
@@ -127,7 +127,7 @@ const Users = () => {
             size={36}
             src={
               record.avatarUrl
-                ? resolveAssetUrl(record.avatarUrl)
+                ? `${BACKEND_ORIGIN}${record.avatarUrl}`
                 : undefined
             }
             className="bg-gradient-to-br from-slate-500 to-slate-700 dark:from-slate-600 dark:to-slate-800 flex-shrink-0"
@@ -209,18 +209,16 @@ const Users = () => {
         </Tag>
       </div>
 
-    
+      {initialLoading ? (
+        <div className="flex items-center justify-center h-32">
+          <Spin />
+        </div>
+      ) : users.length === 0 && !loading ? (
+        <NoData text={t(T.noData)} />
+      ) : (
         <Card
           className={`!border-slate-200 dark:!border-slate-700/60 transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
-        >  {initialLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <Spin />
-          </div>
-        ) : 
-        // users.length === 0 && !loading ? (
-        //   <NoData text={t(T.noData)} />
-        // ) :
-         (
+        >
           <Table
             dataSource={users}
             columns={columns}
@@ -235,10 +233,10 @@ const Users = () => {
               showSizeChanger: false
             }}
             size="middle"
-          /> )}
-
+          />
         </Card>
-     
+      )}
+
       <Modal
         title={editing ? 'Edit user' : 'Add user'}
         open={modalOpen}

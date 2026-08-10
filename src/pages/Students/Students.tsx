@@ -416,9 +416,7 @@ const Students = () => {
 
   const showTree = viewMode === 'tree';
   const busy = showTree ? treeLoading : initialLoading;
-  const empty = showTree
-    ? treeStudents.length === 0 && !treeFetching
-    : students.length === 0 && !loading;
+  const treeEmpty = treeStudents.length === 0 && !treeFetching;
 
   return (
     <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden p-4 md:p-6">
@@ -485,33 +483,36 @@ const Students = () => {
         </p>
       ) : null}
 
-      {busy ? (
-        <div className="flex h-32 items-center justify-center">
-          <Spin />
-        </div>
-      ) : empty ? (
-        <NoData text={t(T.noData)} />
-      ) : showTree ? (
-        <ContentCard loading={treeFetching && !treeLoading}>
-          <EmployeesHierarchy
-            students={treeStudents}
-            organizations={reportingActivation.organizations}
-            divisions={reportingActivation.divisions}
-            canEditOrg={can('organizations', 'update')}
-            canEditEmployee={canEditEmployee}
-            onActivationChange={() => {
-              void refetchTree();
-              void refetchActivation();
-            }}
-          />
-        </ContentCard>
+      {showTree ? (
+        busy ? (
+          <div className="flex h-32 items-center justify-center">
+            <Spin />
+          </div>
+        ) : treeEmpty ? (
+          <NoData text={t(T.noData)} />
+        ) : (
+          <ContentCard loading={treeFetching && !treeLoading}>
+            <EmployeesHierarchy
+              students={treeStudents}
+              organizations={reportingActivation.organizations}
+              divisions={reportingActivation.divisions}
+              canEditOrg={can('organizations', 'update')}
+              canEditEmployee={canEditEmployee}
+              onActivationChange={() => {
+                void refetchTree();
+                void refetchActivation();
+              }}
+            />
+          </ContentCard>
+        )
       ) : (
-        <ContentCard loading={loading}>
+        <ContentCard loading={loading || initialLoading}>
           <Table
             dataSource={students}
             columns={columns}
             rowKey="id"
             loading={false}
+            emptyText={t(T.noData)}
             columnFilters={columnFilters}
             onColumnFiltersChange={handleColumnFiltersChange}
             onRow={(record) => {
