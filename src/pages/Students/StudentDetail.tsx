@@ -17,6 +17,7 @@ import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
 import { EmployeeCertificateSection } from './EmployeeCertificateSection';
 import { EmployeeSafetySection } from './EmployeeSafetySection';
 import type { UserProfile } from '@/services/api';
+import { formatPersonName } from '@/lib/person-name';
 
 const T = {
   back: { uz: 'Orqaga', en: 'Back', ru: 'Назад' },
@@ -271,7 +272,7 @@ const StudentDetailPage = () => {
 
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-              {student.firstName} {student.lastName}
+              {formatPersonName(student)}
               {student.role === 'MODERATOR' ? (
                 <Tag className="ml-2 align-middle" color="blue">
                   Moderator

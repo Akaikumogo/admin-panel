@@ -5,6 +5,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { HeartsLostAnalyticsResponse, Organization, UserProfile } from '@/services/api';
+import { formatPersonName } from '@/lib/person-name';
 
 const T = {
   title: { uz: 'Xato javoblar', en: 'Wrong answers', ru: 'Ошибочные ответы' },
@@ -119,7 +120,7 @@ export default function HeartsAnalyticsPage() {
         render: (_: unknown, r: HeartsLostAnalyticsResponse['byUser'][number]) => (
           <div>
             <div className="font-medium">
-              {r.firstName} {r.lastName}
+              {formatPersonName(r)}
             </div>
             <div className="text-xs text-slate-400">{r.email}</div>
           </div>
@@ -264,7 +265,7 @@ export default function HeartsAnalyticsPage() {
                   Top xodim
                 </div>
                 <div className="font-semibold text-lg">
-                  {topUser.firstName} {topUser.lastName}
+                  {formatPersonName(topUser)}
                 </div>
                 <div className="text-sm text-slate-500">{topUser.email}</div>
                 <Tag color="red" className="mt-3">

@@ -39,6 +39,7 @@ import apiService, {
 import { can } from '@/utils/can';
 import { DateTimeDisplay } from '@/components/DateTimeDisplay';
 import { fmtDateTime } from '@/lib/format';
+import { formatPersonName } from '@/lib/person-name';
 
 const QP_DEFAULTS = {
   tab: 'app' as 'app' | 'moderators' | 'analytics',
@@ -199,7 +200,7 @@ export default function OrganizationDetail() {
       key: 'name',
       render: (_: unknown, r: StudentSummary) => (
         <span className="font-medium text-slate-900 dark:text-white">
-          {r.lastName} {r.firstName}
+          {formatPersonName(r)}
         </span>
       ),
     },
@@ -300,7 +301,7 @@ export default function OrganizationDetail() {
           </Avatar>
           <div>
             <p className="font-medium text-slate-900 dark:text-white">
-              {row.user.firstName} {row.user.lastName}
+              {formatPersonName(row.user)}
             </p>
             <p className="text-xs text-slate-500">{row.user.email}</p>
           </div>
