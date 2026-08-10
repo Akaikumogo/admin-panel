@@ -209,16 +209,16 @@ const Users = () => {
         </Tag>
       </div>
 
-      {initialLoading ? (
-        <div className="flex items-center justify-center h-32">
-          <Spin />
-        </div>
-      ) : users.length === 0 && !loading ? (
-        <NoData text={t(T.noData)} />
-      ) : (
+    
         <Card
           className={`!border-slate-200 dark:!border-slate-700/60 transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
-        >
+        >  {initialLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <Spin />
+          </div>
+        ) : users.length === 0 && !loading ? (
+          <NoData text={t(T.noData)} />
+        ) : (
           <Table
             dataSource={users}
             columns={columns}
@@ -233,10 +233,10 @@ const Users = () => {
               showSizeChanger: false
             }}
             size="middle"
-          />
-        </Card>
-      )}
+          /> )}
 
+        </Card>
+     
       <Modal
         title={editing ? 'Edit user' : 'Add user'}
         open={modalOpen}
