@@ -6,7 +6,7 @@ import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { can } from '@/utils/can';
 import apiService from '@/services/api';
-import type { CertificateEligibility, EmployeeCertificate } from '@/services/api';
+import type { EmployeeCertificate } from '@/services/api';
 import {
   CertificateCard,
   formatCertificateDate,
@@ -38,7 +38,6 @@ const T = {
     ru: 'Нажмите на карточку, чтобы перевернуть.',
   },
   history: { uz: 'Oldingi guvohnomalar', en: 'Previous certificates', ru: 'Предыдущие удостоверения' },
-  issueFailed: { uz: 'Guvohnoma berilmadi', en: 'Could not issue', ru: 'Не удалось выдать' },
   issueOk: { uz: 'Guvohnoma berildi', en: 'Certificate issued', ru: 'Удостоверение выдано' },
   revokeOk: { uz: 'Guvohnoma bekor qilindi', en: 'Certificate revoked', ru: 'Удостоверение аннулировано' },
   cancel: { uz: 'Bekor qilish', en: 'Cancel', ru: 'Отмена' },
@@ -76,13 +75,6 @@ export function EmployeeCertificateSection({
     [],
   );
 
-  const { data: eligibility, refetch: refetchEligibility } =
-    useFetch<CertificateEligibility | null>(
-      ['certificate-eligibility', userId],
-      () => apiService.getCertificateEligibility(userId),
-      null,
-    );
-
   const current = certificates[0] ?? null;
   const previous = certificates.slice(1);
   const canIssue = can('students', 'create');
@@ -95,7 +87,6 @@ export function EmployeeCertificateSection({
       await apiService.issueCertificate(userId);
       message.success(t(T.issueOk));
       refetch();
-      refetchEligibility();
     } catch {
       /* xatoni global interceptor ko'rsatadi */
     } finally {
@@ -111,7 +102,6 @@ export function EmployeeCertificateSection({
       setRevokeOpen(false);
       setRevokeReason('');
       refetch();
-      refetchEligibility();
     } catch {
       /* xatoni global interceptor ko'rsatadi */
     }
@@ -156,20 +146,11 @@ export function EmployeeCertificateSection({
             </Button>
           )}
           {canIssue && (
-            <Popconfirm
-              title={
-                eligibility?.eligible
-                  ? t(T.issue)
-                  : (eligibility?.reason ?? t(T.issueFailed))
-              }
-              onConfirm={handleIssue}
-              disabled={!eligibility?.eligible}
-            >
+            <Popconfirm title={t(T.issue)} onConfirm={handleIssue}>
               <Button
                 type="primary"
                 icon={<RefreshCw className="h-4 w-4" />}
                 loading={issuing}
-                disabled={!eligibility?.eligible}
               >
                 {current ? t(T.reissue) : t(T.issue)}
               </Button>
@@ -177,12 +158,6 @@ export function EmployeeCertificateSection({
           )}
         </div>
       </div>
-
-      {!eligibility?.eligible && eligibility?.reason && (
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          {eligibility.reason}
-        </p>
-      )}
 
       {initialLoading ? (
         <div className="flex h-40 items-center justify-center">
