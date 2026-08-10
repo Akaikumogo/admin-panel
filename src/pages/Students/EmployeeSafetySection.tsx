@@ -145,7 +145,8 @@ export function EmployeeSafetySection({ userId, me }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [userId, t]);
+    // `t` intentionally omitted — unstable identity previously caused infinite refetch
+  }, [userId]);
 
   useEffect(() => {
     void load();
