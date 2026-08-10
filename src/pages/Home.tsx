@@ -2,12 +2,9 @@ import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
-  Users,
   Activity,
   Building2,
-  Shield,
   Layers,
-  HelpCircle,
   AlertTriangle,
   Home as HomeIcon,
   TrendingUp,
@@ -46,7 +43,7 @@ import type {
   UserProfile,
 } from '@/services/api';
 import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
-import { MiniSparkline } from './Home/MiniSparkline';
+import { CoreMetricsPanel } from './Home/CoreMetricsPanel';
 import { formatDelta, shortBranchName } from './Home/branchName';
 import { PlanResultsTable } from './Reports/PlanMatrixTable';
 import { PlanResultsFilterBar } from './Reports/PlanResultsFilterBar';
@@ -58,98 +55,6 @@ const { Title, Text } = Typography;
 const HOME_ORG_QP = {
   orgId: undefined as string | undefined,
 } as const;
-
-type KpiTone = {
-  accent: string;
-  spark: string;
-  chip: string;
-};
-
-const KPI_META: Array<{
-  key: keyof Pick<
-    AnalyticsSummary,
-    | 'totalUsers'
-    | 'activeUsers7d'
-    | 'totalOrganizations'
-    | 'totalModerators'
-    | 'totalLevels'
-    | 'totalQuestions'
-  >;
-  icon: typeof Users;
-  tone: KpiTone;
-}> = [
-  {
-    key: 'totalUsers',
-    icon: Users,
-    tone: {
-      accent: 'text-cyan-600 dark:text-cyan-400',
-      spark: 'rgb(8 145 178)',
-      chip: 'bg-cyan-500/10',
-    },
-  },
-  {
-    key: 'activeUsers7d',
-    icon: Activity,
-    tone: {
-      accent: 'text-blue-600 dark:text-blue-400',
-      spark: 'rgb(37 99 235)',
-      chip: 'bg-blue-500/10',
-    },
-  },
-  {
-    key: 'totalOrganizations',
-    icon: Building2,
-    tone: {
-      accent: 'text-orange-600 dark:text-orange-400',
-      spark: 'rgb(234 88 12)',
-      chip: 'bg-orange-500/10',
-    },
-  },
-  {
-    key: 'totalModerators',
-    icon: Shield,
-    tone: {
-      accent: 'text-violet-600 dark:text-violet-400',
-      spark: 'rgb(124 58 237)',
-      chip: 'bg-violet-500/10',
-    },
-  },
-  {
-    key: 'totalLevels',
-    icon: Layers,
-    tone: {
-      accent: 'text-sky-600 dark:text-sky-400',
-      spark: 'rgb(2 132 199)',
-      chip: 'bg-sky-500/10',
-    },
-  },
-  {
-    key: 'totalQuestions',
-    icon: HelpCircle,
-    tone: {
-      accent: 'text-emerald-600 dark:text-emerald-400',
-      spark: 'rgb(5 150 105)',
-      chip: 'bg-emerald-500/10',
-    },
-  },
-];
-
-const KPI_LABELS: Record<string, { uz: string; en: string; ru: string }> = {
-  totalUsers: {
-    uz: 'Foydalanuvchilar',
-    en: 'Total users',
-    ru: 'Пользователей',
-  },
-  activeUsers7d: { uz: 'Faol (7 kun)', en: 'Active (7d)', ru: 'Активные (7д)' },
-  totalOrganizations: {
-    uz: 'Tashkilotlar',
-    en: 'Organizations',
-    ru: 'Организации',
-  },
-  totalModerators: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
-  totalLevels: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
-  totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
-};
 
 const FUNNEL_ICONS = [Star, Flame, BookOpen, Layers, Trophy];
 
@@ -182,63 +87,6 @@ function DeltaBadge({
       <Icon size={11} strokeWidth={2.25} />
       {text}
     </span>
-  );
-}
-
-function KpiCell({
-  label,
-  value,
-  icon: Icon,
-  loading,
-  tone,
-  sparkValues,
-  deltaPercent,
-}: {
-  label: string;
-  value: number | string;
-  icon: typeof Users;
-  loading: boolean;
-  tone: KpiTone;
-  sparkValues?: number[];
-  deltaPercent?: number | null;
-}) {
-  return (
-    <div className="relative px-3 py-3 sm:px-4">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-          {label}
-        </p>
-        <span
-          className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-md',
-            tone.chip,
-            tone.accent,
-          )}
-        >
-          <Icon size={14} strokeWidth={1.75} />
-        </span>
-      </div>
-      {loading ? (
-        <Skeleton.Input active size="small" className="mt-2 !w-16" />
-      ) : (
-        <>
-          <p
-            className={cn(
-              'mt-1.5 text-2xl font-semibold tracking-tight tabular-nums',
-              tone.accent,
-            )}
-          >
-            {typeof value === 'number' ? value.toLocaleString() : value}
-          </p>
-          <div className="mt-2 flex items-end justify-between gap-2">
-            <DeltaBadge percent={deltaPercent} />
-            {sparkValues && sparkValues.length > 1 ? (
-              <MiniSparkline values={sparkValues} stroke={tone.spark} />
-            ) : null}
-          </div>
-        </>
-      )}
-    </div>
   );
 }
 
@@ -487,45 +335,13 @@ export default function HomePage() {
         />
       </div>
 
-      {/* KPI — larger visual weight */}
-      <Card className="!border-border !shadow-none">
-        <div className="mb-1 flex items-center justify-between px-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {t({
-              uz: 'Asosiy ko‘rsatkichlar',
-              en: 'Core metrics',
-              ru: 'Ключевые метрики',
-            })}
-          </p>
-          <p className="text-[11px] tabular-nums text-muted-foreground">
-            {new Date().toLocaleDateString()}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-6">
-          {KPI_META.map(({ key, icon, tone }) => {
-            const spark =
-              key === 'activeUsers7d'
-                ? weekSpark
-                : key === 'totalUsers'
-                  ? planSpark
-                  : undefined;
-            return (
-              <KpiCell
-                key={key}
-                label={t(KPI_LABELS[key])}
-                icon={icon}
-                tone={tone}
-                loading={summaryLoading}
-                value={summary?.[key] ?? 0}
-                sparkValues={spark}
-                deltaPercent={
-                  key === 'activeUsers7d' ? insight?.loginDeltaPercent : null
-                }
-              />
-            );
-          })}
-        </div>
-      </Card>
+      <CoreMetricsPanel
+        summary={summary}
+        loading={summaryLoading}
+        weekSpark={weekSpark}
+        planSpark={planSpark}
+        loginDeltaPercent={insight?.loginDeltaPercent}
+      />
 
       <Card className="!border-border !shadow-none min-w-0 max-w-full overflow-hidden space-y-4">
         <PlanResultsFilterBar
