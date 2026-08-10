@@ -1,14 +1,25 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Segmented,
   Select,
   Spin,
+  Switch,
   Table,
   Tag,
   message,
 } from '@/components/ui';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Download,
   GraduationCap,
@@ -29,6 +40,7 @@ import apiService from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
 import { can } from '@/utils/can';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
+import { cn } from '@/lib/utils';
 
 const T = {
   title: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
@@ -68,9 +80,16 @@ const Students = () => {
   const { params: qp, setParams } = useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const [exporting, setExporting] = useState(false);
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [empActive, setEmpActive] = useState<Map<string, boolean>>(() => new Map());
+  const [pendingOff, setPendingOff] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
   const pageSize = qp.limit ? parseInt(qp.limit, 10) : 20;
   const viewMode = qp.view === 'tree' ? 'tree' : 'flat';
+  const canEditEmployee = can('students', 'update');
 
   const columnSearch = useMemo(
     () =>
@@ -142,6 +161,67 @@ const Students = () => {
     () => apiService.getLevels(),
     [],
   );
+
+  useEffect(() => {
+    const m = new Map<string, boolean>();
+    for (const s of students) m.set(s.id, s.reportActive !== false);
+    setEmpActive(m);
+  }, [students]);
+
+  const applyEmployeeActive = async (userId: string, next: boolean) => {
+    setBusyId(userId);
+    try {
+      await apiService.setEmployeeReportActive(userId, next);
+      setEmpActive((prev) => {
+        const m = new Map(prev);
+        m.set(userId, next);
+        return m;
+      });
+      message.success(
+        next
+          ? t({
+              uz: 'Hisobotga qaytarildi',
+              en: 'Included in reporting again',
+              ru: 'Снова в отчётах',
+            })
+          : t({
+              uz: 'Hisobotdan chiqarildi (ma’lumotlar saqlanadi)',
+              en: 'Excluded from reporting (data kept)',
+              ru: 'Исключено из отчётов (данные сохранены)',
+            }),
+      );
+      void refetch();
+    } catch {
+      message.error(
+        t({
+          uz: 'Saqlashda xato',
+          en: 'Could not save',
+          ru: 'Не удалось сохранить',
+        }),
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleEmployeeSwitch = (record: StudentSummary, next: boolean) => {
+    if (!canEditEmployee || busyId) return;
+    const title =
+      `${record.lastName ?? ''} ${record.firstName ?? ''}`.trim() ||
+      record.email;
+    if (!next) {
+      setPendingOff({ id: record.id, title });
+      return;
+    }
+    void applyEmployeeActive(record.id, true);
+  };
+
+  const confirmOff = () => {
+    if (!pendingOff) return;
+    const { id } = pendingOff;
+    setPendingOff(null);
+    void applyEmployeeActive(id, false);
+  };
 
   const handleColumnFiltersChange = (filters: Record<string, string>) => {
     setColumnFilters(filters);
@@ -300,6 +380,38 @@ const Students = () => {
       render: (_: unknown, record: StudentSummary) =>
         record.organizations.map((o) => <Tag key={o.id}>{o.name}</Tag>),
     },
+    {
+      title: t({
+        uz: 'Hisobot',
+        en: 'Report',
+        ru: 'Отчёт',
+      }),
+      key: 'reportActive',
+      width: 100,
+      filterable: false,
+      render: (_: unknown, record: StudentSummary) => {
+        const checked = empActive.get(record.id) ?? record.reportActive !== false;
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            title={
+              checked
+                ? 'ON — hisobotda hisobga olinadi'
+                : 'OFF — reportingda hisobga olinmaydi'
+            }
+          >
+            <Switch
+              size="small"
+              checked={checked}
+              disabled={!canEditEmployee || busyId === record.id}
+              onCheckedChange={(next) => handleEmployeeSwitch(record, next)}
+            />
+          </div>
+        );
+      },
+    },
   ];
 
   const showTree = viewMode === 'tree';
@@ -363,6 +475,16 @@ const Students = () => {
         </Tag>
       </FilterBar>
 
+      {!showTree ? (
+        <p className="text-right text-[11px] text-muted-foreground">
+          {t({
+            uz: 'Switch OFF = hisobotdan chiqarish (o‘chirish emas)',
+            en: 'Switch OFF = exclude from reports (not delete)',
+            ru: 'Switch OFF = исключить из отчётов (не удаление)',
+          })}
+        </p>
+      ) : null}
+
       {busy ? (
         <div className="flex h-32 items-center justify-center">
           <Spin />
@@ -376,7 +498,7 @@ const Students = () => {
             organizations={reportingActivation.organizations}
             divisions={reportingActivation.divisions}
             canEditOrg={can('organizations', 'update')}
-            canEditEmployee={can('students', 'update')}
+            canEditEmployee={canEditEmployee}
             onActivationChange={() => {
               void refetchTree();
               void refetchActivation();
@@ -392,10 +514,14 @@ const Students = () => {
             loading={false}
             columnFilters={columnFilters}
             onColumnFiltersChange={handleColumnFiltersChange}
-            onRow={(record) => ({
-              onClick: () => navigate(`/dashboard/employees/${record.id}`),
-              className: 'cursor-pointer',
-            })}
+            onRow={(record) => {
+              const active =
+                empActive.get(record.id) ?? record.reportActive !== false;
+              return {
+                onClick: () => navigate(`/dashboard/employees/${record.id}`),
+                className: cn('cursor-pointer', !active && 'opacity-55'),
+              };
+            }}
             pagination={{
               current: currentPage,
               pageSize,
@@ -413,6 +539,42 @@ const Students = () => {
           />
         </ContentCard>
       )}
+
+      <AlertDialog
+        open={!!pendingOff}
+        onOpenChange={(v) => {
+          if (!v) setPendingOff(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t({
+                uz: 'Hisobotdan chiqarish',
+                en: 'Exclude from reporting',
+                ru: 'Исключить из отчётов',
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingOff
+                ? t({
+                    uz: `«${pendingOff.title}» reporting va KPI hisob-kitoblaridan chiqariladi. Ma’lumotlar o‘chirilmaydi.`,
+                    en: `“${pendingOff.title}” will be excluded from reporting and KPI. Data is not deleted.`,
+                    ru: `«${pendingOff.title}» будет исключён из отчётов и KPI. Данные не удаляются.`,
+                  })
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t({ uz: 'Bekor', en: 'Cancel', ru: 'Отмена' })}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmOff()}>
+              {t({ uz: 'Chiqarish', en: 'Exclude', ru: 'Исключить' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
