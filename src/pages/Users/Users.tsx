@@ -216,9 +216,11 @@ const Users = () => {
           <div className="flex items-center justify-center h-32">
             <Spin />
           </div>
-        ) : users.length === 0 && !loading ? (
-          <NoData text={t(T.noData)} />
-        ) : (
+        ) : 
+        // users.length === 0 && !loading ? (
+        //   <NoData text={t(T.noData)} />
+        // ) :
+         (
           <Table
             dataSource={users}
             columns={columns}
