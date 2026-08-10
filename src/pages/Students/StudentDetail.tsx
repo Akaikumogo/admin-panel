@@ -334,11 +334,8 @@ const StudentDetailPage = () => {
         </div>
       </div>
 
-      {/* Guvohnoma */}
-      <EmployeeCertificateSection
-        userId={student.id}
-        avatarUrl={student.avatarUrl}
-      />
+      {/* Guvohnoma — ENERGO ID kartasi (avtomatik) */}
+      <EmployeeCertificateSection student={student} />
 
       {/* Safety / certification (manual) */}
       <EmployeeSafetySection userId={student.id} me={me} />

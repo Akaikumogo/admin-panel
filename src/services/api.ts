@@ -979,6 +979,8 @@ export type StudentDetail = {
   middleName: string | null;
   avatarUrl: string | null;
   role: string;
+  /** ENERGO ID user id — guvohnoma QR uchun */
+  energoId?: string | null;
   personnelNumber: string | null;
   division: string | null;
   post: string | null;
