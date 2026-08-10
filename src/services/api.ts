@@ -267,6 +267,8 @@ export type EmployeeSafetyChange = {
 export type EmployeeSafetySection = {
   type: SafetyRecordType;
   record: EmployeeSafetyRecord | null;
+  /** Barcha yozuvlar (tarix, yangidan eski) — arxiv emas, to‘liq tarix */
+  records?: EmployeeSafetyRecord[];
   pendingChange: EmployeeSafetyChange | null;
 };
 
