@@ -6,6 +6,7 @@ import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { Exam, ExamType, StudentSummary, UserProfile } from '@/services/api';
 import { can } from '@/utils/can';
+import { formatPersonName } from '@/lib/person-name';
 
 const T = {
   title: { uz: 'Imtihonlar', en: 'Exams', ru: 'Экзамены' },
@@ -223,7 +224,7 @@ export default function ExamsPage() {
                 options={studentsPage.data.flatMap((s) =>
                   (s.organizations ?? []).map((o) => ({
                     value: `${s.id}|${o.id}`,
-                    label: `${s.firstName} ${s.lastName} — ${o.name}`,
+                    label: `${formatPersonName(s)} — ${o.name}`,
                   })),
                 )}
               />

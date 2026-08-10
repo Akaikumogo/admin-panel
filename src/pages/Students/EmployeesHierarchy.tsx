@@ -36,6 +36,7 @@ import type { StudentSummary } from '@/services/api';
 import apiService from '@/services/api';
 import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
 import { cn } from '@/lib/utils';
+import { formatPersonName } from '@/lib/person-name';
 
 /* ─── tree model ─────────────────────────────────────────────────────────── */
 
@@ -142,10 +143,7 @@ function buildTree(
   }
 
   const byName = (a: StudentSummary, b: StudentSummary) =>
-    `${a.lastName} ${a.firstName}`.localeCompare(
-      `${b.lastName} ${b.firstName}`,
-      'uz',
-    );
+    formatPersonName(a).localeCompare(formatPersonName(b), 'uz');
 
   return [...orgs.values()]
     .map((o) => {
@@ -230,7 +228,7 @@ const EmployeeRow = memo(function EmployeeRow({
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium tracking-tight text-foreground">
-            {s.lastName} {s.firstName}
+            {formatPersonName(s)}
             {s.role === 'MODERATOR' ? (
               <span className="ml-1.5 rounded bg-blue-500/15 px-1 py-0.5 text-[10px] font-normal text-blue-700 dark:text-blue-300">
                 Mod
@@ -298,7 +296,7 @@ function EmployeePanel({
             canEdit={canEdit}
             checked={checked}
             onToggle={(next) =>
-              onToggleEmp(s.id, next, `${s.lastName} ${s.firstName}`)
+              onToggleEmp(s.id, next, formatPersonName(s))
             }
           />
         );

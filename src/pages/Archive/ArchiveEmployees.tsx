@@ -11,6 +11,7 @@ import { usePaginatedFetch } from '@/hooks/useFetch';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService, { type TerminatedEmployee } from '@/services/api';
+import { formatPersonName } from '@/lib/person-name';
 
 const nf = new Intl.NumberFormat('uz-UZ');
 const QP_DEFAULTS = {
@@ -52,7 +53,7 @@ export default function ArchiveEmployeesPage() {
         render: (_: unknown, r: TerminatedEmployee) => (
           <div>
             <div className="font-medium text-foreground">
-              {[r.lastName, r.firstName].filter(Boolean).join(' ') || '—'}
+              {formatPersonName(r) || '—'}
             </div>
             <div className="text-xs text-muted-foreground">{r.login}</div>
           </div>

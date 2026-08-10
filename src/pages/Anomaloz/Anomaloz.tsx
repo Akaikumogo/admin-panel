@@ -23,6 +23,7 @@ import type {
   XpAnomalySample,
   XpAnomalyUserRow,
 } from '@/services/api';
+import { formatPersonName } from '@/lib/person-name';
 
 const { Text } = Typography;
 
@@ -161,7 +162,7 @@ export default function AnomalozPage() {
             onClick={() => navigate(`/dashboard/employees/${r.userId}`)}
           >
             <div className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-              {r.firstName} {r.lastName}
+              {formatPersonName(r)}
             </div>
             <div className="text-xs text-slate-500">{r.email}</div>
           </button>
@@ -233,7 +234,7 @@ export default function AnomalozPage() {
         width: 160,
         render: (_: unknown, r: XpAnomalySample) => (
           <span>
-            {r.firstName} {r.lastName}
+            {formatPersonName(r)}
           </span>
         ),
       },
@@ -286,7 +287,7 @@ export default function AnomalozPage() {
         title: t({ uz: 'F.I.O', en: 'Name', ru: 'Ф.И.О' }),
         key: 'name',
         render: (_: unknown, r: BlockedEmailLoginRow) =>
-          `${r.lastName} ${r.firstName}`.trim() || '—',
+          formatPersonName(r) || '—',
       },
       {
         title: 'Role',

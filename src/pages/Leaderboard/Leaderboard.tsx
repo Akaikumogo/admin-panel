@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, { resolveAssetUrl } from '@/services/api';
 import type { LeaderboardRow, Organization, UserProfile } from '@/services/api';
+import { formatPersonName } from '@/lib/person-name';
 
 const T = {
   title: { uz: 'Reyting', en: 'Leaderboard', ru: 'Рейтинг' },
@@ -77,7 +78,7 @@ export default function LeaderboardPage() {
             </div>
             <div className="min-w-0">
               <div className="truncate font-medium text-blue-600 hover:underline dark:text-blue-400">
-                {r.firstName} {r.lastName}
+                {formatPersonName(r)}
               </div>
               <div className="truncate text-xs text-slate-500">{r.email}</div>
             </div>

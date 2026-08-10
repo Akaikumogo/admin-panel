@@ -6,6 +6,7 @@ import 'dayjs/locale/uz-latn';
 import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ActivityUserRow } from '@/services/api';
+import { formatPersonName } from '@/lib/person-name';
 
 dayjs.extend(relativeTime);
 
@@ -47,7 +48,7 @@ const ActivityTable = ({ rows, onOpenUser, formatDuration }: Props) => {
           </Badge>
           <div className="min-w-0">
             <div className="font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
-              {r.firstName} {r.lastName}
+              {formatPersonName(r)}
             </div>
             <div className="text-xs text-slate-500 truncate">{r.email}</div>
           </div>

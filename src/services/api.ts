@@ -943,6 +943,8 @@ export type StudentSummary = {
   id: string;
   firstName: string;
   lastName: string;
+  /** NES — otasining ismi */
+  middleName?: string | null;
   email: string;
   avatarUrl: string | null;
   /** USER | MODERATOR — moderatorlar ham plan topshiradi */
@@ -1377,6 +1379,7 @@ export type TerminatedEmployee = {
   login: string;
   firstName: string;
   lastName: string;
+  middleName?: string | null;
   organizationName: string | null;
   division: string;
   post: string;
@@ -1521,6 +1524,7 @@ export type HeartsLostAnalyticsResponse = {
     userId: string;
     firstName: string;
     lastName: string;
+    middleName?: string | null;
     email: string;
     lostHearts: number;
   }>;
@@ -1537,6 +1541,7 @@ export type LeaderboardRow = {
   userId: string;
   firstName: string;
   lastName: string;
+  middleName?: string | null;
   email: string;
   avatarUrl: string | null;
   xp: number;
@@ -4052,6 +4057,7 @@ export type ActivityUserRow = {
   userId: string;
   firstName: string;
   lastName: string;
+  middleName?: string | null;
   email: string;
   role: Role;
   organizationId: string | null;

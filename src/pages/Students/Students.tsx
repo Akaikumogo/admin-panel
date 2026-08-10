@@ -41,6 +41,7 @@ import type { StudentSummary, Level, Organization } from '@/services/api';
 import { can } from '@/utils/can';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
 import { cn } from '@/lib/utils';
+import { formatPersonName } from '@/lib/person-name';
 
 const T = {
   title: { uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' },
@@ -206,9 +207,7 @@ const Students = () => {
 
   const handleEmployeeSwitch = (record: StudentSummary, next: boolean) => {
     if (!canEditEmployee || busyId) return;
-    const title =
-      `${record.lastName ?? ''} ${record.firstName ?? ''}`.trim() ||
-      record.email;
+    const title = formatPersonName(record) || record.email;
     if (!next) {
       setPendingOff({ id: record.id, title });
       return;
@@ -243,7 +242,7 @@ const Students = () => {
         ['Tabel', 'Ism', 'Email', 'Bo‘lim', 'Lavozim', 'XP', 'Daraja', 'Tashkilot'],
         ...rows.map((row) => [
           row.personnelNumber ?? '',
-          `${row.firstName ?? ''} ${row.lastName ?? ''}`.trim(),
+          formatPersonName(row),
           row.email ?? '',
           row.division ?? '',
           row.post ?? '',
@@ -292,8 +291,7 @@ const Students = () => {
       key: 'name',
       filterable: true,
       filterPlaceholder: 'Ism...',
-      getFilterValue: (record: StudentSummary) =>
-        `${record.firstName ?? ''} ${record.lastName ?? ''}`.trim(),
+      getFilterValue: (record: StudentSummary) => formatPersonName(record),
       render: (_: unknown, record: StudentSummary) => (
         <div className="flex items-center gap-3">
           <EmployeeAvatarUpload
@@ -306,9 +304,7 @@ const Students = () => {
           />
           <div>
             <p className="font-medium text-foreground">
-              <HighlightText
-                text={`${record.firstName} ${record.lastName}`}
-              />
+              <HighlightText text={formatPersonName(record)} />
               {record.role === 'MODERATOR' ? (
                 <Tag className="ml-2" color="blue">
                   Moderator
