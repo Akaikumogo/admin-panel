@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   Bell,
   BadgeCheck,
+  ClipboardCheck,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -149,6 +150,11 @@ const navGroups: NavGroup[] = [
         icon: GraduationCap,
       },
       {
+        path: '/dashboard/approvals',
+        label: { uz: 'Tasdiq uchun', en: 'For approval', ru: 'На утверждение' },
+        icon: ClipboardCheck,
+      },
+      {
         path: '/dashboard/departments',
         label: { uz: 'Bo‘limlar', en: 'Departments', ru: 'Отделы' },
         icon: Building,
@@ -235,6 +241,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [meLoading, setMeLoading] = useState(true);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
@@ -276,6 +283,33 @@ const Layout = () => {
       .catch(() => setMe(null))
       .finally(() => setMeLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!me || (me.role !== 'APPROVER' && me.role !== 'SUPERADMIN')) {
+      setPendingApprovalsCount(0);
+      return;
+    }
+    let cancelled = false;
+    const refresh = () => {
+      apiService
+        .getPendingSafetyApprovalsCount()
+        .then((res) => {
+          if (!cancelled) setPendingApprovalsCount(res.total ?? 0);
+        })
+        .catch(() => {
+          if (!cancelled) setPendingApprovalsCount(0);
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 30_000);
+    const onChanged = () => refresh();
+    window.addEventListener('el-approvals-changed', onChanged);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener('el-approvals-changed', onChanged);
+    };
+  }, [me?.id, me?.role]);
 
   // Activity tracking — WebSocket ulanishi (login bo'lgan har bir userda)
   useEffect(() => {
@@ -321,12 +355,27 @@ const Layout = () => {
         '/dashboard/home',
         '/dashboard/notifications',
         '/dashboard/employees',
+        '/dashboard/approvals',
+        '/dashboard/reports',
+        '/dashboard/leaderboard',
+        '/dashboard/hearts-analytics',
         '/dashboard/profile',
+        '/dashboard/ai-assistant',
       ]);
       return navGroups
         .map((group) => ({
           ...group,
-          items: group.items.filter((item) => allowed.has(item.path)),
+          items: group.items
+            .filter((item) => allowed.has(item.path))
+            .map((item) =>
+              item.path === '/dashboard/approvals'
+                ? {
+                    ...item,
+                    badgeCount: pendingApprovalsCount,
+                    badgeTone: 'danger' as const,
+                  }
+                : item,
+            ),
         }))
         .filter((group) => group.items.length > 0);
     }
@@ -348,7 +397,17 @@ const Layout = () => {
     }
 
     const filterItems = (items: NavItem[]) => {
-      if (me.role === 'SUPERADMIN') return items;
+      if (me.role === 'SUPERADMIN') {
+        return items.map((item) =>
+          item.path === '/dashboard/approvals'
+            ? {
+                ...item,
+                badgeCount: pendingApprovalsCount,
+                badgeTone: 'danger' as const,
+              }
+            : item,
+        );
+      }
       if (me.role !== 'MODERATOR') return [];
 
       const hasAudioPerm =
@@ -361,6 +420,7 @@ const Layout = () => {
         (item) =>
           item.path !== '/dashboard/moderators' &&
           item.path !== '/dashboard/approvers' &&
+          item.path !== '/dashboard/approvals' &&
           item.path !== '/dashboard/violations' &&
           item.path !== '/dashboard/permissions' &&
           item.path !== '/dashboard/exam-analysis' &&
@@ -379,7 +439,7 @@ const Layout = () => {
         return { ...group, items };
       })
       .filter((group) => group.items.length > 0);
-  }, [me]);
+  }, [me, pendingApprovalsCount]);
 
   const isModeratorForbiddenRoute =
     me?.role === 'MODERATOR' &&
@@ -403,7 +463,12 @@ const Layout = () => {
     !location.pathname.startsWith('/dashboard/students') &&
     location.pathname !== '/dashboard/home' &&
     location.pathname !== '/dashboard/notifications' &&
-    location.pathname !== '/dashboard/profile';
+    location.pathname !== '/dashboard/approvals' &&
+    location.pathname !== '/dashboard/reports' &&
+    location.pathname !== '/dashboard/leaderboard' &&
+    location.pathname !== '/dashboard/hearts-analytics' &&
+    location.pathname !== '/dashboard/profile' &&
+    location.pathname !== '/dashboard/ai-assistant';
 
   const isAccountingForbiddenRoute =
     me?.role === 'ACCOUNTING' &&

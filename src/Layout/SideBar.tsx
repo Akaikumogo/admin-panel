@@ -8,6 +8,9 @@ export type NavItem = {
   path: string;
   label: { uz: string; en: string; ru: string };
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+  /** Qizil badge counter (masalan: tasdiq kutayotganlar) */
+  badgeCount?: number;
+  badgeTone?: 'danger' | 'default';
 };
 
 export type NavGroup = {
@@ -127,8 +130,35 @@ export const Sidebar: React.FC<{
                         )}
                       />
                       {!isCollapsed && (
-                        <span className="truncate">{t(item.label)}</span>
+                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="truncate">{t(item.label)}</span>
+                          {typeof item.badgeCount === 'number' &&
+                            item.badgeCount > 0 && (
+                              <span
+                                className={cn(
+                                  'ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums text-white',
+                                  item.badgeTone === 'danger' || !item.badgeTone
+                                    ? 'bg-red-600'
+                                    : 'bg-muted-foreground',
+                                )}
+                              >
+                                {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                              </span>
+                            )}
+                        </span>
                       )}
+                      {isCollapsed &&
+                        typeof item.badgeCount === 'number' &&
+                        item.badgeCount > 0 && (
+                          <span
+                            className={cn(
+                              'absolute right-1 top-1 h-2 w-2 rounded-full',
+                              item.badgeTone === 'danger' || !item.badgeTone
+                                ? 'bg-red-600'
+                                : 'bg-muted-foreground',
+                            )}
+                          />
+                        )}
                     </NavLink>
                   );
                 })}

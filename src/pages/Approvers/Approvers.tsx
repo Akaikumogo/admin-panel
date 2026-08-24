@@ -21,6 +21,7 @@ import { PageHeader } from '@/components/PageHeader';
 import apiService, {
   resolveAssetUrl,
   type Organization,
+  type StudentSummary,
   type UserProfile,
 } from '@/services/api';
 import { filterSelectOption } from '@/utils/selectSearch.util';
@@ -75,9 +76,9 @@ const T = {
     ru: 'Выберите филиал (обязательно)',
   },
   employeeHint: {
-    uz: 'Faqat Energo ID orqali kelgan xodimlar (USER) ko‘rinadi. Ular moderator kiritgan jadvallarni tasdiqlaydi.',
-    en: 'Only Energo ID employees (USER). They approve tables entered by moderators.',
-    ru: 'Только сотрудники из Energo ID (USER). Утверждают таблицы модераторов.',
+    uz: 'Barcha xodimlar izlanadi (ism, login, tabel №, email, filial). Ular moderator kiritgan jadvallarni tasdiqlaydi.',
+    en: 'Search all employees (name, login, personnel #, email, branch). They approve tables entered by moderators.',
+    ru: 'Ищутся все сотрудники (имя, логин, табельный №, email, филиал). Утверждают таблицы модераторов.',
   },
   employeeSearch: {
     uz: 'Ism, login, tabel №, email yoki filial...',
@@ -95,6 +96,10 @@ const T = {
     ru: 'Выберите сотрудника',
   },
 } as const;
+
+function orgLabelFromStudent(u: StudentSummary) {
+  return (u.organizations ?? []).map((o) => o.name).filter(Boolean).join(', ');
+}
 
 function orgLabel(u: UserProfile) {
   return (u.organizations ?? []).map((o) => o.name).filter(Boolean).join(', ');
@@ -138,19 +143,22 @@ export default function ApproversPage() {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
-  const [employeeOptions, setEmployeeOptions] = useState<UserProfile[]>([]);
+  const [employeeOptions, setEmployeeOptions] = useState<StudentSummary[]>([]);
   const [employeeLoading, setEmployeeLoading] = useState(false);
   const [demotingId, setDemotingId] = useState<string | null>(null);
 
   const loadEmployees = async (search?: string) => {
     setEmployeeLoading(true);
     try {
-      const res = await apiService.getUsers({
-        role: 'USER',
+      // Xodimlar ro‘yxati API — barcha xodimlar (ism, login, tabel №, filial).
+      const res = await apiService.getStudents({
         search: search || undefined,
-        limit: 50,
+        limit: 100,
       });
-      setEmployeeOptions(res.data);
+      // Tasdiqlovchiga faqat oddiy xodim (USER) tayinlanadi.
+      setEmployeeOptions(
+        res.data.filter((s) => !s.role || s.role === 'USER'),
+      );
     } finally {
       setEmployeeLoading(false);
     }
@@ -217,10 +225,15 @@ export default function ApproversPage() {
 
   const employeeSelectOptions = useMemo(
     () =>
-      employeeOptions.map((u) => ({
-        value: u.id,
-        label: `${u.lastName ?? ''} ${u.firstName ?? ''} — ${orgLabel(u) || '—'} (${u.email})`.trim(),
-      })),
+      employeeOptions.map((u) => {
+        const name = `${u.lastName ?? ''} ${u.firstName ?? ''}`.trim();
+        const org = orgLabelFromStudent(u) || '—';
+        const tabel = u.personnelNumber ? ` · №${u.personnelNumber}` : '';
+        return {
+          value: u.id,
+          label: `${name}${tabel} — ${org} (${u.email})`,
+        };
+      }),
     [employeeOptions],
   );
 

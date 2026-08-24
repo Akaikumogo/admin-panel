@@ -264,6 +264,30 @@ export type EmployeeSafetyChange = {
   notificationId: string | null;
 };
 
+export type PendingSafetyApprovalItem = {
+  change: EmployeeSafetyChange;
+  employee: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+  organization: { id: string; name: string | null };
+  type: SafetyRecordType | null;
+};
+
+export type PendingSafetyApprovalsResponse = {
+  total: number;
+  items: PendingSafetyApprovalItem[];
+};
+
+export type BulkSafetyActionResult = {
+  approved?: number;
+  rejected?: number;
+  failed: number;
+  results: Array<{ changeId: string; ok: boolean; error?: string }>;
+};
+
 export type EmployeeSafetySection = {
   type: SafetyRecordType;
   record: EmployeeSafetyRecord | null;
@@ -3550,6 +3574,41 @@ class ApiService {
     const response = await this.api.post(
       `/admin/safety-changes/${changeId}/reject`,
       { reviewNote },
+    );
+    return response.data;
+  }
+
+  async getPendingSafetyApprovals(): Promise<PendingSafetyApprovalsResponse> {
+    const response = await this.api.get<PendingSafetyApprovalsResponse>(
+      '/admin/safety-changes/pending',
+    );
+    return response.data;
+  }
+
+  async getPendingSafetyApprovalsCount(): Promise<{ total: number }> {
+    const response = await this.api.get<{ total: number }>(
+      '/admin/safety-changes/pending/count',
+    );
+    return response.data;
+  }
+
+  async bulkApproveSafetyChanges(
+    changeIds: string[],
+  ): Promise<BulkSafetyActionResult> {
+    const response = await this.api.post<BulkSafetyActionResult>(
+      '/admin/safety-changes/bulk-approve',
+      { changeIds },
+    );
+    return response.data;
+  }
+
+  async bulkRejectSafetyChanges(
+    changeIds: string[],
+    reviewNote?: string,
+  ): Promise<BulkSafetyActionResult> {
+    const response = await this.api.post<BulkSafetyActionResult>(
+      '/admin/safety-changes/bulk-reject',
+      { changeIds, reviewNote },
     );
     return response.data;
   }

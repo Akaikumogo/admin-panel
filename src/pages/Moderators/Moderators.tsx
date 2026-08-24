@@ -33,7 +33,12 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
-import apiService, { resolveAssetUrl, type Organization, type UserProfile } from '@/services/api';
+import apiService, {
+  resolveAssetUrl,
+  type Organization,
+  type StudentSummary,
+  type UserProfile,
+} from '@/services/api';
 import { filterSelectOption } from '@/utils/selectSearch.util';
 
 const T = {
@@ -303,7 +308,7 @@ const Moderators = () => {
   const orgRequired = assignRole === 'APPROVER' || assignRole === 'ACCOUNTING';
   const [saving, setSaving] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
-  const [employeeOptions, setEmployeeOptions] = useState<UserProfile[]>([]);
+  const [employeeOptions, setEmployeeOptions] = useState<StudentSummary[]>([]);
   const [employeeLoading, setEmployeeLoading] = useState(false);
   const [orgOverrides, setOrgOverrides] = useState<Record<string, string | null>>({});
   const [orgUpdating, setOrgUpdating] = useState<Record<string, boolean>>({});
@@ -410,12 +415,13 @@ const Moderators = () => {
   const loadEmployees = async (search?: string) => {
     setEmployeeLoading(true);
     try {
-      const res = await apiService.getUsers({
-        role: 'USER',
+      const res = await apiService.getStudents({
         search: search || undefined,
-        limit: 50,
+        limit: 100,
       });
-      setEmployeeOptions(res.data);
+      setEmployeeOptions(
+        res.data.filter((s) => !s.role || s.role === 'USER'),
+      );
     } finally {
       setEmployeeLoading(false);
     }
@@ -818,7 +824,7 @@ const Moderators = () => {
             name="userId"
             label={t(T.employee)}
             rules={[{ required: true, message: 'Xodimni tanlang' }]}
-            extra="Faqat Energo ID orqali kelgan xodimlar (USER) ko'rinadi"
+            extra="Barcha xodimlar izlanadi (ism, login, tabel №, email, filial)"
           >
             <Select
               showSearch
@@ -830,13 +836,16 @@ const Moderators = () => {
                 employeeLoading ? 'Qidirilmoqda...' : 'Xodim topilmadi'
               }
               options={employeeOptions.map((u) => {
-                const org = resolveUserOrganizations(u)
+                const org = (u.organizations ?? [])
                   .map((o) => o.name)
                   .join(', ');
                 const name = `${u.lastName} ${u.firstName}`.trim();
+                const tabel = u.personnelNumber
+                  ? ` · №${u.personnelNumber}`
+                  : '';
                 const label = org
-                  ? `${name} — ${org} (${u.email})`
-                  : `${name} (${u.email})`;
+                  ? `${name}${tabel} — ${org} (${u.email})`
+                  : `${name}${tabel} (${u.email})`;
                 return { value: u.id, label };
               })}
             />
