@@ -2495,6 +2495,73 @@ class ApiService {
     return response.data;
   }
 
+  async getTelegramBotSettings() {
+    const response = await this.api.get('/admin/telegram-bot/settings');
+    return response.data as {
+      hasToken: boolean;
+      tokenMasked: string | null;
+      webAppUrl: string;
+      isEnabled: boolean;
+      polling: boolean;
+      updatedAt: string;
+    };
+  }
+
+  async updateTelegramBotSettings(data: {
+    botToken?: string;
+    webAppUrl?: string;
+    isEnabled?: boolean;
+  }) {
+    const response = await this.api.patch('/admin/telegram-bot/settings', data);
+    return response.data as {
+      hasToken: boolean;
+      tokenMasked: string | null;
+      webAppUrl: string;
+      isEnabled: boolean;
+      polling: boolean;
+      updatedAt: string;
+    };
+  }
+
+  async getTelegramBotChats() {
+    const response = await this.api.get('/admin/telegram-bot/chats');
+    return response.data as TelegramBotChat[];
+  }
+
+  async getTelegramBotMessages(chatId: string, limit = 100) {
+    const response = await this.api.get(
+      `/admin/telegram-bot/chats/${chatId}/messages`,
+      { params: { limit } },
+    );
+    return response.data as {
+      chat: TelegramBotChat;
+      messages: TelegramBotMessage[];
+    };
+  }
+
+  async replyTelegramBotChat(chatId: string, text: string) {
+    const response = await this.api.post(
+      `/admin/telegram-bot/chats/${chatId}/reply`,
+      { text },
+    );
+    return response.data as { ok: boolean };
+  }
+
+  async sendTelegramBotReport(chatId: string) {
+    const response = await this.api.post(
+      `/admin/telegram-bot/chats/${chatId}/send-report`,
+    );
+    return response.data as { ok: boolean };
+  }
+
+  async broadcastTelegramBotReport() {
+    const response = await this.api.post('/admin/telegram-bot/broadcast-report');
+    return response.data as { ok: boolean };
+  }
+
+    return response.data;
+  }
+
   async exportOAuthEnvBundle() {
     const response = await this.api.get(
       '/admin/import-export/oauth/integration/env-export',
