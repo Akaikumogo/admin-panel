@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Check, X, Save } from 'lucide-react';
+import { Plus, Check, X, Save, Trash2 } from 'lucide-react';
 import { Button, Input, Spin, Tag } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService, {
   type EmployeeSafetyRecord,
   type EmployeeSafetySection,
   type Role,
+  type SafetyUserBrief,
   type UpsertSafetyRecordPayload,
   type UserProfile,
 } from '@/services/api';
 import { notification } from '@/lib/toast';
 import { cn } from '@/lib/utils';
+import { can } from '@/utils/can';
 
 type Props = {
   userId: string;
@@ -39,6 +41,9 @@ const T = {
   cancel: { uz: 'Bekor', en: 'Cancel', ru: 'Отмена' },
   approve: { uz: 'Tasdiqlash', en: 'Approve', ru: 'Утвердить' },
   reject: { uz: 'Rad etish', en: 'Reject', ru: 'Отклонить' },
+  delete: { uz: 'Oʻchirish', en: 'Delete', ru: 'Удалить' },
+  deleted: { uz: 'Oʻchirilgan', en: 'Deleted', ru: 'Удалено' },
+  createdBy: { uz: 'Kim', en: 'Who', ru: 'Кто' },
   examDate: { uz: 'Sinov sanasi', en: 'Exam date', ru: 'Дата' },
   examReason: { uz: 'Sinov sababi', en: 'Reason', ru: 'Причина' },
   grade: { uz: 'Baho', en: 'Grade', ru: 'Оценка' },
@@ -82,6 +87,11 @@ const T = {
     ru: 'Новая строка — заполните и сохраните',
   },
   latest: { uz: 'Joriy', en: 'Current', ru: 'Текущая' },
+  deleteConfirm: {
+    uz: 'Bu qator oʻchirilsinmi?',
+    en: 'Delete this row?',
+    ru: 'Удалить эту строку?',
+  },
 } as const;
 
 const EMPTY_FIELDS: UpsertSafetyRecordPayload = {
@@ -96,6 +106,12 @@ const EMPTY_FIELDS: UpsertSafetyRecordPayload = {
   protocolDate: null,
   doctorConclusion: null,
 };
+
+function personLabel(u: SafetyUserBrief | null | undefined): string {
+  if (!u) return '—';
+  const n = `${u.lastName ?? ''} ${u.firstName ?? ''}`.trim();
+  return n || u.email || '—';
+}
 
 function statusTag(
   status: string | undefined,
@@ -133,9 +149,74 @@ function sortRecords(list: EmployeeSafetyRecord[]) {
 
 function cell(children: React.ReactNode, className?: string) {
   return (
-    <td className={cn('px-3 py-2 align-middle text-xs text-slate-700 dark:text-slate-200', className)}>
+    <td
+      className={cn(
+        'px-3 py-2 align-middle text-xs text-slate-700 dark:text-slate-200',
+        className,
+      )}
+    >
       {children}
     </td>
+  );
+}
+
+function auditCell(
+  record: EmployeeSafetyRecord,
+  t: (x: { uz: string; en: string; ru: string }) => string,
+) {
+  const created = personLabel(record.createdBy);
+  let reviewed: string | null = null;
+  let reviewedKind: 'approved' | 'rejected' | null = null;
+  if (record.approvalStatus === 'APPROVED' && record.approvedBy) {
+    reviewed = personLabel(record.approvedBy);
+    reviewedKind = 'approved';
+  } else if (record.approvalStatus === 'REJECTED' && record.rejectedBy) {
+    reviewed = personLabel(record.rejectedBy);
+    reviewedKind = 'rejected';
+  } else if (record.rejectedBy) {
+    reviewed = personLabel(record.rejectedBy);
+    reviewedKind = 'rejected';
+  }
+
+  return cell(
+    <div className="space-y-1 min-w-[150px]">
+      <div className="text-[11px] leading-snug">
+        <span className="text-slate-400">
+          {t({ uz: 'Yaratgan:', en: 'Created:', ru: 'Создал:' })}
+        </span>{' '}
+        <span className="font-medium">{created}</span>
+      </div>
+      {reviewed && reviewedKind === 'approved' ? (
+        <div className="text-[11px] leading-snug text-emerald-700 dark:text-emerald-400">
+          <span className="text-slate-400">
+            {t({ uz: 'Tasdiqlagan:', en: 'Approved:', ru: 'Утвердил:' })}
+          </span>{' '}
+          <span className="font-medium">{reviewed}</span>
+        </div>
+      ) : null}
+      {reviewed && reviewedKind === 'rejected' ? (
+        <div className="text-[11px] leading-snug text-red-600 dark:text-red-400">
+          <span className="text-slate-400">
+            {t({ uz: 'Rad etgan:', en: 'Rejected:', ru: 'Отклонил:' })}
+          </span>{' '}
+          <span className="font-medium">{reviewed}</span>
+        </div>
+      ) : null}
+      {record.deletedAt && record.deletedBy ? (
+        <div className="text-[11px] font-medium leading-snug text-red-600 dark:text-red-400">
+          {t({
+            uz: `${personLabel(record.deletedBy)} tomonidan oʻchirilgan`,
+            en: `Deleted by ${personLabel(record.deletedBy)}`,
+            ru: `Удалено: ${personLabel(record.deletedBy)}`,
+          })}
+        </div>
+      ) : null}
+      {record.archivedAt ? (
+        <Tag color="default" className="!m-0 !text-[10px]">
+          {t({ uz: 'Arxiv', en: 'Archive', ru: 'Архив' })}
+        </Tag>
+      ) : null}
+    </div>,
   );
 }
 
@@ -152,9 +233,12 @@ export function EmployeeSafetySection({ userId, me }: Props) {
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   const role: Role | undefined = me?.role;
-  // Barcha moderatorlar o‘z filiali xodimlariga qo‘sha oladi (backend org-scope).
   const canEdit = role === 'SUPERADMIN' || role === 'MODERATOR';
   const canApprove = role === 'SUPERADMIN' || role === 'APPROVER';
+  const canDelete =
+    role === 'SUPERADMIN' ||
+    (role === 'MODERATOR' &&
+      (can('safetyRecords', 'update') || can('safetyRecords', 'delete')));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -172,7 +256,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, t]);
 
   useEffect(() => {
     void load();
@@ -279,6 +363,35 @@ export function EmployeeSafetySection({ userId, me }: Props) {
     }
   };
 
+  const onDelete = async (recordId: string) => {
+    if (!window.confirm(t(T.deleteConfirm))) return;
+    setActing(recordId);
+    try {
+      const res = await apiService.deleteSafetyRecord(recordId);
+      notification.success({
+        message: res.archived
+          ? t({
+              uz: 'Arxivga oʻtkazildi (faqat SUPERADMIN koʻradi)',
+              en: 'Moved to archive (SUPERADMIN only)',
+              ru: 'В архиве (только SUPERADMIN)',
+            })
+          : t({
+              uz: 'Oʻchirildi',
+              en: 'Deleted',
+              ru: 'Удалено',
+            }),
+      });
+      await load();
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? 'Error';
+      notification.error({ message: String(msg) });
+    } finally {
+      setActing(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center rounded-xl border border-border bg-card p-10">
@@ -295,9 +408,9 @@ export function EmployeeSafetySection({ userId, me }: Props) {
         </h2>
         <p className="mt-0.5 text-[11px] text-slate-500">
           {t({
-            uz: 'Har bir boʻlim — alohida jadval',
-            en: 'Each section has its own table',
-            ru: 'Каждый раздел — отдельная таблица',
+            uz: 'Har bir boʻlim — alohida jadval. Yaratgan / tasdiqlagan / rad etgan koʻrsatiladi.',
+            en: 'Each section is its own table. Creator / approver / rejector shown.',
+            ru: 'Каждый раздел — отдельная таблица. Создатель / утвердивший видны.',
           })}
         </p>
       </div>
@@ -316,12 +429,12 @@ export function EmployeeSafetySection({ userId, me }: Props) {
         );
         const sectionDrafts = draftsByType.get(code) ?? [];
         const colCount = isMedical
-          ? 4
+          ? 6
           : isIndustrial
-            ? 8
+            ? 10
             : isOccupational
-              ? 7
-              : 6;
+              ? 9
+              : 8;
 
         const sectionHighlight =
           sectionParam === section.type.sectionSlug ||
@@ -364,7 +477,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[860px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-slate-50/80 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">
                     {isMedical ? (
@@ -374,27 +487,36 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                       </>
                     ) : isIndustrial ? (
                       <>
-                        <th className="px-3 py-2.5 whitespace-nowrap">{t(T.examDate)}</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">
+                          {t(T.examDate)}
+                        </th>
                         <th className="px-3 py-2.5">{t(T.ruleName)}</th>
                         <th className="px-3 py-2.5">{t(T.decision)}</th>
                         <th className="px-3 py-2.5">{t(T.protocolNo)}</th>
                         <th className="px-3 py-2.5 whitespace-nowrap">
                           {t(T.protocolDate)}
                         </th>
-                        <th className="px-3 py-2.5 whitespace-nowrap">{t(T.nextExam)}</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">
+                          {t(T.nextExam)}
+                        </th>
                       </>
                     ) : (
                       <>
-                        <th className="px-3 py-2.5 whitespace-nowrap">{t(T.examDate)}</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">
+                          {t(T.examDate)}
+                        </th>
                         <th className="px-3 py-2.5">{t(T.examReason)}</th>
                         {isOccupational ? (
                           <th className="px-3 py-2.5">{t(T.qualGroup)}</th>
                         ) : null}
                         <th className="px-3 py-2.5">{t(T.grade)}</th>
-                        <th className="px-3 py-2.5 whitespace-nowrap">{t(T.nextExam)}</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">
+                          {t(T.nextExam)}
+                        </th>
                       </>
                     )}
                     <th className="px-3 py-2.5">{t(T.status)}</th>
+                    <th className="px-3 py-2.5">{t(T.createdBy)}</th>
                     <th className="px-3 py-2.5">{t(T.actions)}</th>
                   </tr>
                 </thead>
@@ -581,6 +703,9 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                           </span>,
                         )}
                         {cell(
+                          <span className="text-[11px] text-slate-400">—</span>,
+                        )}
+                        {cell(
                           <div className="flex flex-wrap gap-1.5">
                             <Button
                               size="small"
@@ -624,12 +749,18 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                       const highlight =
                         (changeIdParam && pendingId === changeIdParam) ||
                         (sectionParam === section.type.sectionSlug &&
-                          record.isLatest);
+                          record.isLatest &&
+                          !record.deletedAt);
                       const showApprove =
                         canApprove &&
                         pendingId &&
                         record.approvalStatus === 'PENDING' &&
+                        !record.deletedAt &&
                         (!changeIdParam || changeIdParam === pendingId);
+                      const isDeleted = !!record.deletedAt;
+                      const hasAction =
+                        !!(showApprove && pendingId) ||
+                        (canDelete && !isDeleted);
 
                       return (
                         <tr
@@ -638,6 +769,8 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                           className={cn(
                             'border-b border-border/60 transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-900/30',
                             highlight && 'bg-amber-50/80 dark:bg-amber-950/20',
+                            isDeleted &&
+                              'bg-red-50/50 opacity-80 dark:bg-red-950/20',
                           )}
                         >
                           {isMedical ? (
@@ -645,15 +778,23 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                               {cell(
                                 <span className="whitespace-nowrap tabular-nums">
                                   {record.examDate || '—'}
-                                  {record.isLatest ? (
+                                  {record.isLatest && !isDeleted ? (
                                     <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--shell-rail)]">
                                       {t(T.latest)}
                                     </span>
                                   ) : null}
+                                  {isDeleted ? (
+                                    <Tag color="red" className="!ml-1.5 !m-0">
+                                      {t(T.deleted)}
+                                    </Tag>
+                                  ) : null}
                                 </span>,
                               )}
                               {cell(
-                                <span className="max-w-[320px] truncate block" title={record.doctorConclusion ?? ''}>
+                                <span
+                                  className="max-w-[320px] truncate block"
+                                  title={record.doctorConclusion ?? ''}
+                                >
                                   {record.doctorConclusion || '—'}
                                 </span>,
                               )}
@@ -663,10 +804,15 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                               {cell(
                                 <span className="whitespace-nowrap tabular-nums">
                                   {record.examDate || '—'}
-                                  {record.isLatest ? (
+                                  {record.isLatest && !isDeleted ? (
                                     <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--shell-rail)]">
                                       {t(T.latest)}
                                     </span>
+                                  ) : null}
+                                  {isDeleted ? (
+                                    <Tag color="red" className="!ml-1.5 !m-0">
+                                      {t(T.deleted)}
+                                    </Tag>
                                   ) : null}
                                 </span>,
                               )}
@@ -693,15 +839,23 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                               {cell(
                                 <span className="whitespace-nowrap tabular-nums">
                                   {record.examDate || '—'}
-                                  {record.isLatest ? (
+                                  {record.isLatest && !isDeleted ? (
                                     <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--shell-rail)]">
                                       {t(T.latest)}
                                     </span>
                                   ) : null}
+                                  {isDeleted ? (
+                                    <Tag color="red" className="!ml-1.5 !m-0">
+                                      {t(T.deleted)}
+                                    </Tag>
+                                  ) : null}
                                 </span>,
                               )}
                               {cell(
-                                <span className="max-w-[220px] truncate block" title={record.examReason ?? ''}>
+                                <span
+                                  className="max-w-[220px] truncate block"
+                                  title={record.examReason ?? ''}
+                                >
                                   {record.examReason || '—'}
                                 </span>,
                               )}
@@ -721,27 +875,43 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                             </>
                           )}
                           {cell(statusTag(record.approvalStatus, t))}
+                          {auditCell(record, t)}
                           {cell(
-                            showApprove && pendingId ? (
+                            hasAction ? (
                               <div className="flex flex-wrap gap-1.5">
-                                <Button
-                                  size="small"
-                                  type="primary"
-                                  loading={acting === pendingId}
-                                  icon={<Check size={13} />}
-                                  onClick={() => void onApprove(pendingId)}
-                                >
-                                  {t(T.approve)}
-                                </Button>
-                                <Button
-                                  size="small"
-                                  danger
-                                  loading={acting === pendingId}
-                                  icon={<X size={13} />}
-                                  onClick={() => void onReject(pendingId)}
-                                >
-                                  {t(T.reject)}
-                                </Button>
+                                {showApprove && pendingId ? (
+                                  <>
+                                    <Button
+                                      size="small"
+                                      type="primary"
+                                      loading={acting === pendingId}
+                                      icon={<Check size={13} />}
+                                      onClick={() => void onApprove(pendingId)}
+                                    >
+                                      {t(T.approve)}
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      danger
+                                      loading={acting === pendingId}
+                                      icon={<X size={13} />}
+                                      onClick={() => void onReject(pendingId)}
+                                    >
+                                      {t(T.reject)}
+                                    </Button>
+                                  </>
+                                ) : null}
+                                {canDelete && !isDeleted ? (
+                                  <Button
+                                    size="small"
+                                    danger
+                                    loading={acting === record.id}
+                                    icon={<Trash2 size={13} />}
+                                    onClick={() => void onDelete(record.id)}
+                                  >
+                                    {t(T.delete)}
+                                  </Button>
+                                ) : null}
                               </div>
                             ) : (
                               <span className="text-slate-300">—</span>

@@ -241,6 +241,11 @@ export type EmployeeSafetyRecord = {
   updatedBy: SafetyUserBrief | null;
   approvedBy: SafetyUserBrief | null;
   approvedAt: string | null;
+  rejectedBy: SafetyUserBrief | null;
+  rejectedAt: string | null;
+  deletedBy: SafetyUserBrief | null;
+  deletedAt: string | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -321,6 +326,42 @@ export type AppNotification = {
   body: string;
   data: Record<string, unknown> | null;
   isRead: boolean;
+  createdAt: string;
+};
+
+export type TelegramBotChat = {
+  id: string;
+  chatId: string;
+  chatType: string;
+  chatTitle: string | null;
+  peerUsername: string | null;
+  peerFirstName: string | null;
+  peerLastName: string | null;
+  reportEnabled: boolean;
+  isActive: boolean;
+  unreadCount: number;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  startedByUsername: string | null;
+  createdAt: string;
+  updatedAt: string;
+  displayName: string;
+};
+
+export type TelegramBotMessage = {
+  id: string;
+  chatRowId: string;
+  direction: 'in' | 'out';
+  kind: string;
+  telegramMessageId: string | null;
+  fromUserId: string | null;
+  fromUsername: string | null;
+  fromName: string | null;
+  text: string | null;
+  caption: string | null;
+  isCommand: boolean;
+  commandName: string | null;
+  sentByAdminId: string | null;
   createdAt: string;
 };
 
@@ -2559,9 +2600,6 @@ class ApiService {
     return response.data as { ok: boolean };
   }
 
-    return response.data;
-  }
-
   async exportOAuthEnvBundle() {
     const response = await this.api.get(
       '/admin/import-export/oauth/integration/env-export',
@@ -3641,6 +3679,15 @@ class ApiService {
     const response = await this.api.post(
       `/admin/safety-changes/${changeId}/reject`,
       { reviewNote },
+    );
+    return response.data;
+  }
+
+  async deleteSafetyRecord(
+    recordId: string,
+  ): Promise<{ record: EmployeeSafetyRecord; archived: boolean }> {
+    const response = await this.api.post(
+      `/admin/safety-records/${recordId}/delete`,
     );
     return response.data;
   }
