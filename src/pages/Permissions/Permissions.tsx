@@ -82,6 +82,14 @@ const MODULES: {
       ru: 'Записи безопасности (свои)',
     },
   },
+  {
+    key: 'telegramBot',
+    label: {
+      uz: 'Telegram bot',
+      en: 'Telegram bot',
+      ru: 'Telegram бот',
+    },
+  },
 ];
 
 const CRUD_ORDER: (keyof CrudPermissions)[] = ['view', 'create', 'update', 'delete'];

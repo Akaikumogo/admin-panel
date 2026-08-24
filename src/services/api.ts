@@ -1357,6 +1357,7 @@ export type ModeratorPermissions = {
   nesSync: CrudPermissions;
   aiAssistant: CrudPermissions;
   safetyRecords: CrudPermissions;
+  telegramBot: CrudPermissions;
 };
 
 export type ModeratorPermissionRecord = {

@@ -918,6 +918,7 @@ const Moderators = () => {
                 ['logs', 'Tizim loglari (Logs)'],
                 ['nesSync', '1C sinxronizatsiya (NES sync)'],
                 ['aiAssistant', 'AI yordamchi (AI Assistant)'],
+                ['telegramBot', 'Telegram bot'],
               ] as const
             ).map(([key, label], idx) => (
               <div key={key}>
