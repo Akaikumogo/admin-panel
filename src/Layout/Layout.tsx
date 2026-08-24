@@ -223,12 +223,6 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-const allNavItems: NavItem[] = [
-  ...navGroups.flatMap((group) => group.items),
-  importExportNavItem,
-  telegramBotNavItem,
-];
-
 const importExportNavItem: NavItem = {
   path: '/dashboard/import-export',
   label: { uz: 'Import / Export', en: 'Import / Export', ru: 'Import / Export' },
@@ -240,6 +234,12 @@ const telegramBotNavItem: NavItem = {
   label: { uz: 'Telegram Bot', en: 'Telegram Bot', ru: 'Telegram Bot' },
   icon: Bot,
 };
+
+const allNavItems: NavItem[] = [
+  ...navGroups.flatMap((group) => group.items),
+  importExportNavItem,
+  telegramBotNavItem,
+];
 
 const Layout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
