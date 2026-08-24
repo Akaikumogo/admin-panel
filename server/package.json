@@ -1,0 +1,5 @@
+{
+  "name": "elektrolearn-admin-static-server",
+  "private": true,
+  "type": "module"
+}

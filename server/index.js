@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,8 +8,12 @@ import { URL } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 15161);
 const HOST = process.env.HOST ?? '0.0.0.0';
-const BACKEND_TARGET = new URL(
+/** Avval lokal backend; ishlamasa domain. */
+const PRIMARY_TARGET = new URL(
   process.env.API_TARGET ?? 'http://127.0.0.1:15162',
+);
+const FALLBACK_TARGET = new URL(
+  process.env.API_FALLBACK ?? 'https://elektrolearn-api.uzbekistonmet.uz',
 );
 const DIST = path.resolve(__dirname, '../dist');
 
@@ -26,8 +31,28 @@ const MIME = {
   '.woff2': 'font/woff2',
 };
 
-function forwardedHeaders(req) {
-  const headers = { ...req.headers, host: BACKEND_TARGET.host };
+function clientFor(target) {
+  return target.protocol === 'https:' ? https : http;
+}
+
+function portFor(target) {
+  if (target.port) return Number(target.port);
+  return target.protocol === 'https:' ? 443 : 80;
+}
+
+function isConnError(error) {
+  return (
+    error?.code === 'ECONNREFUSED' ||
+    error?.code === 'ECONNRESET' ||
+    error?.code === 'ETIMEDOUT' ||
+    error?.code === 'ENOTFOUND' ||
+    error?.code === 'EHOSTUNREACH' ||
+    error?.code === 'EAI_AGAIN'
+  );
+}
+
+function forwardedHeaders(req, target) {
+  const headers = { ...req.headers, host: target.host };
   const remoteAddress = req.socket.remoteAddress?.replace(/^::ffff:/, '') ?? '';
   const previous = headers['x-forwarded-for'];
   headers['x-forwarded-for'] = previous
@@ -49,42 +74,92 @@ function isBackendPath(url = '/') {
   );
 }
 
-function proxyHttp(req, res) {
-  const headers = forwardedHeaders(req);
-  delete headers.connection;
-
-  const upstream = http.request(
-    {
-      hostname: BACKEND_TARGET.hostname,
-      port: BACKEND_TARGET.port || 80,
-      path: req.url,
-      method: req.method,
-      headers,
-    },
-    (upstreamResponse) => {
-      res.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers);
-      upstreamResponse.pipe(res);
-    },
-  );
-
-  upstream.on('error', (error) => {
-    console.error('[proxy]', req.url, error.message);
-    if (!res.headersSent) {
-      res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
-    }
-    res.end(JSON.stringify({ message: 'Backend bilan aloqa yo‘q' }));
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
   });
-
-  req.pipe(upstream);
 }
 
-function proxyWebSocket(req, socket, head) {
-  const upstream = http.request({
-    hostname: BACKEND_TARGET.hostname,
-    port: BACKEND_TARGET.port || 80,
+function proxyHttp(req, res) {
+  void (async () => {
+    let body;
+    try {
+      body = await readBody(req);
+    } catch (error) {
+      console.error('[proxy] body', req.url, error.message);
+      if (!res.headersSent) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+      }
+      res.end(JSON.stringify({ message: 'So‘rov o‘qilmadi' }));
+      return;
+    }
+
+    const attempt = (target, isFallback) => {
+      const headers = forwardedHeaders(req, target);
+      delete headers.connection;
+      headers['content-length'] = String(body.length);
+
+      const upstream = clientFor(target).request(
+        {
+          hostname: target.hostname,
+          port: portFor(target),
+          path: req.url,
+          method: req.method,
+          headers,
+        },
+        (upstreamResponse) => {
+          res.writeHead(
+            upstreamResponse.statusCode ?? 502,
+            upstreamResponse.headers,
+          );
+          upstreamResponse.pipe(res);
+        },
+      );
+
+      upstream.on('error', (error) => {
+        console.error(
+          `[proxy]${isFallback ? ' fallback' : ''}`,
+          target.origin,
+          req.url,
+          error.message,
+        );
+        if (
+          !isFallback &&
+          isConnError(error) &&
+          FALLBACK_TARGET.origin !== PRIMARY_TARGET.origin
+        ) {
+          console.warn(
+            `[proxy] ${PRIMARY_TARGET.origin} ishlamayapti → ${FALLBACK_TARGET.origin}`,
+          );
+          attempt(FALLBACK_TARGET, true);
+          return;
+        }
+        if (!res.headersSent) {
+          res.writeHead(502, {
+            'Content-Type': 'application/json; charset=utf-8',
+          });
+        }
+        res.end(JSON.stringify({ message: 'Backend bilan aloqa yo‘q' }));
+      });
+
+      if (body.length) upstream.write(body);
+      upstream.end();
+    };
+
+    attempt(PRIMARY_TARGET, false);
+  })();
+}
+
+function proxyWebSocket(req, socket, head, target = PRIMARY_TARGET, isFallback = false) {
+  const upstream = clientFor(target).request({
+    hostname: target.hostname,
+    port: portFor(target),
     path: req.url,
     method: req.method,
-    headers: forwardedHeaders(req),
+    headers: forwardedHeaders(req, target),
   });
 
   upstream.on('upgrade', (response, upstreamSocket, upstreamHead) => {
@@ -101,7 +176,23 @@ function proxyWebSocket(req, socket, head) {
   });
 
   upstream.on('error', (error) => {
-    console.error('[proxy:ws]', req.url, error.message);
+    console.error(
+      `[proxy:ws]${isFallback ? ' fallback' : ''}`,
+      target.origin,
+      req.url,
+      error.message,
+    );
+    if (
+      !isFallback &&
+      isConnError(error) &&
+      FALLBACK_TARGET.origin !== PRIMARY_TARGET.origin
+    ) {
+      console.warn(
+        `[proxy:ws] ${PRIMARY_TARGET.origin} ishlamayapti → ${FALLBACK_TARGET.origin}`,
+      );
+      proxyWebSocket(req, socket, head, FALLBACK_TARGET, true);
+      return;
+    }
     socket.destroy();
   });
 
@@ -146,8 +237,11 @@ function securityHeaders(contentType, cacheControl = 'no-cache') {
     'Cache-Control': cacheControl,
     'Content-Security-Policy':
       "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
-      "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; " +
-      "connect-src 'self'; font-src 'self' data: https:",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "img-src 'self' data: blob: https: http:; " +
+      "connect-src 'self' https: wss: ws:; " +
+      "font-src 'self' data: https: https://fonts.gstatic.com",
     'Content-Type': contentType,
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'X-Content-Type-Options': 'nosniff',
@@ -173,5 +267,6 @@ server.on('upgrade', (req, socket, head) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`ElektroLearn admin: http://${HOST}:${PORT}`);
-  console.log(`Backend proxy    : ${BACKEND_TARGET.origin}`);
+  console.log(`Backend primary   : ${PRIMARY_TARGET.origin}`);
+  console.log(`Backend fallback  : ${FALLBACK_TARGET.origin}`);
 });
