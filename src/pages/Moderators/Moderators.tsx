@@ -28,6 +28,7 @@ import {
   UserMinus,
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { mergeModeratorPermissions } from '@/utils/moderatorPermissions';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
@@ -380,6 +381,10 @@ const Moderators = () => {
       return {
         ...prev,
         [moduleKey]: {
+          view: false,
+          create: false,
+          update: false,
+          delete: false,
           ...prev[moduleKey],
           [field]: value,
         },
@@ -394,7 +399,7 @@ const Moderators = () => {
     setPermLoading(true);
     try {
       const rec = await apiService.getModeratorPermissions(userId);
-      setPermissions(rec.permissions);
+      setPermissions(mergeModeratorPermissions(rec.permissions));
     } finally {
       setPermLoading(false);
     }
@@ -933,7 +938,7 @@ const Moderators = () => {
                             {field}
                           </span>
                           <Switch
-                            checked={permissions[key][field]}
+                            checked={!!permissions[key]?.[field]}
                             onChange={(v) => setCrud(key, field, v)}
                           />
                         </div>

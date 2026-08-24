@@ -9,15 +9,24 @@ import {
   Image as ImageIcon,
   Users,
   User,
+  Bell,
 } from 'lucide-react';
 import { Button, Input, Switch, Tag, Textarea, message } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
+import { can } from '@/utils/can';
 import { cn } from '@/lib/utils';
 import apiService, {
   type TelegramBotChat,
   type TelegramBotMessage,
 } from '@/services/api';
+import {
+  canShowTelegramBotBrowserNotif,
+  disableTelegramBotWebNotifications,
+  enableTelegramBotWebNotifications,
+  getBrowserNotificationPermission,
+  isTelegramBotWebNotifEnabled,
+} from '@/utils/telegramBotNotifications';
 
 const T = {
   title: { uz: 'Telegram Bot', en: 'Telegram Bot', ru: 'Telegram Bot' },
@@ -50,7 +59,26 @@ const T = {
   pollingOff: { uz: 'Polling yo‘q', en: 'Polling off', ru: 'Polling выключен' },
   reportOn: { uz: 'Hisobot ON', en: 'Report ON', ru: 'Отчёт ON' },
   reportOff: { uz: 'Hisobot OFF', en: 'Report OFF', ru: 'Отчёт OFF' },
+  webNotifOn: {
+    uz: 'Telegram bot bildirishnomalari yoqilgan',
+    en: 'Telegram bot notifications on',
+    ru: 'Уведомления Telegram-бота включены',
+  },
+  webNotifOff: {
+    uz: 'Telegram bot bildirishnomalarini yoqish',
+    en: 'Enable Telegram bot notifications',
+    ru: 'Включить уведомления Telegram-бота',
+  },
+  webNotifHint: {
+    uz: 'Sayt bildirishnomasi yoqilgan bo‘lsa ham, bu o‘chiq bo‘lsa Telegram xabarlari chiqmaydi',
+    en: 'Even if site notifications are on, Telegram alerts stay off unless this is enabled',
+    ru: 'Даже если уведомления сайта включены, Telegram не придёт, пока это выключено',
+  },
 } as const;
+
+function canAccessTelegramBotPage() {
+  return isSuperAdmin() || can('telegramBot', 'view');
+}
 
 export default function TelegramBotPage() {
   const { t } = useTranslation();
@@ -64,6 +92,7 @@ export default function TelegramBotPage() {
   const [tokenMasked, setTokenMasked] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [webNotifOn, setWebNotifOn] = useState(() => isTelegramBotWebNotifEnabled());
 
   const [chats, setChats] = useState<TelegramBotChat[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -75,10 +104,41 @@ export default function TelegramBotPage() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!isSuperAdmin()) {
+    if (!canAccessTelegramBotPage()) {
       navigate('/dashboard/home');
     }
   }, [navigate]);
+
+  const onToggleWebNotif = async () => {
+    if (webNotifOn && canShowTelegramBotBrowserNotif()) {
+      disableTelegramBotWebNotifications();
+      setWebNotifOn(false);
+      message.success('Telegram bot bildirishnomalari o‘chirildi');
+      return;
+    }
+    const res = await enableTelegramBotWebNotifications();
+    if (!res.ok) {
+      if (res.permission === 'unsupported') {
+        message.error('Brauzer bildirishnomalarni qo‘llab-quvvatlamaydi');
+      } else if (res.permission === 'denied') {
+        message.error('Brauzerda bildirishnoma ruxsati berilmagan');
+      } else {
+        message.error('Bildirishnomani yoqib bo‘lmadi');
+      }
+      setWebNotifOn(false);
+      return;
+    }
+    setWebNotifOn(true);
+    message.success('Telegram bot bildirishnomalari yoqildi');
+    try {
+      new Notification('Elektro Learn', {
+        body: 'Telegram bot bildirishnomalari yoqildi',
+        tag: 'elektro-telegram-bot-test',
+      });
+    } catch {
+      /* ignore */
+    }
+  };
 
   const loadSettings = useCallback(async () => {
     try {
@@ -230,6 +290,17 @@ export default function TelegramBotPage() {
           </Tag>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant={webNotifOn && canShowTelegramBotBrowserNotif() ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => void onToggleWebNotif()}
+            title={t(T.webNotifHint)}
+          >
+            <Bell className="mr-1.5 h-4 w-4" />
+            {webNotifOn && canShowTelegramBotBrowserNotif()
+              ? t(T.webNotifOn)
+              : t(T.webNotifOff)}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { void loadChats(); void loadSettings(); }}>
             <RefreshCw className="mr-1.5 h-4 w-4" />
             {t(T.refresh)}
@@ -240,6 +311,12 @@ export default function TelegramBotPage() {
           </Button>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        {t(T.webNotifHint)}
+        {getBrowserNotificationPermission() === 'denied'
+          ? ' · Brauzer ruxsati yopiq — sozlamadan oching.'
+          : ''}
+      </p>
 
       {/* Settings */}
       <div className="rounded-lg border border-border bg-card p-4">

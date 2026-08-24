@@ -24,6 +24,7 @@ import type {
   Organization,
   UserProfile,
 } from '@/services/api';
+import { mergeModeratorPermissions } from '@/utils/moderatorPermissions';
 
 const T = {
   title: { uz: 'Ruxsatlar', en: 'Permissions', ru: 'Права доступа' },
@@ -187,7 +188,9 @@ const PermissionsPage = () => {
         if (cancelled) return;
         const next: Record<string, ModeratorPermissions | undefined> = {};
         for (const r of results) {
-          next[r.id] = r.permissions;
+          next[r.id] = r.permissions
+            ? mergeModeratorPermissions(r.permissions)
+            : undefined;
         }
         setPermMap(next);
         setDirtyIds(new Set());
@@ -215,6 +218,10 @@ const PermissionsPage = () => {
           [userId]: {
             ...cur,
             [moduleKey]: {
+              view: false,
+              create: false,
+              update: false,
+              delete: false,
               ...cur[moduleKey],
               [field]: value,
             },
@@ -354,7 +361,7 @@ const PermissionsPage = () => {
           return (
             <Switch
               size="small"
-              checked={perms[mod.key][crud]}
+              checked={!!perms[mod.key]?.[crud]}
               onChange={(v) => setCrud(record.id, mod.key, crud, v)}
             />
           );
