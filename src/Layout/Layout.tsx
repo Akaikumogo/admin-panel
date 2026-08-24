@@ -52,6 +52,18 @@ const G = {
   account: { uz: 'Hisob', en: 'Account', ru: 'Аккаунт' },
 } as const;
 
+const importExportNavItem: NavItem = {
+  path: '/dashboard/import-export',
+  label: { uz: 'Import / Export', en: 'Import / Export', ru: 'Import / Export' },
+  icon: ArrowDownUp,
+};
+
+const telegramBotNavItem: NavItem = {
+  path: '/dashboard/telegram-bot',
+  label: { uz: 'Telegram Bot', en: 'Telegram Bot', ru: 'Telegram Bot' },
+  icon: Bot,
+};
+
 const navGroups: NavGroup[] = [
   {
     label: G.main,
@@ -109,6 +121,7 @@ const navGroups: NavGroup[] = [
         label: { uz: 'Loglar', en: 'Logs', ru: 'Логи' },
         icon: ScrollText,
       },
+      telegramBotNavItem,
     ],
   },
   {
@@ -223,22 +236,9 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-const importExportNavItem: NavItem = {
-  path: '/dashboard/import-export',
-  label: { uz: 'Import / Export', en: 'Import / Export', ru: 'Import / Export' },
-  icon: ArrowDownUp,
-};
-
-const telegramBotNavItem: NavItem = {
-  path: '/dashboard/telegram-bot',
-  label: { uz: 'Telegram Bot', en: 'Telegram Bot', ru: 'Telegram Bot' },
-  icon: Bot,
-};
-
 const allNavItems: NavItem[] = [
   ...navGroups.flatMap((group) => group.items),
   importExportNavItem,
-  telegramBotNavItem,
 ];
 
 const Layout = () => {
@@ -425,6 +425,7 @@ const Layout = () => {
         can('audioLibrary', 'update') ||
         can('audioLibrary', 'delete');
       const hasNesSyncPerm = can('nesSync', 'view');
+      const hasTelegramBotPerm = can('telegramBot', 'view');
 
       return items.filter(
         (item) =>
@@ -436,6 +437,7 @@ const Layout = () => {
           item.path !== '/dashboard/exam-analysis' &&
           item.path !== '/dashboard/anomaloz' &&
           (hasNesSyncPerm || item.path !== '/dashboard/nes-sync') &&
+          (hasTelegramBotPerm || item.path !== '/dashboard/telegram-bot') &&
           (hasAudioPerm || item.path !== '/dashboard/audio-library'),
       );
     };
@@ -444,7 +446,7 @@ const Layout = () => {
       .map((group) => {
         let items = filterItems(group.items);
         if (me.role === 'SUPERADMIN' && group.label.uz === G.admin.uz) {
-          items = [...items, importExportNavItem, telegramBotNavItem];
+          items = [...items, importExportNavItem];
         }
         return { ...group, items };
       })
@@ -457,7 +459,8 @@ const Layout = () => {
       location.pathname === '/dashboard/approvers' ||
       location.pathname === '/dashboard/permissions' ||
       location.pathname === '/dashboard/import-export' ||
-      location.pathname === '/dashboard/telegram-bot' ||
+      (location.pathname === '/dashboard/telegram-bot' &&
+        !can('telegramBot', 'view')) ||
       location.pathname === '/dashboard/anomaloz' ||
       (location.pathname === '/dashboard/nes-sync' && !can('nesSync', 'view')) ||
       location.pathname === '/dashboard/exam-analysis' ||
