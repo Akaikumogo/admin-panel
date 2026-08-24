@@ -46,9 +46,11 @@ export default function NotificationsPage() {
     const path =
       typeof data.reviewPath === 'string'
         ? data.reviewPath
-        : data.employeeUserId && data.section
-          ? `/dashboard/employees/${data.employeeUserId}?section=${data.section}&changeId=${data.changeId ?? ''}`
-          : null;
+        : data.changeId
+          ? `/dashboard/approvals?changeId=${data.changeId}`
+          : data.employeeUserId && data.section
+            ? `/dashboard/employees/${data.employeeUserId}?section=${data.section}&changeId=${data.changeId ?? ''}`
+            : null;
     if (!n.isRead) {
       try {
         await apiService.markNotificationRead(n.id);

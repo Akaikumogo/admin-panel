@@ -26,9 +26,9 @@ type DraftRow = {
 
 const T = {
   title: {
-    uz: 'Xavfsizlik / sertifikat maʼlumotlari',
-    en: 'Safety / certification',
-    ru: 'Безопасность / сертификация',
+    uz: 'Xavfsizlik / texnik sinov maʼlumotlari',
+    en: 'Safety / technical exam',
+    ru: 'Безопасность / тех. испытания',
   },
   add: { uz: 'Qoʻshish', en: 'Add', ru: 'Добавить' },
   pending: { uz: 'Tasdiq kutilmoqda', en: 'Pending', ru: 'Ожидает' },
@@ -152,6 +152,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   const role: Role | undefined = me?.role;
+  // Barcha moderatorlar o‘z filiali xodimlariga qo‘sha oladi (backend org-scope).
   const canEdit = role === 'SUPERADMIN' || role === 'MODERATOR';
   const canApprove = role === 'SUPERADMIN' || role === 'APPROVER';
 

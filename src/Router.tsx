@@ -22,6 +22,7 @@ const TheoryDetailPage = lazy(() => import('./pages/Theories/TheoryDetail'));
 const QuestionDetailPage = lazy(() => import('./pages/Questions/QuestionDetail'));
 const ModeratorsPage = lazy(() => import('./pages/Moderators/Moderators'));
 const ApproversPage = lazy(() => import('./pages/Approvers/Approvers'));
+const ApprovalsPage = lazy(() => import('./pages/Approvals/Approvals'));
 const PermissionsPage = lazy(() => import('./pages/Permissions/Permissions'));
 const OrganizationsPage = lazy(
   () => import('./pages/Organizations/Organizations')
@@ -91,6 +92,10 @@ export const routes: RouteObject[] = [
           {
             path: 'approvers',
             element: withSuspense(ApproversPage)
+          },
+          {
+            path: 'approvals',
+            element: withSuspense(ApprovalsPage)
           },
           {
             path: 'permissions',

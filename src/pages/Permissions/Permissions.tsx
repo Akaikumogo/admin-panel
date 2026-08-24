@@ -77,9 +77,9 @@ const MODULES: {
   {
     key: 'safetyRecords',
     label: {
-      uz: 'Xavfsizlik yozuvlari',
-      en: 'Safety records',
-      ru: 'Записи безопасности',
+      uz: 'Xavfsizlik yozuvlari (o‘z xodimlari)',
+      en: 'Safety records (own staff)',
+      ru: 'Записи безопасности (свои)',
     },
   },
 ];
