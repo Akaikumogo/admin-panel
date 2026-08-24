@@ -42,6 +42,13 @@ import apiService, { resolveAssetUrl, type UserProfile } from '@/services/api';
 import { cacheModeratorPermissions } from '@/utils/permissions';
 import { can } from '@/utils/can';
 import { userActivitySocket } from '@/services/userActivitySocket';
+import {
+  canShowTelegramBotBrowserNotif,
+  readLastUnreadTotal,
+  showTelegramBotBrowserNotification,
+  writeLastUnreadTotal,
+} from '@/utils/telegramBotNotifications';
+import { isSuperAdmin } from '@/utils/isSuperAdmin';
 
 const G = {
   main: { uz: 'Asosiy', en: 'Main', ru: 'Основное' },
@@ -343,6 +350,45 @@ const Layout = () => {
       .then((res) => cacheModeratorPermissions(res.permissions))
       .catch(() => cacheModeratorPermissions(null));
   }, [me]);
+
+  // Telegram bot → brauzer bildirishnomasi (faqat alohida toggle yoqilganda)
+  useEffect(() => {
+    if (!me) return;
+    const allowed = isSuperAdmin() || can('telegramBot', 'view');
+    if (!allowed) return;
+
+    let cancelled = false;
+    const tick = async () => {
+      if (!canShowTelegramBotBrowserNotif()) return;
+      try {
+        const rows = await apiService.getTelegramBotChats();
+        if (cancelled) return;
+        const total = rows.reduce((s, c) => s + (c.unreadCount || 0), 0);
+        const prev = readLastUnreadTotal();
+        writeLastUnreadTotal(total);
+        if (total > prev) {
+          const hot = rows
+            .filter((c) => c.unreadCount > 0)
+            .sort((a, b) => (b.unreadCount || 0) - (a.unreadCount || 0))[0];
+          showTelegramBotBrowserNotification(
+            'Telegram Bot',
+            hot?.lastMessagePreview ||
+              hot?.displayName ||
+              `Yangi xabar (${total})`,
+          );
+        }
+      } catch {
+        /* ruxsat yo‘q yoki offline */
+      }
+    };
+
+    void tick();
+    const id = window.setInterval(() => void tick(), 12000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [me?.id, me?.role]);
 
   useEffect(() => {
     if (meLoading || !me) return;
