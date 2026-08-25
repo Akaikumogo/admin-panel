@@ -359,6 +359,10 @@ export type TelegramBotMessage = {
   fromName: string | null;
   text: string | null;
   caption: string | null;
+  mediaFileId?: string | null;
+  mediaUrl?: string | null;
+  mediaFileName?: string | null;
+  mediaMime?: string | null;
   isCommand: boolean;
   commandName: string | null;
   sentByAdminId: string | null;

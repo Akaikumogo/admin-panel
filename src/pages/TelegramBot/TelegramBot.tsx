@@ -7,6 +7,7 @@ import {
   Send,
   Settings2,
   Image as ImageIcon,
+  FileText,
   Users,
   User,
   Bell,
@@ -17,6 +18,7 @@ import { isSuperAdmin } from '@/utils/isSuperAdmin';
 import { can } from '@/utils/can';
 import { cn } from '@/lib/utils';
 import apiService, {
+  resolveAssetUrl,
   type TelegramBotChat,
   type TelegramBotMessage,
 } from '@/services/api';
@@ -512,9 +514,93 @@ export default function TelegramBotPage() {
                               📊 hisobot
                             </div>
                           )}
-                          <div className="whitespace-pre-wrap break-words">
-                            {m.text || m.caption || '—'}
-                          </div>
+                          {m.mediaUrl ? (
+                            <div className="mt-1 space-y-1.5">
+                              {(() => {
+                                const src = resolveAssetUrl(m.mediaUrl);
+                                const mime = (m.mediaMime || '').toLowerCase();
+                                const isImage =
+                                  m.kind === 'photo' ||
+                                  mime.startsWith('image/') ||
+                                  /\.(jpe?g|png|gif|webp|bmp)$/i.test(m.mediaUrl);
+                                const isVideo =
+                                  m.kind === 'video' ||
+                                  mime.startsWith('video/') ||
+                                  /\.(mp4|webm|mov)$/i.test(m.mediaUrl);
+                                const isAudio =
+                                  m.kind === 'audio' ||
+                                  mime.startsWith('audio/') ||
+                                  /\.(ogg|mp3|m4a|wav)$/i.test(m.mediaUrl);
+
+                                if (isImage) {
+                                  return (
+                                    <a
+                                      href={src}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="block"
+                                    >
+                                      <img
+                                        src={src}
+                                        alt={m.mediaFileName || 'Rasm'}
+                                        className="max-h-64 max-w-full rounded-lg object-contain"
+                                        loading="lazy"
+                                      />
+                                    </a>
+                                  );
+                                }
+                                if (isVideo) {
+                                  return (
+                                    <video
+                                      src={src}
+                                      controls
+                                      className="max-h-64 max-w-full rounded-lg"
+                                    />
+                                  );
+                                }
+                                if (isAudio) {
+                                  return (
+                                    <audio src={src} controls className="w-full max-w-xs" />
+                                  );
+                                }
+                                return (
+                                  <a
+                                    href={src}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    download={m.mediaFileName || undefined}
+                                    className={cn(
+                                      'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium underline-offset-2 hover:underline',
+                                      mine
+                                        ? 'bg-primary-foreground/15'
+                                        : 'bg-muted',
+                                    )}
+                                  >
+                                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate max-w-[200px]">
+                                      {m.mediaFileName || 'Faylni ochish'}
+                                    </span>
+                                  </a>
+                                );
+                              })()}
+                              {(m.caption ||
+                                (m.text &&
+                                  !['📷 Rasm', '🎬 Video', '🎞️ GIF', '⏺ Video xabar', '🎤 Ovozli xabar'].includes(
+                                    m.text,
+                                  ) &&
+                                  !m.text.startsWith('📄 ') &&
+                                  !m.text.startsWith('🎵 ') &&
+                                  !m.text.startsWith('Sticker'))) && (
+                                <div className="whitespace-pre-wrap break-words">
+                                  {m.caption || m.text}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="whitespace-pre-wrap break-words">
+                              {m.text || m.caption || '—'}
+                            </div>
+                          )}
                           <div
                             className={cn(
                               'mt-1 text-[10px]',
