@@ -20,6 +20,7 @@ import apiService, {
   type TelegramBotChat,
   type TelegramBotMessage,
 } from '@/services/api';
+import { cacheModeratorPermissions } from '@/utils/permissions';
 import {
   canShowTelegramBotBrowserNotif,
   disableTelegramBotWebNotifications,
@@ -84,6 +85,7 @@ export default function TelegramBotPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   const [tokenInput, setTokenInput] = useState('');
   const [webAppUrl, setWebAppUrl] = useState('');
@@ -104,9 +106,28 @@ export default function TelegramBotPage() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!canAccessTelegramBotPage()) {
-      navigate('/dashboard/home');
-    }
+    let cancelled = false;
+    (async () => {
+      if (isSuperAdmin()) {
+        if (!cancelled) setAccessChecked(true);
+        return;
+      }
+      try {
+        const res = await apiService.getMyModeratorPermissions();
+        cacheModeratorPermissions(res.permissions);
+        if (cancelled) return;
+        if (!can('telegramBot', 'view')) {
+          navigate('/dashboard/home', { replace: true });
+          return;
+        }
+        setAccessChecked(true);
+      } catch {
+        if (!cancelled) navigate('/dashboard/home', { replace: true });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   const onToggleWebNotif = async () => {
@@ -183,6 +204,7 @@ export default function TelegramBotPage() {
   }, []);
 
   useEffect(() => {
+    if (!accessChecked) return;
     void loadSettings();
     void loadChats();
     const id = window.setInterval(() => {
@@ -190,11 +212,19 @@ export default function TelegramBotPage() {
       if (selectedId) void loadMessages(selectedId);
     }, 8000);
     return () => window.clearInterval(id);
-  }, [loadSettings, loadChats, loadMessages, selectedId]);
+  }, [accessChecked, loadSettings, loadChats, loadMessages, selectedId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  if (!accessChecked) {
+    return (
+      <div className="flex h-[calc(100vh-7rem)] items-center justify-center p-6 text-sm text-muted-foreground">
+        …
+      </div>
+    );
+  }
 
   const onSaveSettings = async () => {
     setSaving(true);

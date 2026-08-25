@@ -38,8 +38,13 @@ import { fmtHeaderDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Button, Select, Spin } from '@/components/ui';
 import { Sidebar, type NavGroup, type NavItem } from './SideBar';
-import apiService, { resolveAssetUrl, type UserProfile } from '@/services/api';
+import apiService, {
+  resolveAssetUrl,
+  type ModeratorPermissions,
+  type UserProfile,
+} from '@/services/api';
 import { cacheModeratorPermissions } from '@/utils/permissions';
+import { mergeModeratorPermissions } from '@/utils/moderatorPermissions';
 import { can } from '@/utils/can';
 import { userActivitySocket } from '@/services/userActivitySocket';
 import {
@@ -259,6 +264,8 @@ const Layout = () => {
   const [me, setMe] = useState<UserProfile | null>(null);
   const [meLoading, setMeLoading] = useState(true);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  /** Moderator ruxsatlari yuklanganda menyuni qayta chizish uchun */
+  const [modPerms, setModPerms] = useState<ModeratorPermissions | null>(null);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
@@ -343,18 +350,29 @@ const Layout = () => {
     if (!me) return;
     if (me.role !== 'MODERATOR') {
       cacheModeratorPermissions(null);
+      setModPerms(null);
       return;
     }
     apiService
       .getMyModeratorPermissions()
-      .then((res) => cacheModeratorPermissions(res.permissions))
-      .catch(() => cacheModeratorPermissions(null));
+      .then((res) => {
+        const merged = res.permissions
+          ? mergeModeratorPermissions(res.permissions)
+          : null;
+        cacheModeratorPermissions(merged);
+        setModPerms(merged);
+      })
+      .catch(() => {
+        cacheModeratorPermissions(null);
+        setModPerms(null);
+      });
   }, [me]);
 
   // Telegram bot → brauzer bildirishnomasi (faqat alohida toggle yoqilganda)
   useEffect(() => {
     if (!me) return;
-    const allowed = isSuperAdmin() || can('telegramBot', 'view');
+    const allowed =
+      isSuperAdmin() || !!modPerms?.telegramBot?.view || can('telegramBot', 'view');
     if (!allowed) return;
 
     let cancelled = false;
@@ -388,7 +406,7 @@ const Layout = () => {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [me?.id, me?.role]);
+  }, [me?.id, me?.role, modPerms]);
 
   useEffect(() => {
     if (meLoading || !me) return;
@@ -467,11 +485,16 @@ const Layout = () => {
       if (me.role !== 'MODERATOR') return [];
 
       const hasAudioPerm =
+        !!modPerms?.audioLibrary?.create ||
+        !!modPerms?.audioLibrary?.update ||
+        !!modPerms?.audioLibrary?.delete ||
         can('audioLibrary', 'create') ||
         can('audioLibrary', 'update') ||
         can('audioLibrary', 'delete');
-      const hasNesSyncPerm = can('nesSync', 'view');
-      const hasTelegramBotPerm = can('telegramBot', 'view');
+      const hasNesSyncPerm =
+        !!modPerms?.nesSync?.view || can('nesSync', 'view');
+      const hasTelegramBotPerm =
+        !!modPerms?.telegramBot?.view || can('telegramBot', 'view');
 
       return items.filter(
         (item) =>
@@ -497,7 +520,18 @@ const Layout = () => {
         return { ...group, items };
       })
       .filter((group) => group.items.length > 0);
-  }, [me, pendingApprovalsCount]);
+  }, [me, pendingApprovalsCount, modPerms]);
+
+  const hasTelegramBotView =
+    !!modPerms?.telegramBot?.view || can('telegramBot', 'view');
+  const hasNesSyncView = !!modPerms?.nesSync?.view || can('nesSync', 'view');
+  const hasAudioLibraryWrite =
+    !!modPerms?.audioLibrary?.create ||
+    !!modPerms?.audioLibrary?.update ||
+    !!modPerms?.audioLibrary?.delete ||
+    can('audioLibrary', 'create') ||
+    can('audioLibrary', 'update') ||
+    can('audioLibrary', 'delete');
 
   const isModeratorForbiddenRoute =
     me?.role === 'MODERATOR' &&
@@ -506,16 +540,12 @@ const Layout = () => {
       location.pathname === '/dashboard/permissions' ||
       location.pathname === '/dashboard/import-export' ||
       (location.pathname === '/dashboard/telegram-bot' &&
-        !can('telegramBot', 'view')) ||
+        !hasTelegramBotView) ||
       location.pathname === '/dashboard/anomaloz' ||
-      (location.pathname === '/dashboard/nes-sync' && !can('nesSync', 'view')) ||
+      (location.pathname === '/dashboard/nes-sync' && !hasNesSyncView) ||
       location.pathname === '/dashboard/exam-analysis' ||
       (location.pathname === '/dashboard/audio-library' &&
-        !(
-          can('audioLibrary', 'create') ||
-          can('audioLibrary', 'update') ||
-          can('audioLibrary', 'delete')
-        )));
+        !hasAudioLibraryWrite));
 
   const isDirectorForbiddenRoute =
     me?.role === 'APPROVER' &&
