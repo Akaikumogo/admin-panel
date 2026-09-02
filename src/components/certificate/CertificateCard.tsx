@@ -8,6 +8,12 @@ import { formatCardOrgTitle } from './org-title';
 import { isGoldTier, resolvePositionTier, type PositionTier } from './position-tier';
 import type { EmployeeCertificate } from './types';
 import { UmetSeal } from './UmetSeal';
+import {
+  ID_CARD_FACE_CLASS,
+  ID_CARD_PRINT_CLASS,
+  ID_CARD_SCENE_CLASS,
+  ID_CARD_SIZE_LABEL,
+} from './id-card-dimensions';
 
 export type CertificateCardSize = 'sm' | 'md' | 'lg';
 
@@ -18,11 +24,11 @@ function cardTitle(certificate: EmployeeCertificate) {
   );
 }
 
-/** Guvohnoma gorizontal (landscape) — sahna kengligi. */
+/** Barcha o'lchamlar — haqiqiy 8,5 × 5,5 sm. */
 const SCENE_SIZE: Record<CertificateCardSize, string> = {
-  sm: 'max-w-[260px]',
-  md: 'max-w-[320px]',
-  lg: 'w-full max-w-[440px]',
+  sm: ID_CARD_SCENE_CLASS,
+  md: ID_CARD_SCENE_CLASS,
+  lg: ID_CARD_SCENE_CLASS,
 };
 
 export function formatCertificateDate(value: string | null | undefined) {
@@ -67,7 +73,10 @@ export function CertificateCard({
     >
       <button
         type="button"
-        className="relative w-full max-w-full aspect-[8/5] border-0 p-0 bg-transparent cursor-pointer [perspective:1400px] drop-shadow-[0_16px_32px_rgba(0,0,0,0.45)]"
+        className={cn(
+          'relative border-0 p-0 bg-transparent cursor-pointer [perspective:1400px] drop-shadow-[0_16px_32px_rgba(0,0,0,0.45)]',
+          ID_CARD_FACE_CLASS,
+        )}
         onClick={toggleFlip}
         aria-pressed={flipped}
         aria-label={`${certificate.fullName} — guvohnoma${flipped ? ', orqa tomon' : ''}`}
@@ -92,6 +101,10 @@ export function CertificateCard({
       >
         {flipped ? 'Old tomonga' : 'Aylantirish'}
       </button>
+
+      <p className="m-0 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        {ID_CARD_SIZE_LABEL}
+      </p>
     </div>
   );
 }
@@ -99,19 +112,19 @@ export function CertificateCard({
 /**
  * `flip` — 3D aylanadigan karta (ekranda).
  * `static` — oddiy oqim ichidagi karta.
- * `print` — chop etish uchun haqiqiy o'lcham, 96 x 60 mm.
+ * `print` — chop etish uchun haqiqiy o'lcham, 85 x 55 mm (8,5 x 5,5 sm).
  */
 type FaceVariant = 'flip' | 'static' | 'print';
 
 const FACE_BASE =
-  'overflow-hidden border border-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.2)]';
+  'overflow-hidden border border-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.2)] [container-type:inline-size]';
 
 const FLIP_FACE =
   'absolute inset-0 [backface-visibility:hidden] [transform-style:preserve-3d] rounded-2xl';
 
-const STATIC_FACE = 'relative w-full aspect-[8/5] rounded-2xl';
+const STATIC_FACE = cn('relative rounded-2xl', ID_CARD_FACE_CLASS);
 
-const PRINT_FACE = 'relative w-[96mm] h-[60mm] rounded-[3mm]';
+const PRINT_FACE = cn('relative rounded-[3mm]', ID_CARD_PRINT_CLASS);
 
 function faceClass(variant: FaceVariant, side: 'front' | 'back') {
   if (variant === 'print') return PRINT_FACE;
