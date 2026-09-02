@@ -220,6 +220,16 @@ export default function TelegramBotPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const sortedChats = useMemo(
+    () =>
+      [...chats].sort((a, b) => {
+        const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        return tb - ta;
+      }),
+    [chats],
+  );
+
   if (!accessChecked) {
     return (
       <div className="flex h-[calc(100vh-7rem)] items-center justify-center p-6 text-sm text-muted-foreground">
@@ -300,16 +310,6 @@ export default function TelegramBotPage() {
       setSending(false);
     }
   };
-
-  const sortedChats = useMemo(
-    () =>
-      [...chats].sort((a, b) => {
-        const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
-        const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
-        return tb - ta;
-      }),
-    [chats],
-  );
 
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-[520px] flex-col gap-4 p-4 md:p-6">
