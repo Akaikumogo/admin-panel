@@ -9,7 +9,7 @@ interface CertificateCardPrintProps {
 
 /**
  * Faqat chop etish uchun joylashuv: bitta A4 list —
- * yuqorida old tomon, pastda orqa tomon (96 x 60 mm, gorizontal).
+ * yuqorida old tomon, pastda orqa tomon (85 x 55 mm / 8,5 x 5,5 sm, gorizontal).
  * Dashboard qobig'i `overflow: hidden` bo'lgani uchun portal orqali
  * to'g'ridan-to'g'ri `body` ga chiqariladi.
  */
