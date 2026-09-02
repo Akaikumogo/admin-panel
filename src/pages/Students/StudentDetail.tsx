@@ -16,6 +16,7 @@ import type {
 import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
 import { EmployeeCertificateSection } from './EmployeeCertificateSection';
 import { EmployeeSafetySection } from './EmployeeSafetySection';
+import { StudentFieldsEditor } from './StudentFieldsEditor';
 import type { UserProfile } from '@/services/api';
 import { formatPersonName } from '@/lib/person-name';
 
@@ -298,6 +299,10 @@ const StudentDetailPage = () => {
                 ))}
               </div>
             )}
+            {(me?.role === 'MODERATOR' || me?.role === 'SUPERADMIN') &&
+            student.energoId ? (
+              <StudentFieldsEditor student={student} onSaved={() => refetch()} />
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-6 flex-shrink-0 justify-end">

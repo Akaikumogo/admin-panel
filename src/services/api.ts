@@ -1055,6 +1055,11 @@ export type StudentDetail = {
   personnelNumber: string | null;
   division: string | null;
   post: string | null;
+  firstName1c?: string | null;
+  lastName1c?: string | null;
+  middleName1c?: string | null;
+  division1c?: string | null;
+  post1c?: string | null;
   organizations: { id: string; name: string }[];
   totalXp: number;
   /** To‘g‘ri javob urinishlari soni (XP = correctAnswers * 10) */
@@ -3632,6 +3637,23 @@ class ApiService {
   async getStudent(id: string): Promise<StudentDetail> {
     const response = await this.api.get<StudentDetail>(
       `/admin/employees/${id}`
+    );
+    return response.data;
+  }
+
+  async patchEmployeeFields(
+    userId: string,
+    fields: Partial<{
+      firstName: string | null;
+      lastName: string | null;
+      middleName: string | null;
+      division: string | null;
+      post: string | null;
+    }>,
+  ) {
+    const response = await this.api.patch(
+      `/admin/field-overrides/employees/${userId}`,
+      fields,
     );
     return response.data;
   }
