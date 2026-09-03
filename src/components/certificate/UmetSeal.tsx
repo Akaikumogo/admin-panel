@@ -1,20 +1,18 @@
 import { cn } from '@/lib/utils';
 
 /**
- * "O‘zbekiston milliy elektr tarmoqlari" AJ rasmiy emblemasi — dumaloq muhr ko'rinishida.
- * Fayl public/ dan olinadi, shuning uchun chop etishda ham to'g'ri chiqadi.
+ * "O‘zbekiston milliy elektr tarmoqlari" AJ rasmiy emblemasi — dumaloq, bordersiz.
+ * JPG oq cheti scale bilan kesiladi.
  */
 export function UmetSeal({ className }: { className?: string }) {
   return (
-    <img
-      src="/umet-logo.jpg"
-      alt=""
-      className={cn(
-        'block aspect-square rounded-full object-cover bg-white',
-        'border-[0.4cqw] border-white/85 shadow-[0_2px_10px_rgba(0,0,0,0.4)]',
-        className,
-      )}
-      draggable={false}
-    />
+    <span className={cn('relative block aspect-square overflow-hidden rounded-full', className)}>
+      <img
+        src="/umet-logo.jpg"
+        alt=""
+        className="absolute inset-0 h-full w-full scale-[1.28] object-cover"
+        draggable={false}
+      />
+    </span>
   );
 }
