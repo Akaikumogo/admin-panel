@@ -1,10 +1,15 @@
 import { createPortal } from 'react-dom';
-import { CertificateCardBack, CertificateCardFront } from './CertificateCard';
+import {
+  CertificateCardBack,
+  CertificateCardFront,
+  type CertificateCardDesign,
+} from './CertificateCard';
 import type { EmployeeCertificate } from './types';
 
 interface CertificateCardPrintProps {
   certificate: EmployeeCertificate;
   avatarUrl?: string | null;
+  design?: CertificateCardDesign;
 }
 
 /**
@@ -16,6 +21,7 @@ interface CertificateCardPrintProps {
 export function CertificateCardPrint({
   certificate,
   avatarUrl,
+  design = 'v1',
 }: CertificateCardPrintProps) {
   return createPortal(
     <>
@@ -39,10 +45,15 @@ export function CertificateCardPrint({
               certificate={certificate}
               avatarUrl={avatarUrl ?? certificate.avatarUrl}
               variant="print"
+              design={design}
             />
           </div>
           <div className="print:drop-shadow-[0_1mm_2mm_rgba(0,0,0,0.25)]">
-            <CertificateCardBack certificate={certificate} variant="print" />
+            <CertificateCardBack
+              certificate={certificate}
+              variant="print"
+              design={design}
+            />
           </div>
         </div>
       </div>

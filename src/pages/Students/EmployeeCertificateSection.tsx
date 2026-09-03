@@ -7,6 +7,7 @@ import type { StudentDetail } from '@/services/api';
 import {
   CertificateCard,
   formatCertificateDate,
+  type CertificateCardDesign,
 } from '@/components/certificate/CertificateCard';
 import { CertificateCardPrint } from '@/components/certificate/CertificateCardPrint';
 import { buildEnergoIdCertificate } from '@/components/certificate/buildEnergoIdCertificate';
@@ -31,6 +32,8 @@ const T = {
     en: 'Source: ENERGO ID',
     ru: 'Источник: ENERGO ID',
   },
+  variant1: { uz: '1-variant', en: 'Variant 1', ru: 'Вариант 1' },
+  variant2: { uz: '2-variant', en: 'Variant 2', ru: 'Вариант 2' },
 } as const;
 
 interface EmployeeCertificateSectionProps {
@@ -42,6 +45,7 @@ export function EmployeeCertificateSection({
 }: EmployeeCertificateSectionProps) {
   const { t } = useTranslation();
   const [printing, setPrinting] = useState(false);
+  const [design, setDesign] = useState<CertificateCardDesign>('v1');
 
   const certificate = buildEnergoIdCertificate(student);
   const hasIdentity = Boolean(
@@ -68,12 +72,42 @@ export function EmployeeCertificateSection({
         </div>
 
         {hasIdentity ? (
-          <Button
-            icon={<Printer className="h-4 w-4" />}
-            onClick={handlePrint}
-          >
-            {t(T.print)}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="inline-flex rounded-md border border-border p-0.5"
+              role="group"
+              aria-label="Card design"
+            >
+              <button
+                type="button"
+                className={`rounded px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  design === 'v1'
+                    ? 'bg-[var(--shell-rail)] text-white'
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+                onClick={() => setDesign('v1')}
+              >
+                {t(T.variant1)}
+              </button>
+              <button
+                type="button"
+                className={`rounded px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  design === 'v2'
+                    ? 'bg-[var(--shell-rail)] text-white'
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+                onClick={() => setDesign('v2')}
+              >
+                {t(T.variant2)}
+              </button>
+            </div>
+            <Button
+              icon={<Printer className="h-4 w-4" />}
+              onClick={handlePrint}
+            >
+              {t(T.print)}
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -82,9 +116,11 @@ export function EmployeeCertificateSection({
       ) : (
         <div className="flex flex-wrap items-start gap-8">
           <CertificateCard
+            key={design}
             certificate={certificate}
             avatarUrl={student.avatarUrl}
             size="lg"
+            design={design}
           />
 
           <div className="min-w-[220px] flex-1 space-y-3">
@@ -139,6 +175,7 @@ export function EmployeeCertificateSection({
         <CertificateCardPrint
           certificate={certificate}
           avatarUrl={student.avatarUrl}
+          design={design}
         />
       ) : null}
     </div>
