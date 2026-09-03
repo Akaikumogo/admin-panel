@@ -267,10 +267,10 @@ function CertificateCardFrontV1({
           aria-hidden
         />
 
-        <div className="relative z-[2] flex min-h-0 flex-1 items-center gap-[0.22cm] pt-[0.18cm]">
+        <div className="relative z-[2] flex min-h-0 flex-1 items-start gap-[0.22cm] pt-[0.1cm]">
           <CardPhoto avatarUrl={avatarUrl} tier="employee" frame="v1" />
 
-          <dl className="m-0 flex min-w-0 flex-1 flex-col justify-between gap-[0.12cm] py-[0.04cm] text-left">
+          <dl className="m-0 flex min-w-0 flex-1 flex-col justify-start gap-[0.1cm] pt-0 text-left">
             <CardField
               labelUz="Familiyasi"
               labelEn="Surname"
@@ -298,7 +298,7 @@ function CertificateCardFrontV1({
             />
           </dl>
 
-          <div className="flex w-[2.4cm] shrink-0 flex-col items-end justify-between gap-[0.1cm] self-stretch py-[0.04cm]">
+          <div className="flex w-[2.4cm] shrink-0 flex-col items-end justify-end gap-[0.14cm] self-stretch pb-[0.02cm]">
             <div className="w-full text-right">
               <p className="m-0 whitespace-nowrap text-[1.35cqw] font-medium leading-none text-[#B8C9D4]">
                 Guvohnoma raqami{' '}
