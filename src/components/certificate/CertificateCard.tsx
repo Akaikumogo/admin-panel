@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { resolveAssetUrl } from '@/services/api';
+import { CardBackdropV1, V1_FACE_STYLE } from './CardBackdropV1';
 import { CertificateQr } from './CertificateQr';
 import { CertificateRibbons } from './CertificateRibbons';
 import { tierFaceStyle } from './certificate-theme';
@@ -16,12 +17,22 @@ import {
 } from './id-card-dimensions';
 
 export type CertificateCardSize = 'sm' | 'md' | 'lg';
+export type CertificateCardDesign = 'v1' | 'v2';
+
+const ORG_LINE = `"O'zbekiston milliy elektr tarmoqlari" AJ`;
+const CERT_TITLE_V1 = 'Xodimning bilim sinovi guvohnomasi';
 
 /** Guvohnoma sarlavhasi — filialning to'liq nomi (bo'lmasa tashkilot nomi). */
 function cardTitle(certificate: EmployeeCertificate) {
   return formatCardOrgTitle(
     certificate.branchName?.trim() || certificate.organizationTitle?.trim(),
   );
+}
+
+function branchLine(certificate: EmployeeCertificate) {
+  const branch = certificate.branchName?.trim();
+  if (branch) return formatCardOrgTitle(branch);
+  return 'Markaziy Apparat';
 }
 
 /** Barcha o'lchamlar — haqiqiy 8,5 × 5,5 sm. */
@@ -45,6 +56,8 @@ interface CertificateCardProps {
   /** Guvohnomadagi 3x4 rasm. Berilmasa — DTO dagi avatar ishlatiladi. */
   avatarUrl?: string | null;
   size?: CertificateCardSize;
+  /** Asosiy dizayn — v1 (rasm). Eski ribbon dizayn — v2. */
+  design?: CertificateCardDesign;
   className?: string;
 }
 
@@ -53,6 +66,7 @@ export function CertificateCard({
   certificate,
   avatarUrl,
   size = 'lg',
+  design = 'v1',
   className,
 }: CertificateCardProps) {
   const [flipped, setFlipped] = useState(false);
@@ -87,8 +101,12 @@ export function CertificateCard({
             flipped && '[transform:rotateY(180deg)]',
           )}
         >
-          <CertificateCardFront certificate={certificate} avatarUrl={photo} />
-          <CertificateCardBack certificate={certificate} />
+          <CertificateCardFront
+            certificate={certificate}
+            avatarUrl={photo}
+            design={design}
+          />
+          <CertificateCardBack certificate={certificate} design={design} />
         </div>
       </button>
 
@@ -145,8 +163,197 @@ function faceClass(variant: FaceVariant, side: 'front' | 'back') {
 const FACE_INNER =
   'absolute inset-0 flex flex-col px-[3.4cqw] pt-[3cqw] pb-[2.8cqw]';
 
+const FACE_INNER_V1 =
+  'absolute inset-0 flex flex-col px-[3.2cqw] pt-[2.4cqw] pb-[2.4cqw]';
+
+type FaceProps = {
+  certificate: EmployeeCertificate;
+  avatarUrl?: string | null;
+  variant?: FaceVariant;
+  design?: CertificateCardDesign;
+};
+
 /** Guvohnoma old tomoni. */
 export function CertificateCardFront({
+  certificate,
+  avatarUrl,
+  variant = 'flip',
+  design = 'v1',
+}: FaceProps) {
+  if (design === 'v1') {
+    return (
+      <CertificateCardFrontV1
+        certificate={certificate}
+        avatarUrl={avatarUrl}
+        variant={variant}
+      />
+    );
+  }
+  return (
+    <CertificateCardFrontV2
+      certificate={certificate}
+      avatarUrl={avatarUrl}
+      variant={variant}
+    />
+  );
+}
+
+/** Guvohnoma orqa tomoni. */
+export function CertificateCardBack({
+  certificate,
+  variant = 'flip',
+  design = 'v1',
+}: Omit<FaceProps, 'avatarUrl'>) {
+  if (design === 'v1') {
+    return <CertificateCardBackV1 certificate={certificate} variant={variant} />;
+  }
+  return <CertificateCardBackV2 certificate={certificate} variant={variant} />;
+}
+
+/* ─────────────────────────── Variant 1 (asosiy) ─────────────────────────── */
+
+function CertificateCardFrontV1({
+  certificate,
+  avatarUrl,
+  variant = 'flip',
+}: {
+  certificate: EmployeeCertificate;
+  avatarUrl?: string | null;
+  variant?: FaceVariant;
+}) {
+  return (
+    <div
+      className={cn(FACE_BASE, faceClass(variant, 'front'), 'border-[#061018]')}
+      style={V1_FACE_STYLE}
+    >
+      <CardBackdropV1 />
+
+      {/* Beyj tirqishi */}
+      <div
+        className="absolute top-[1.4cqw] left-1/2 z-[3] h-[1.6cqw] w-[9.5cqw] -translate-x-1/2 rounded-full bg-white/95 shadow-[0_0_0_0.35cqw_rgba(0,0,0,0.35)]"
+        aria-hidden
+      />
+
+      {/* Logo kvadrat — o'ng yuqori */}
+      <div className="absolute top-[2.6cqw] right-[2.8cqw] z-[3] flex h-[11cqw] w-[11cqw] items-center justify-center overflow-hidden rounded-[1.4cqw] border-[0.35cqw] border-white/80 bg-white/10 p-[0.6cqw]">
+        <img
+          src="/umet-logo.jpg"
+          alt=""
+          className="h-full w-full rounded-[0.8cqw] object-cover"
+          draggable={false}
+        />
+      </div>
+
+      <StatusStamp status={certificate.status} />
+
+      <div className={FACE_INNER_V1}>
+        <header className="relative z-[2] shrink-0 pr-[12cqw] pt-[2.2cqw] text-center">
+          <p className="m-0 text-[2.55cqw] font-bold leading-tight tracking-tight text-white">
+            {ORG_LINE}
+          </p>
+          <p className="m-0 mt-[0.5cqw] text-[2.15cqw] font-medium leading-tight text-white/90">
+            {branchLine(certificate)}
+          </p>
+          <p className="m-0 mt-[0.7cqw] text-[3.05cqw] font-extrabold leading-tight text-[#27AE60]">
+            {CERT_TITLE_V1}
+          </p>
+        </header>
+
+        <div
+          className="relative z-[2] mt-[1.6cqw] h-px w-full shrink-0 bg-gradient-to-r from-transparent via-sky-200/55 to-transparent"
+          aria-hidden
+        />
+
+        <div className="relative z-[2] flex min-h-0 flex-1 items-stretch gap-[2.8cqw] pt-[2.4cqw]">
+          <CardPhoto avatarUrl={avatarUrl} tier="employee" frame="v1" />
+
+          <dl className="m-0 flex min-w-0 flex-1 flex-col justify-between gap-[1.4cqw] py-[0.4cqw] text-left">
+            <CardField
+              labelUz="Familiyasi"
+              labelEn="Surname"
+              value={certificate.lastName || '—'}
+              mutedClass="text-[#B8C9D4]"
+            />
+            <CardField
+              labelUz="Ismi"
+              labelEn="Given name(s)"
+              value={certificate.firstName || '—'}
+              mutedClass="text-[#B8C9D4]"
+            />
+            <CardField
+              labelUz="Otasining ismi"
+              labelEn="Patronymic"
+              value={certificate.middleName || '—'}
+              mutedClass="text-[#B8C9D4]"
+            />
+            <CardField
+              labelUz="Lavozimi"
+              labelEn="Position"
+              value={certificate.positionTitle || '—'}
+              compact
+              mutedClass="text-[#B8C9D4]"
+            />
+          </dl>
+
+          <div className="flex w-[28cqw] shrink-0 flex-col items-end justify-between">
+            <div className="w-full text-right">
+              <p className="m-0 text-[1.65cqw] font-medium leading-tight text-[#B8C9D4]">
+                Guvohnoma raqami{' '}
+                <span className="italic opacity-80">/ Certificate number</span>
+              </p>
+              <p className="m-0 mt-[0.4cqw] text-[4.2cqw] font-extrabold leading-none tracking-wide text-[#F2C94C]">
+                {certificate.certificateNumber || '—'}
+              </p>
+            </div>
+
+            <div className="flex w-full flex-col items-center">
+              <div className="aspect-square w-full rounded-[1cqw] bg-white p-[0.85cqw] shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+                <CertificateQr value={certificate.verifyUrl} />
+              </div>
+              <p className="m-0 mt-[0.7cqw] text-[1.7cqw] font-medium tracking-wide text-[#B8C9D4]">
+                Scan to verify
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CertificateCardBackV1({
+  certificate,
+  variant = 'flip',
+}: {
+  certificate: EmployeeCertificate;
+  variant?: FaceVariant;
+}) {
+  return (
+    <div
+      className={cn(FACE_BASE, faceClass(variant, 'back'), 'border-[#061018]')}
+      style={V1_FACE_STYLE}
+    >
+      <CardBackdropV1 />
+      <div className={cn(FACE_INNER_V1, 'items-center justify-center')}>
+        <div className="relative z-[3] flex h-[34cqw] w-[34cqw] items-center justify-center overflow-hidden rounded-[2cqw] border-[0.4cqw] border-white/75 bg-white/10 p-[1.2cqw]">
+          <img
+            src="/umet-logo.jpg"
+            alt=""
+            className="h-full w-full rounded-[1.2cqw] object-cover"
+            draggable={false}
+          />
+        </div>
+      </div>
+      <span className="absolute bottom-[3cqw] right-[3.8cqw] z-[3] text-[2.2cqw] font-semibold tracking-[0.06em] text-[#B8C9D4]">
+        № {certificate.certificateNumber}
+      </span>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Variant 2 (eski) ─────────────────────────── */
+
+function CertificateCardFrontV2({
   certificate,
   avatarUrl,
   variant = 'flip',
@@ -165,29 +372,25 @@ export function CertificateCardFront({
     >
       <CertificateRibbons tier={tier} />
 
-      {/* Fon ustidagi yengil to'siq — matn doim o'qiladigan bo'lishi uchun */}
       <div
-        className="absolute inset-x-0 top-0 h-[38%] pointer-events-none z-[1] [background:linear-gradient(180deg,rgba(4,16,28,0.7)_0%,rgba(4,16,28,0.3)_64%,transparent_100%)]"
+        className="absolute inset-x-0 top-0 z-[1] h-[38%] pointer-events-none [background:linear-gradient(180deg,rgba(4,16,28,0.7)_0%,rgba(4,16,28,0.3)_64%,transparent_100%)]"
         aria-hidden
       />
       <div
-        className="absolute inset-x-0 bottom-0 h-[30%] pointer-events-none z-[1] [background:linear-gradient(0deg,rgba(4,16,28,0.62)_0%,rgba(4,16,28,0.24)_58%,transparent_100%)]"
-        aria-hidden
-      />
-
-      {/* Beyj uchun tirqish */}
-      <div
-        className="absolute top-[1.6cqw] left-1/2 -translate-x-1/2 w-[9cqw] h-[1.5cqw] rounded-full bg-black/45 shadow-[inset_0_1px_2px_rgba(0,0,0,0.55)] z-[3]"
+        className="absolute inset-x-0 bottom-0 z-[1] h-[30%] pointer-events-none [background:linear-gradient(0deg,rgba(4,16,28,0.62)_0%,rgba(4,16,28,0.24)_58%,transparent_100%)]"
         aria-hidden
       />
 
-      {/* Logotip — o'ng yuqori burchak */}
+      <div
+        className="absolute top-[1.6cqw] left-1/2 z-[3] h-[1.5cqw] w-[9cqw] -translate-x-1/2 rounded-full bg-black/45 shadow-[inset_0_1px_2px_rgba(0,0,0,0.55)]"
+        aria-hidden
+      />
+
       <UmetSeal className="absolute top-[2.8cqw] right-[3.4cqw] z-[3] w-[12cqw]" />
 
       <StatusStamp status={certificate.status} />
 
       <div className={FACE_INNER}>
-        {/* Sarlavha — filialning to'liq nomi */}
         <header className="relative z-[2] shrink-0 pt-[3cqw] pr-[13cqw] text-left">
           <p
             className={cn(
@@ -204,11 +407,10 @@ export function CertificateCardFront({
           aria-hidden
         />
 
-        {/* Asosiy qism: rasm | maydonlar | QR — uchtasi bir chiziqdan boshlanadi */}
         <div className="relative z-[2] flex min-h-0 items-start gap-[3.2cqw] pt-[5.5cqw]">
           <CardPhoto avatarUrl={avatarUrl} tier={tier} />
 
-          <dl className="m-0 flex flex-1 min-w-0 flex-col gap-[2.8cqw] text-left">
+          <dl className="m-0 flex min-w-0 flex-1 flex-col gap-[2.8cqw] text-left">
             <CardField
               labelUz="Familiyasi"
               labelEn="Surname"
@@ -232,7 +434,6 @@ export function CertificateCardFront({
             />
           </dl>
 
-          {/* Kvadrat QR — eni rasm balandligiga teng, balandlik bo'yicha markazda */}
           <div className="w-[30cqw] shrink-0 self-center">
             <div className="aspect-square w-full rounded-[1cqw] bg-white p-[0.9cqw] shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
               <CertificateQr value={certificate.verifyUrl} />
@@ -244,8 +445,7 @@ export function CertificateCardFront({
   );
 }
 
-/** Guvohnoma orqa tomoni — qo'shimcha ma'lumotlar, xuddi shu fon. */
-export function CertificateCardBack({
+function CertificateCardBackV2({
   certificate,
   variant = 'flip',
 }: {
@@ -262,7 +462,7 @@ export function CertificateCardBack({
       <CertificateRibbons tier={tier} />
 
       <div
-        className="absolute inset-0 pointer-events-none z-[1] [background:linear-gradient(180deg,rgba(4,16,28,0.72)_0%,rgba(4,16,28,0.32)_34%,rgba(4,16,28,0.32)_66%,rgba(4,16,28,0.6)_100%)]"
+        className="absolute inset-0 z-[1] pointer-events-none [background:linear-gradient(180deg,rgba(4,16,28,0.72)_0%,rgba(4,16,28,0.32)_34%,rgba(4,16,28,0.32)_66%,rgba(4,16,28,0.6)_100%)]"
         aria-hidden
       />
 
@@ -277,7 +477,8 @@ export function CertificateCardBack({
   );
 }
 
-/** Bekor qilingan / muddati o'tgan guvohnomada ko'ndalang muhr. */
+/* ─────────────────────────── Shared pieces ─────────────────────────── */
+
 function StatusStamp({ status }: { status: EmployeeCertificate['status'] }) {
   if (status === 'VALID') return null;
 
@@ -304,29 +505,34 @@ function StatusStamp({ status }: { status: EmployeeCertificate['status'] }) {
   );
 }
 
-/** Ikki tilli yorliq + qiymat. */
 function CardField({
   labelUz,
   labelEn,
   value,
   accent = false,
   compact = false,
+  mutedClass,
 }: {
   labelUz: string;
   labelEn: string;
   value: string;
   accent?: boolean;
-  /** Lavozim kabi uzun qiymatlar uchun kichikroq shrift. */
   compact?: boolean;
+  mutedClass?: string;
 }) {
   return (
     <div className="min-w-0">
-      <dt className="m-0 text-[1.75cqw] font-medium leading-tight text-[var(--card-muted)]">
+      <dt
+        className={cn(
+          'm-0 text-[1.75cqw] font-medium leading-tight',
+          mutedClass ?? 'text-[var(--card-muted)]',
+        )}
+      >
         {labelUz} <span className="italic opacity-80">/ {labelEn}</span>
       </dt>
       <dd
         className={cn(
-          'm-0 mt-[0.3cqw] font-bold leading-tight text-[var(--card-text)] break-words',
+          'm-0 mt-[0.3cqw] font-bold leading-tight text-white break-words',
           compact ? 'text-[2.5cqw] line-clamp-2' : 'text-[3.1cqw] line-clamp-1',
           accent && 'text-[var(--card-role)]',
         )}
@@ -338,20 +544,21 @@ function CardField({
   );
 }
 
-/** Chapdagi 3x4 rasm maydoni. */
 function CardPhoto({
   avatarUrl,
   tier,
+  frame = 'v2',
 }: {
   avatarUrl?: string | null;
   tier: PositionTier;
+  frame?: 'v1' | 'v2';
 }) {
-  const frame =
-    'w-[24cqw] shrink-0 self-start aspect-[4/5] rounded-[1cqw] overflow-hidden border-[0.5cqw] border-white/85 shadow-[0_3px_10px_rgba(0,0,0,0.4)]';
+  const frameClass =
+    frame === 'v1'
+      ? 'w-[22cqw] shrink-0 self-stretch min-h-0 aspect-[3/4] rounded-[1cqw] overflow-hidden border-[0.45cqw] border-sky-300/90 shadow-[0_0_10px_rgba(56,189,248,0.35),0_3px_10px_rgba(0,0,0,0.4)]'
+      : 'w-[24cqw] shrink-0 self-start aspect-[4/5] rounded-[1cqw] overflow-hidden border-[0.5cqw] border-white/85 shadow-[0_3px_10px_rgba(0,0,0,0.4)]';
 
   const src = avatarUrl ? resolveAssetUrl(avatarUrl) : '';
-  // `cors` — rasmga eksport uchun kerak; server CORS bermasa `plain` ga
-  // tushamiz, shunda hech bo'lmasa rasm ekranda ko'rinadi.
   const [mode, setMode] = useState<'cors' | 'plain' | 'failed'>('cors');
 
   useEffect(() => setMode('cors'), [src]);
@@ -364,7 +571,7 @@ function CardPhoto({
         alt=""
         {...(mode === 'cors' ? { crossOrigin: 'anonymous' as const } : {})}
         onError={() => setMode((prev) => (prev === 'cors' ? 'plain' : 'failed'))}
-        className={cn(frame, 'object-cover object-[center_top]')}
+        className={cn(frameClass, 'object-cover object-[center_top]')}
       />
     );
   }
@@ -372,7 +579,7 @@ function CardPhoto({
   return (
     <div
       className={cn(
-        frame,
+        frameClass,
         'flex items-end justify-center',
         '[background:radial-gradient(ellipse_90%_70%_at_50%_18%,rgba(255,255,255,0.16),transparent_70%),linear-gradient(165deg,rgba(255,255,255,0.12),rgba(0,0,0,0.28))]',
       )}
@@ -383,7 +590,6 @@ function CardPhoto({
   );
 }
 
-/** Odam rasmi uchun joy — siluet (placeholder). */
 function PhotoSilhouette({ tier }: { tier: PositionTier }) {
   return (
     <svg
