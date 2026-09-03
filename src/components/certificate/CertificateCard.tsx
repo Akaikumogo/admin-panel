@@ -11,7 +11,9 @@ import type { EmployeeCertificate } from './types';
 import { UmetSeal } from './UmetSeal';
 import {
   ID_CARD_FACE_CLASS,
+  ID_CARD_PHOTO_CLASS,
   ID_CARD_PRINT_CLASS,
+  ID_CARD_QR_BOX_CLASS,
   ID_CARD_SCENE_CLASS,
   ID_CARD_SIZE_LABEL,
 } from './id-card-dimensions';
@@ -265,10 +267,10 @@ function CertificateCardFrontV1({
           aria-hidden
         />
 
-        <div className="relative z-[2] flex min-h-0 flex-1 items-stretch gap-[2.8cqw] pt-[2.4cqw]">
+        <div className="relative z-[2] flex min-h-0 flex-1 items-center gap-[0.22cm] pt-[0.18cm]">
           <CardPhoto avatarUrl={avatarUrl} tier="employee" frame="v1" />
 
-          <dl className="m-0 flex min-w-0 flex-1 flex-col justify-between gap-[1.4cqw] py-[0.4cqw] text-left">
+          <dl className="m-0 flex min-w-0 flex-1 flex-col justify-between gap-[0.12cm] py-[0.04cm] text-left">
             <CardField
               labelUz="Familiyasi"
               labelEn="Surname"
@@ -296,22 +298,22 @@ function CertificateCardFrontV1({
             />
           </dl>
 
-          <div className="flex w-[28cqw] shrink-0 flex-col items-end justify-between">
+          <div className="flex w-[2.4cm] shrink-0 flex-col items-end justify-between gap-[0.1cm] self-stretch py-[0.04cm]">
             <div className="w-full text-right">
-              <p className="m-0 text-[1.65cqw] font-medium leading-tight text-[#B8C9D4]">
+              <p className="m-0 whitespace-nowrap text-[1.35cqw] font-medium leading-none text-[#B8C9D4]">
                 Guvohnoma raqami{' '}
                 <span className="italic opacity-80">/ Certificate number</span>
               </p>
-              <p className="m-0 mt-[0.4cqw] text-[4.2cqw] font-extrabold leading-none tracking-wide text-[#F2C94C]">
+              <p className="m-0 mt-[0.08cm] text-[3.6cqw] font-extrabold leading-none tracking-wide text-[#F2C94C]">
                 {certificate.certificateNumber || '—'}
               </p>
             </div>
 
             <div className="flex w-full flex-col items-center">
-              <div className="aspect-square w-full rounded-[1cqw] bg-white p-[0.85cqw] shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+              <div className={ID_CARD_QR_BOX_CLASS}>
                 <CertificateQr value={certificate.verifyUrl} />
               </div>
-              <p className="m-0 mt-[0.7cqw] text-[1.7cqw] font-medium tracking-wide text-[#B8C9D4]">
+              <p className="m-0 mt-[0.06cm] whitespace-nowrap text-[1.4cqw] font-medium tracking-wide text-[#B8C9D4]">
                 Scan to verify
               </p>
             </div>
@@ -554,11 +556,13 @@ function CardPhoto({
   tier: PositionTier;
   frame?: 'v1' | 'v2';
 }) {
-  // Wrapper aspect/height saqlaydi; img object-cover — cho'zilmaydi.
   const wrapClass =
     frame === 'v1'
-      ? 'relative w-[22cqw] shrink-0 self-stretch min-h-0 overflow-hidden rounded-[1cqw] border-[0.45cqw] border-sky-300/90 shadow-[0_0_10px_rgba(56,189,248,0.35),0_3px_10px_rgba(0,0,0,0.4)]'
-      : 'relative w-[24cqw] shrink-0 self-start aspect-[4/5] overflow-hidden rounded-[1cqw] border-[0.5cqw] border-white/85 shadow-[0_3px_10px_rgba(0,0,0,0.4)]';
+      ? cn(
+          ID_CARD_PHOTO_CLASS,
+          'border-[0.045cm] border-sky-300/90 shadow-[0_0_10px_rgba(56,189,248,0.35),0_3px_10px_rgba(0,0,0,0.4)]',
+        )
+      : 'relative w-[2.5cm] h-[2.7cm] shrink-0 overflow-hidden rounded-[1cqw] border-[0.05cm] border-white/85 shadow-[0_3px_10px_rgba(0,0,0,0.4)]';
 
   const src = avatarUrl ? resolveAssetUrl(avatarUrl) : '';
   const [mode, setMode] = useState<'cors' | 'plain' | 'failed'>('cors');
