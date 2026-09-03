@@ -5,7 +5,7 @@ import { CardBackdropV1, V1_FACE_STYLE } from './CardBackdropV1';
 import { CertificateQr } from './CertificateQr';
 import { CertificateRibbons } from './CertificateRibbons';
 import { tierFaceStyle } from './certificate-theme';
-import { formatV1BranchLabel } from './org-title';
+import { formatV1BranchLabel, SHORT_ORG_TITLE } from './org-title';
 import { isGoldTier, resolvePositionTier, type PositionTier } from './position-tier';
 import type { EmployeeCertificate } from './types';
 import { UmetSeal } from './UmetSeal';
@@ -22,10 +22,12 @@ export type CertificateCardDesign = 'v1' | 'v2';
 const ORG_LINE = `"O'zbekiston milliy elektr tarmoqlari" AJ`;
 const CERT_TITLE_V1 = 'Xodimning bilim sinovi guvohnomasi';
 
-/** Guvohnoma sarlavhasi — qisqa filial nomi. */
+/** V2 sarlavha — filial to‘liq nomi; markaziy apparatda qisqa MET. */
 function cardTitle(certificate: EmployeeCertificate) {
-  return formatV1BranchLabel(
-    certificate.branchName?.trim() || certificate.organizationTitle?.trim(),
+  return (
+    formatV1BranchLabel(
+      certificate.branchName?.trim() || certificate.organizationTitle?.trim(),
+    ) || SHORT_ORG_TITLE
   );
 }
 
@@ -234,12 +236,12 @@ function CertificateCardFrontV1({
         aria-hidden
       />
 
-      {/* Logo — dumaloq, bordersiz */}
-      <div className="absolute top-[2.6cqw] right-[2.8cqw] z-[3] h-[11cqw] w-[11cqw] overflow-hidden rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+      {/* Logo — dumaloq; JPG oq chetini scale bilan kesamiz */}
+      <div className="absolute top-[2.6cqw] right-[2.8cqw] z-[3] h-[11cqw] w-[11cqw] overflow-hidden rounded-full">
         <img
           src="/umet-logo.jpg"
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full scale-[1.28] object-cover"
           draggable={false}
         />
       </div>
@@ -251,9 +253,11 @@ function CertificateCardFrontV1({
           <p className="m-0 text-[2.55cqw] font-bold leading-tight tracking-tight text-white">
             {ORG_LINE}
           </p>
-          <p className="m-0 mt-[0.5cqw] text-[2.15cqw] font-medium leading-tight text-white/90">
-            {branchLine(certificate)}
-          </p>
+          {branchLine(certificate) ? (
+            <p className="m-0 mt-[0.5cqw] text-[2.15cqw] font-medium leading-tight text-white/90">
+              {branchLine(certificate)}
+            </p>
+          ) : null}
           <p className="m-0 mt-[0.7cqw] text-[3.05cqw] font-extrabold leading-tight text-[#27AE60]">
             {CERT_TITLE_V1}
           </p>
@@ -335,11 +339,11 @@ function CertificateCardBackV1({
     >
       <CardBackdropV1 />
       <div className={cn(FACE_INNER_V1, 'items-center justify-center')}>
-        <div className="relative z-[3] h-[34cqw] w-[34cqw] overflow-hidden rounded-full shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
+        <div className="relative z-[3] h-[34cqw] w-[34cqw] overflow-hidden rounded-full">
           <img
             src="/umet-logo.jpg"
             alt=""
-            className="h-full w-full object-cover"
+            className="h-full w-full scale-[1.28] object-cover"
             draggable={false}
           />
         </div>
