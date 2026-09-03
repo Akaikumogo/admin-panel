@@ -267,10 +267,10 @@ function CertificateCardFrontV1({
           aria-hidden
         />
 
-        <div className="relative z-[2] flex min-h-0 flex-1 items-start gap-[0.22cm] pt-[0.1cm]">
+        <div className="relative z-[2] flex min-h-0 flex-1 items-start gap-[0.22cm] pt-0">
           <CardPhoto avatarUrl={avatarUrl} tier="employee" frame="v1" />
 
-          <dl className="m-0 flex min-w-0 flex-1 flex-col justify-start gap-[0.1cm] pt-0 text-left">
+          <dl className="m-0 -mt-[0.12cm] flex min-w-0 flex-1 flex-col justify-start gap-[0.06cm] text-left">
             <CardField
               labelUz="Familiyasi"
               labelEn="Surname"
@@ -298,22 +298,22 @@ function CertificateCardFrontV1({
             />
           </dl>
 
-          <div className="flex w-[2.4cm] shrink-0 flex-col items-end justify-end gap-[0.14cm] self-stretch pb-[0.02cm]">
-            <div className="w-full text-right">
+          <div className="relative w-[2.4cm] shrink-0 self-stretch">
+            <div className="absolute inset-x-0 bottom-[2.42cm] text-right">
               <p className="m-0 whitespace-nowrap text-[1.35cqw] font-medium leading-none text-[#B8C9D4]">
                 Guvohnoma raqami{' '}
                 <span className="italic opacity-80">/ Certificate number</span>
               </p>
-              <p className="m-0 mt-[0.08cm] text-[3.6cqw] font-extrabold leading-none tracking-wide text-[#F2C94C]">
+              <p className="m-0 mt-[0.06cm] text-[3.6cqw] font-extrabold leading-none tracking-wide text-[#F2C94C]">
                 {certificate.certificateNumber || '—'}
               </p>
             </div>
 
-            <div className="flex w-full flex-col items-center">
+            <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
               <div className={ID_CARD_QR_BOX_CLASS}>
                 <CertificateQr value={certificate.verifyUrl} />
               </div>
-              <p className="m-0 mt-[0.06cm] whitespace-nowrap text-[1.4cqw] font-medium tracking-wide text-[#B8C9D4]">
+              <p className="m-0 mt-[0.05cm] whitespace-nowrap text-[1.4cqw] font-medium tracking-wide text-[#B8C9D4]">
                 Scan to verify
               </p>
             </div>
