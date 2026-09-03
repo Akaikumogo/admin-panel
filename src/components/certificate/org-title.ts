@@ -1,6 +1,9 @@
 /** Kartada ko'rsatiladigan tashkilotning qisqa rasmiy nomi. */
 export const SHORT_ORG_TITLE = '"O‘ZBEKISTON MET" AJ';
 
+/** Filial yo‘q / markaziy apparat. */
+export const HEAD_OFFICE_LABEL = 'Markaziy Apparat';
+
 /** Tashkiliy-huquqiy shakl — nomdan oldin ham, keyin ham kelishi mumkin. */
 const ORG_FORM = String.raw`(?:AJ|AO|АЖ|АО)\.?`;
 
@@ -19,7 +22,6 @@ const FULL_ORG_RE = new RegExp(
 /** Sarlavha boshidagi bir yoki bir nechta AJ/AO. */
 const LEADING_ORG_FORMS_RE = new RegExp(String.raw`^(?:${ORG_FORM}\s+)+`, 'iu');
 
-/** FILIALI oldidagi yolg‘on qo‘shtirnoq: ` " FILIALI` (yopuvchi " emas). */
 const STRAY_QUOTE_BEFORE_FILIALI_RE =
   /\s+["«»“”]+\s*(?=(?:FILIALI|филиали)\b)/giu;
 const STRAY_QUOTE_AFTER_FILIALI_RE =
@@ -27,7 +29,69 @@ const STRAY_QUOTE_AFTER_FILIALI_RE =
 
 const TRAILING_QUOTES_RE = /\s*["«»“”'‘’]+\s*$/gu;
 
-const MET_SHORT_RE = /O[''‘’]?ZBEKISTON\s+MET/iu;
+const MET_SHORT_RE = /["«»“”]?\s*O[''‘’]?ZBEKISTON\s+MET\s*["«»“”]?\s*(?:AJ|AO|АЖ|АО)?\.?/giu;
+
+/** "Magistral elektr tarmoqlari" — MET bilan takror, olib tashlanadi. */
+const MAGISTRAL_NOISE_RE =
+  /magistral\s+elektr\s+tarmoqlari|магистрал\s+(?:электр\s+)?тармо[кқ]лари|магистральн\w*\s+электр\w*\s+сет\w*/giu;
+
+/**
+ * MET filiallari — kartada faqat qisqa nom (main org qatorida to‘liq nom bor).
+ * Tartib muhim: Toshkent shahar → Toshkentdan oldin.
+ */
+const BRANCH_LABELS: { label: string; patterns: RegExp[] }[] = [
+  {
+    label: 'Toshkent shahar filiali',
+    patterns: [
+      /toshkent\s+shahar/i,
+      /тошкент\s+шах?ар/i,
+      /ташкент\s+(?:город|г\.?)/i,
+    ],
+  },
+  {
+    label: "Qoraqalpog'iston filiali",
+    patterns: [
+      /qoraqalpog[''‘’]?iston/i,
+      /qaraqalpog[''‘’]?iston/i,
+      /каракалпакстан/i,
+      /қорақалпоғ?истон/i,
+    ],
+  },
+  { label: 'Andijon filiali', patterns: [/andijon/i, /андижан/i, /андижон/i] },
+  { label: 'Buxoro filiali', patterns: [/buxoro/i, /бухара/i, /бухоро/i] },
+  { label: 'Jizzax filiali', patterns: [/jizzax/i, /джизак/i, /жиззах/i] },
+  {
+    label: 'Qashqadaryo filiali',
+    patterns: [/qashqadaryo/i, /қашқадар[еёя]/i, /кашкадарь?[еёя]/i],
+  },
+  { label: 'Navoiy filiali', patterns: [/navoiy/i, /навои/i] },
+  { label: 'Namangan filiali', patterns: [/namangan/i, /наманган/i] },
+  {
+    label: 'Samarqand filiali',
+    patterns: [/samarqand/i, /самарканд/i, /самарқанд/i],
+  },
+  {
+    label: 'Sirdaryo filiali',
+    patterns: [/sirdaryo/i, /сырдарь?[еёя]/i, /сирдар[еёя]/i],
+  },
+  {
+    label: 'Surxondaryo filiali',
+    patterns: [/surxondaryo/i, /сурхандарь?[еёя]/i, /сурхондар[еёя]/i],
+  },
+  {
+    label: "Farg'ona filiali",
+    patterns: [/farg[''‘’]?ona/i, /фергана/i, /фарғона/i],
+  },
+  { label: 'Xorazm filiali', patterns: [/xorazm/i, /хорезм/i, /хоразм/i] },
+  {
+    label: 'Toshkent filiali',
+    patterns: [/toshkent/i, /тошкент/i, /ташкент/i],
+  },
+];
+
+function normalizeApostrophes(value: string) {
+  return value.replace(/[`´ʻʼ‘’']/g, "'");
+}
 
 /**
  * NES dan keladigan nomlarda tashkiliy-huquqiy shakl "AO"/"АО" ko'rinishida
@@ -40,16 +104,10 @@ export function normalizeOrgForm(name: string) {
   );
 }
 
-/**
- * Qisqartirishdan keyin:
- * - chapdagi AJ/AO ni HAR DOIM olib tashlash (o'ngdagi `"… MET" AJ` qoladi)
- * - FILIALI atrofidagi yolg'on qo‘shtirnoqlarni tozalash
- */
 export function cleanupCardOrgTitle(title: string): string {
   let t = title.replace(/\s{2,}/g, ' ').trim();
 
   t = t.replace(LEADING_ORG_FORMS_RE, '');
-
   t = t.replace(STRAY_QUOTE_BEFORE_FILIALI_RE, ' ');
   t = t.replace(STRAY_QUOTE_AFTER_FILIALI_RE, '$1');
   t = t.replace(TRAILING_QUOTES_RE, '');
@@ -58,9 +116,8 @@ export function cleanupCardOrgTitle(title: string): string {
 }
 
 /**
- * Tashkilotning to'liq nomi kartaga sig'maydi: NES dan qanday yozilishi bilan
- * kelmasin — lotin, kirill, "AO"/"AJ" oldinda yoki ortida — qisqa shaklga
- * almashtiriladi. Filialning o'z nomi o'zgarishsiz qoladi.
+ * To‘liq org nomini qisqa MET shakliga almashtirish (kerak bo‘lsa).
+ * Kartaning 1-qatori odatda alohida ORG_LINE — bu funksiya kamroq ishlatiladi.
  */
 export function formatCardOrgTitle(name: string | null | undefined): string {
   const raw = (name ?? '').trim();
@@ -75,14 +132,38 @@ export function formatCardOrgTitle(name: string | null | undefined): string {
 }
 
 /**
- * V1 kartadagi filial qatori: har doim `"O‘ZBEKISTON MET" AJ` + filial nomi.
+ * V1/V2 kartadagi filial qatori — faqat qisqa filial nomi.
+ * Main org qatorida to‘liq nom bor, shuning uchun MET AJ qo‘yilmaydi.
+ *
+ * Masalan: `Andijon filiali`, `Toshkent shahar filiali`, `Markaziy Apparat`
  */
 export function formatV1BranchLabel(name: string | null | undefined): string {
-  const raw = (name ?? '').trim();
-  if (!raw) return `${SHORT_ORG_TITLE}, Markaziy Apparat`;
+  const raw = normalizeApostrophes((name ?? '').trim());
+  if (!raw) return HEAD_OFFICE_LABEL;
+  if (/markaziy\s+apparat/i.test(raw) || /центральн\w*\s+аппарат/i.test(raw)) {
+    return HEAD_OFFICE_LABEL;
+  }
 
-  const formatted = formatCardOrgTitle(raw).replace(/\s*,\s*/g, ', ');
-  if (MET_SHORT_RE.test(formatted)) return formatted;
+  for (const { label, patterns } of BRANCH_LABELS) {
+    if (patterns.some((re) => re.test(raw))) return label;
+  }
 
-  return `${SHORT_ORG_TITLE}, ${formatted}`;
+  // Noma’lum filial — ortiqcha org/MET/magistral qismlarini olib tashlash
+  let fallback = raw
+    .replace(FULL_ORG_RE, ' ')
+    .replace(MET_SHORT_RE, ' ')
+    .replace(MAGISTRAL_NOISE_RE, ' ')
+    .replace(/\s*,\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  fallback = cleanupCardOrgTitle(normalizeOrgForm(fallback));
+  if (!fallback || MET_SHORT_RE.test(fallback)) return HEAD_OFFICE_LABEL;
+
+  // "filiali" yo‘q bo‘lsa — qo‘shamiz (agar allaqachon filial emas bo‘lsa)
+  if (!/\bfiliali\b|\bфилиали\b/i.test(fallback)) {
+    fallback = `${fallback} filiali`;
+  }
+
+  return fallback;
 }
