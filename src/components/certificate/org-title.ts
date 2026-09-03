@@ -16,6 +16,19 @@ const FULL_ORG_RE = new RegExp(
   'giu',
 );
 
+/** Sarlavha boshidagi bir yoki bir nechta AJ/AO. */
+const LEADING_ORG_FORMS_RE = new RegExp(String.raw`^(?:${ORG_FORM}\s+)+`, 'iu');
+
+/** FILIALI oldidagi yolg‘on qo‘shtirnoq: ` " FILIALI` (yopuvchi " emas). */
+const STRAY_QUOTE_BEFORE_FILIALI_RE =
+  /\s+["«»“”]+\s*(?=(?:FILIALI|филиали)\b)/giu;
+const STRAY_QUOTE_AFTER_FILIALI_RE =
+  /(\b(?:FILIALI|филиали))\s*["«»“”]+/giu;
+
+const TRAILING_QUOTES_RE = /\s*["«»“”'‘’]+\s*$/gu;
+
+const MET_SHORT_RE = /O[''‘’]?ZBEKISTON\s+MET/iu;
+
 /**
  * NES dan keladigan nomlarda tashkiliy-huquqiy shakl "AO"/"АО" ko'rinishida
  * bo'ladi. Guvohnomada u doim "AJ" bo'lishi kerak.
@@ -25,6 +38,23 @@ export function normalizeOrgForm(name: string) {
     /(^|[\s(«"'])(AO|АО)(?=[\s.,)»"']|$)/gu,
     (_match, lead: string) => `${lead}AJ`,
   );
+}
+
+/**
+ * Qisqartirishdan keyin:
+ * - chapdagi AJ/AO ni HAR DOIM olib tashlash (o'ngdagi `"… MET" AJ` qoladi)
+ * - FILIALI atrofidagi yolg'on qo‘shtirnoqlarni tozalash
+ */
+export function cleanupCardOrgTitle(title: string): string {
+  let t = title.replace(/\s{2,}/g, ' ').trim();
+
+  t = t.replace(LEADING_ORG_FORMS_RE, '');
+
+  t = t.replace(STRAY_QUOTE_BEFORE_FILIALI_RE, ' ');
+  t = t.replace(STRAY_QUOTE_AFTER_FILIALI_RE, '$1');
+  t = t.replace(TRAILING_QUOTES_RE, '');
+
+  return t.replace(/\s{2,}/g, ' ').trim();
 }
 
 /**
@@ -41,5 +71,18 @@ export function formatCardOrgTitle(name: string | null | undefined): string {
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  return normalizeOrgForm(shortened) || SHORT_ORG_TITLE;
+  return cleanupCardOrgTitle(normalizeOrgForm(shortened)) || SHORT_ORG_TITLE;
+}
+
+/**
+ * V1 kartadagi filial qatori: har doim `"O‘ZBEKISTON MET" AJ` + filial nomi.
+ */
+export function formatV1BranchLabel(name: string | null | undefined): string {
+  const raw = (name ?? '').trim();
+  if (!raw) return `${SHORT_ORG_TITLE}, Markaziy Apparat`;
+
+  const formatted = formatCardOrgTitle(raw).replace(/\s*,\s*/g, ', ');
+  if (MET_SHORT_RE.test(formatted)) return formatted;
+
+  return `${SHORT_ORG_TITLE}, ${formatted}`;
 }

@@ -5,7 +5,7 @@ import { CardBackdropV1, V1_FACE_STYLE } from './CardBackdropV1';
 import { CertificateQr } from './CertificateQr';
 import { CertificateRibbons } from './CertificateRibbons';
 import { tierFaceStyle } from './certificate-theme';
-import { formatCardOrgTitle } from './org-title';
+import { formatCardOrgTitle, formatV1BranchLabel } from './org-title';
 import { isGoldTier, resolvePositionTier, type PositionTier } from './position-tier';
 import type { EmployeeCertificate } from './types';
 import { UmetSeal } from './UmetSeal';
@@ -30,9 +30,7 @@ function cardTitle(certificate: EmployeeCertificate) {
 }
 
 function branchLine(certificate: EmployeeCertificate) {
-  const branch = certificate.branchName?.trim();
-  if (branch) return formatCardOrgTitle(branch);
-  return 'Markaziy Apparat';
+  return formatV1BranchLabel(certificate.branchName);
 }
 
 /** Barcha o'lchamlar — haqiqiy 8,5 × 5,5 sm. */
@@ -234,12 +232,12 @@ function CertificateCardFrontV1({
         aria-hidden
       />
 
-      {/* Logo kvadrat — o'ng yuqori */}
-      <div className="absolute top-[2.6cqw] right-[2.8cqw] z-[3] flex h-[11cqw] w-[11cqw] items-center justify-center overflow-hidden rounded-[1.4cqw] border-[0.35cqw] border-white/80 bg-white/10 p-[0.6cqw]">
+      {/* Logo — dumaloq, bordersiz */}
+      <div className="absolute top-[2.6cqw] right-[2.8cqw] z-[3] h-[11cqw] w-[11cqw] overflow-hidden rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
         <img
           src="/umet-logo.jpg"
           alt=""
-          className="h-full w-full rounded-[0.8cqw] object-cover"
+          className="h-full w-full object-cover"
           draggable={false}
         />
       </div>
@@ -335,11 +333,11 @@ function CertificateCardBackV1({
     >
       <CardBackdropV1 />
       <div className={cn(FACE_INNER_V1, 'items-center justify-center')}>
-        <div className="relative z-[3] flex h-[34cqw] w-[34cqw] items-center justify-center overflow-hidden rounded-[2cqw] border-[0.4cqw] border-white/75 bg-white/10 p-[1.2cqw]">
+        <div className="relative z-[3] h-[34cqw] w-[34cqw] overflow-hidden rounded-full shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
           <img
             src="/umet-logo.jpg"
             alt=""
-            className="h-full w-full rounded-[1.2cqw] object-cover"
+            className="h-full w-full object-cover"
             draggable={false}
           />
         </div>
