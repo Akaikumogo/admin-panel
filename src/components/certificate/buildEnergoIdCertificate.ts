@@ -6,38 +6,53 @@ const USER_PORTAL_ORIGIN =
   (import.meta.env.VITE_USER_PORTAL_URL as string | undefined)?.trim() ||
   'https://cabinetid.uzbekistonmet.uz';
 
-const ORG_STOPWORDS = new Set([
-  'ao',
-  'aj',
-  'oaj',
-  'oao',
-  'ао',
-  'аж',
-  'оао',
-  "o'zbekiston",
-  'ozbekiston',
-  'узбекистон',
-  'узбекистан',
-  'milliy',
-  'миллий',
-  'национальные',
-  'национальная',
-  'elektr',
-  'электр',
-  'электрические',
-  'tarmoqlari',
-  'тармоклари',
-  'тармоқлари',
-  'сети',
-  'aksiyadorlik',
-  'jamiyati',
-  'акциядорлик',
-  'жамияти',
-  'filiali',
-  'filial',
-  'филиали',
-  'филиал',
-]);
+/** MET filial belgilari (guvohnoma raqami prefiksi). */
+const BRANCH_PREFIXES: { prefix: string; patterns: RegExp[] }[] = [
+  {
+    prefix: 'TSh',
+    patterns: [
+      /toshkent\s+shahar/i,
+      /тошкент\s+шах?ар/i,
+      /ташкент\s+(?:город|г\.?)/i,
+    ],
+  },
+  {
+    prefix: 'QQ',
+    patterns: [
+      /qoraqalpog[''‘’]?iston/i,
+      /qaraqalpog[''‘’]?iston/i,
+      /каракалпакстан/i,
+      /қорақалпоғ?истон/i,
+    ],
+  },
+  { prefix: 'AN', patterns: [/andijon/i, /андижан/i, /андижон/i] },
+  { prefix: 'BX', patterns: [/buxoro/i, /бухара/i, /бухоро/i] },
+  { prefix: 'JX', patterns: [/jizzax/i, /джизак/i, /жиззах/i] },
+  {
+    prefix: 'QSh',
+    patterns: [/qashqadaryo/i, /қашқадар[еёя]/i, /кашкадарь?[еёя]/i],
+  },
+  { prefix: 'NV', patterns: [/navoiy/i, /навои/i] },
+  { prefix: 'NM', patterns: [/namangan/i, /наманган/i] },
+  { prefix: 'SM', patterns: [/samarqand/i, /самарканд/i, /самарқанд/i] },
+  {
+    prefix: 'SR',
+    patterns: [/sirdaryo/i, /сырдарь?[еёя]/i, /сирдар[еёя]/i],
+  },
+  {
+    prefix: 'SX',
+    patterns: [/surxondaryo/i, /сурхандарь?[еёя]/i, /сурхондар[еёя]/i],
+  },
+  {
+    prefix: 'FR',
+    patterns: [/farg[''‘’]?ona/i, /фергана/i, /фарғона/i],
+  },
+  { prefix: 'XZ', patterns: [/xorazm/i, /хорезм/i, /хоразм/i] },
+  {
+    prefix: 'TV',
+    patterns: [/toshkent/i, /тошкент/i, /ташкент/i],
+  },
+];
 
 export type EnergoIdCardSource = {
   id: string;
@@ -57,28 +72,16 @@ function normalizeApostrophes(value: string) {
   return value.replace(/[`´ʻʼ‘’']/g, "'");
 }
 
-function wordInitial(word: string) {
-  const lower = word.toLocaleLowerCase();
-  if (lower.startsWith('sh') || lower.startsWith('ch')) {
-    return word.slice(0, 2).toLocaleUpperCase();
-  }
-  return word.slice(0, 1).toLocaleUpperCase();
-}
-
-/** ENERGO ID bilan bir xil prefiks (masalan ENERGO-IT → EF). */
+/** ENERGO ID bilan bir xil prefiks — MET filial jadvali (Andijon → AN). */
 export function resolveEnergoCardPrefix(branchName?: string | null): string {
   const raw = normalizeApostrophes((branchName ?? '').trim());
-  if (!raw || !/filial|филиал/i.test(raw)) return HEAD_OFFICE_PREFIX;
+  if (!raw) return HEAD_OFFICE_PREFIX;
 
-  const words = raw
-    .replace(/\s*-\s*/g, '-')
-    .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
-    .split(/\s+/)
-    .filter(Boolean)
-    .filter((word) => !ORG_STOPWORDS.has(word.toLocaleLowerCase()));
+  for (const { prefix, patterns } of BRANCH_PREFIXES) {
+    if (patterns.some((re) => re.test(raw))) return prefix;
+  }
 
-  const code = words.map(wordInitial).join('');
-  return code ? `${code}F` : HEAD_OFFICE_PREFIX;
+  return HEAD_OFFICE_PREFIX;
 }
 
 function certDigits(source: EnergoIdCardSource) {
