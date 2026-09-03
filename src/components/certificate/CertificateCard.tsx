@@ -5,7 +5,7 @@ import { CardBackdropV1, V1_FACE_STYLE } from './CardBackdropV1';
 import { CertificateQr } from './CertificateQr';
 import { CertificateRibbons } from './CertificateRibbons';
 import { tierFaceStyle } from './certificate-theme';
-import { formatCardOrgTitle, formatV1BranchLabel } from './org-title';
+import { formatV1BranchLabel } from './org-title';
 import { isGoldTier, resolvePositionTier, type PositionTier } from './position-tier';
 import type { EmployeeCertificate } from './types';
 import { UmetSeal } from './UmetSeal';
@@ -22,15 +22,17 @@ export type CertificateCardDesign = 'v1' | 'v2';
 const ORG_LINE = `"O'zbekiston milliy elektr tarmoqlari" AJ`;
 const CERT_TITLE_V1 = 'Xodimning bilim sinovi guvohnomasi';
 
-/** Guvohnoma sarlavhasi — filialning to'liq nomi (bo'lmasa tashkilot nomi). */
+/** Guvohnoma sarlavhasi — qisqa filial nomi. */
 function cardTitle(certificate: EmployeeCertificate) {
-  return formatCardOrgTitle(
+  return formatV1BranchLabel(
     certificate.branchName?.trim() || certificate.organizationTitle?.trim(),
   );
 }
 
 function branchLine(certificate: EmployeeCertificate) {
-  return formatV1BranchLabel(certificate.branchName);
+  return formatV1BranchLabel(
+    certificate.branchName?.trim() || certificate.organizationTitle?.trim(),
+  );
 }
 
 /** Barcha o'lchamlar — haqiqiy 8,5 × 5,5 sm. */
