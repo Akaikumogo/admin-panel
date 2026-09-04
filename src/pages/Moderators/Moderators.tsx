@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -311,6 +311,7 @@ const Moderators = () => {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeOptions, setEmployeeOptions] = useState<StudentSummary[]>([]);
   const [employeeLoading, setEmployeeLoading] = useState(false);
+  const employeeSearchSeq = useRef(0);
   const [orgOverrides, setOrgOverrides] = useState<Record<string, string | null>>({});
   const [orgUpdating, setOrgUpdating] = useState<Record<string, boolean>>({});
   const [demotingId, setDemotingId] = useState<string | null>(null);
@@ -418,17 +419,25 @@ const Moderators = () => {
   };
 
   const loadEmployees = async (search?: string) => {
+    const q = (search || '').trim();
+    const seq = ++employeeSearchSeq.current;
     setEmployeeLoading(true);
     try {
+      // Login/tabel qidiruvda ko‘proq natija + backend ranking
+      const looksLikeLogin = /[.\d_]/.test(q) && !/\s/.test(q);
       const res = await apiService.getStudents({
-        search: search || undefined,
-        limit: 100,
+        search: q || undefined,
+        limit: q ? (looksLikeLogin ? 50 : 100) : 40,
+        page: 1,
       });
+      if (seq !== employeeSearchSeq.current) return;
       setEmployeeOptions(
         res.data.filter((s) => !s.role || s.role === 'USER'),
       );
     } finally {
-      setEmployeeLoading(false);
+      if (seq === employeeSearchSeq.current) {
+        setEmployeeLoading(false);
+      }
     }
   };
 
@@ -450,8 +459,9 @@ const Moderators = () => {
       assignRole: staffRoleTab === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR',
     });
     setEmployeeSearch('');
-    void loadEmployees();
+    setEmployeeOptions([]);
     setModalOpen(true);
+    void loadEmployees('');
   };
 
   const handlePromote = async () => {
@@ -829,16 +839,30 @@ const Moderators = () => {
             name="userId"
             label={t(T.employee)}
             rules={[{ required: true, message: 'Xodimni tanlang' }]}
-            extra="Barcha xodimlar izlanadi (ism, login, tabel №, email, filial)"
+            extra="Login bilan qidiring (masalan: k.omonov3952) yoki ism / tabel № / filial"
           >
             <Select
               showSearch
+              allowClear
               placeholder={t(T.employeeSearch)}
               filterOption={false}
               loading={employeeLoading}
-              onSearch={setEmployeeSearch}
+              onSearch={(value) => setEmployeeSearch(value)}
+              onClear={() => {
+                setEmployeeSearch('');
+                void loadEmployees('');
+              }}
+              onDropdownVisibleChange={(open) => {
+                if (open && employeeOptions.length === 0) {
+                  void loadEmployees(employeeSearch);
+                }
+              }}
               notFoundContent={
-                employeeLoading ? 'Qidirilmoqda...' : 'Xodim topilmadi'
+                employeeLoading
+                  ? 'Qidirilmoqda...'
+                  : employeeSearch.trim()
+                    ? `“${employeeSearch.trim()}” bo‘yicha xodim topilmadi`
+                    : 'Login yoki ism yozing…'
               }
               options={employeeOptions.map((u) => {
                 const org = (u.organizations ?? [])
@@ -846,13 +870,27 @@ const Moderators = () => {
                   .join(', ');
                 const name = `${u.lastName} ${u.firstName}`.trim();
                 const tabel = u.personnelNumber
-                  ? ` · №${u.personnelNumber}`
+                  ? `№${u.personnelNumber}`
                   : '';
-                const label = org
-                  ? `${name}${tabel} — ${org} (${u.email})`
-                  : `${name}${tabel} (${u.email})`;
+                // Login birinchi — qidiruv natijasida ko‘rinadi
+                const label = [u.email, name, tabel, org]
+                  .filter(Boolean)
+                  .join(' · ');
                 return { value: u.id, label };
               })}
+              optionRender={(option) => (
+                <div className="py-0.5 leading-snug">
+                  <div className="font-medium text-foreground">
+                    {String(option.label ?? '').split(' · ')[0]}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {String(option.label ?? '')
+                      .split(' · ')
+                      .slice(1)
+                      .join(' · ')}
+                  </div>
+                </div>
+              )}
             />
           </Form.Item>
           <Form.Item
