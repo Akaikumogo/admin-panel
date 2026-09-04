@@ -1,7 +1,7 @@
 import type { EmployeeCertificate } from './types';
 
 const ORG_TITLE = '«O‘zbekiston milliy elektr tarmoqlari» AJ';
-const HEAD_OFFICE_PREFIX = 'MA';
+const HEAD_OFFICE_PREFIX = 'UZ';
 const USER_PORTAL_ORIGIN =
   (import.meta.env.VITE_USER_PORTAL_URL as string | undefined)?.trim() ||
   'https://cabinetid.uzbekistonmet.uz';
