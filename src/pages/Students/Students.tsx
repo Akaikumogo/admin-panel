@@ -312,7 +312,8 @@ const Students = () => {
               ) : null}
             </p>
             <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-              {'⚡'.repeat(record.badge.bolts)} {record.badge.label}
+              {'⚡'.repeat(record.badge?.bolts ?? 1)}{' '}
+              {record.badge?.label ?? 'Yangi ishchi'}
             </div>
           </div>
         </div>

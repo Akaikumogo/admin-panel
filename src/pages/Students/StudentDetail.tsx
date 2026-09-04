@@ -282,7 +282,8 @@ const StudentDetailPage = () => {
             </h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs font-medium">
-                {'⚡'.repeat(student.badge.bolts)} {student.badge.label}
+                {'⚡'.repeat(student.badge?.bolts ?? 1)}{' '}
+                {student.badge?.label ?? 'Yangi ishchi'}
               </span>
             </div>
             <div className="flex items-center gap-4 mt-3 text-sm text-slate-500 dark:text-slate-400">

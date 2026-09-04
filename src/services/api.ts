@@ -1029,7 +1029,7 @@ export type StudentSummary = {
   totalXp: number;
   currentLevelId: string | null;
   currentLevelTitle: string | null;
-  badge: StudentBadge;
+  badge?: StudentBadge | null;
   organizations: { id: string; name: string; reportActive?: boolean }[];
 };
 
@@ -1068,7 +1068,7 @@ export type StudentDetail = {
   uniqueCorrectQuestions: number;
   completedLevels: number;
   totalErrors: number;
-  badge: StudentBadge;
+  badge?: StudentBadge | null;
   levelProgress: LevelProgress[];
   createdAt: string;
 };
