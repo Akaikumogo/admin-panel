@@ -422,8 +422,9 @@ const Moderators = () => {
     const q = (search || '').trim();
     const seq = ++employeeSearchSeq.current;
     setEmployeeLoading(true);
+    // Eski kesh optionlar qidiruv natijasini chalkashtirmasin
+    if (q) setEmployeeOptions([]);
     try {
-      // Login/tabel qidiruvda ko‘proq natija + backend ranking
       const looksLikeLogin = /[.\d_]/.test(q) && !/\s/.test(q);
       const res = await apiService.getStudents({
         search: q || undefined,

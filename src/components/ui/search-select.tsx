@@ -1,12 +1,23 @@
 import * as React from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { filterSelectOption } from '@/utils/selectSearch.util';
 
-export type SelectOption = { value: string | number; label: React.ReactNode; disabled?: boolean };
+export type SelectOption = {
+  value: string | number;
+  label: React.ReactNode;
+  disabled?: boolean;
+};
 
 function optionSearchText(opt: SelectOption): string {
   return String(opt.label ?? opt.value ?? '');
@@ -25,6 +36,12 @@ function SearchSelectInner({
   popupClassName,
   allowClear,
   prefix,
+  loading,
+  filterOption = true,
+  onSearch,
+  notFoundContent,
+  optionRender,
+  onOpenChange,
 }: {
   value?: string | number | null;
   onChange?: (value: string) => void;
@@ -38,9 +55,17 @@ function SearchSelectInner({
   popupClassName?: string;
   allowClear?: boolean;
   prefix?: React.ReactNode;
+  loading?: boolean;
+  /** false = faqat backend/onSearch; true/fn = lokal filter */
+  filterOption?: boolean | ((input: string, option?: SelectOption) => boolean);
+  onSearch?: (value: string) => void;
+  notFoundContent?: React.ReactNode;
+  optionRender?: (option: SelectOption) => React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const serverSearch = filterOption === false;
 
   const selected = React.useMemo(
     () => options.find((o) => String(o.value) === String(value)),
@@ -49,13 +74,33 @@ function SearchSelectInner({
 
   const filteredOptions = React.useMemo(() => {
     if (!showSearch || !search.trim()) return options;
+    // Backend qidiruv: options allaqachon serverdan kelgan — lokal filter qilma
+    if (serverSearch) return options;
+    if (typeof filterOption === 'function') {
+      return options.filter((opt) => filterOption(search, opt));
+    }
     return options.filter((opt) => filterSelectOption(search, opt));
-  }, [options, search, showSearch]);
+  }, [options, search, showSearch, serverSearch, filterOption]);
+
+  const handleSearchChange = (next: string) => {
+    setSearch(next);
+    if (serverSearch) onSearch?.(next);
+  };
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (!next) setSearch('');
+    onOpenChange?.(next);
+    if (!next) {
+      setSearch('');
+      if (serverSearch) onSearch?.('');
+    } else if (serverSearch && options.length === 0) {
+      onSearch?.(search);
+    }
   };
+
+  const emptyNode = loading
+    ? 'Qidirilmoqda...'
+    : (notFoundContent ?? 'Topilmadi');
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -72,7 +117,11 @@ function SearchSelectInner({
             {prefix}
             {selected?.label ?? placeholder}
           </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {loading ? (
+            <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin opacity-60" />
+          ) : (
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -87,11 +136,11 @@ function SearchSelectInner({
             <CommandInput
               placeholder={searchPlaceholder}
               value={search}
-              onValueChange={setSearch}
+              onValueChange={handleSearchChange}
             />
           ) : null}
           <CommandList>
-            <CommandEmpty>Topilmadi</CommandEmpty>
+            <CommandEmpty>{emptyNode}</CommandEmpty>
             <CommandGroup>
               {allowClear && value ? (
                 <CommandItem
@@ -116,11 +165,15 @@ function SearchSelectInner({
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
-                      String(value) === String(opt.value) ? 'opacity-100' : 'opacity-0',
+                      'mr-2 h-4 w-4 shrink-0',
+                      String(value) === String(opt.value)
+                        ? 'opacity-100'
+                        : 'opacity-0',
                     )}
                   />
-                  {opt.label}
+                  <span className="min-w-0 flex-1">
+                    {optionRender ? optionRender(opt) : opt.label}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -147,6 +200,12 @@ export function Select(props: Record<string, unknown>) {
     size,
     allowClear,
     prefix,
+    loading,
+    filterOption,
+    onSearch,
+    notFoundContent,
+    optionRender,
+    onDropdownVisibleChange,
   } = props as {
     value?: string | string[] | number | null;
     onChange?: (value: string | string[]) => void;
@@ -164,9 +223,14 @@ export function Select(props: Record<string, unknown>) {
     optionFilterProp?: string;
     filterOption?: boolean | ((input: string, option?: SelectOption) => boolean);
     onSearch?: (value: string) => void;
+    notFoundContent?: React.ReactNode;
+    onDropdownVisibleChange?: (open: boolean) => void;
+    optionRender?: (option: {
+      value?: string | number;
+      label?: React.ReactNode;
+      data?: SelectOption;
+    }) => React.ReactNode;
   };
-
-  void props;
 
   const sizeClass = size === 'large' ? 'h-11' : size === 'small' ? 'h-8 text-xs' : 'h-9';
   const strValue = Array.isArray(value) ? value[0] : value;
@@ -184,6 +248,21 @@ export function Select(props: Record<string, unknown>) {
       popupClassName={popupClassName}
       allowClear={allowClear}
       prefix={prefix}
+      loading={loading}
+      filterOption={filterOption ?? true}
+      onSearch={onSearch}
+      notFoundContent={notFoundContent}
+      onOpenChange={onDropdownVisibleChange}
+      optionRender={
+        optionRender
+          ? (opt) =>
+              optionRender({
+                value: opt.value,
+                label: opt.label,
+                data: opt,
+              })
+          : undefined
+      }
     />
   );
 }
