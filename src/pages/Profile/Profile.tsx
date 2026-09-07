@@ -8,6 +8,8 @@ import {
   Mail,
   Save,
   Shield,
+  Trash2,
+  Upload,
   UserCircle,
   X
 } from 'lucide-react';
@@ -67,6 +69,46 @@ const T = Object.freeze({
     uz: "Rasmga bosing o'zgartirish uchun",
     ru: 'Нажмите для изменения',
     en: 'Click to change photo'
+  },
+  changePhoto: {
+    uz: 'Yuklash / almashtirish',
+    ru: 'Загрузить / заменить',
+    en: 'Upload / replace',
+  },
+  deletePhoto: {
+    uz: 'O‘chirish',
+    ru: 'Удалить',
+    en: 'Delete',
+  },
+  avatarDeleted: {
+    uz: 'Rasm o‘chirildi',
+    ru: 'Фото удалено',
+    en: 'Photo deleted',
+  },
+  rulesTitle: {
+    uz: 'Rasm shartlari',
+    ru: 'Требования к фото',
+    en: 'Photo requirements',
+  },
+  rule1: {
+    uz: 'Format: JPG, PNG, WEBP yoki GIF',
+    ru: 'Формат: JPG, PNG, WEBP или GIF',
+    en: 'Format: JPG, PNG, WEBP or GIF',
+  },
+  rule2: {
+    uz: 'Hajm: eng ko‘pi 5 MB',
+    ru: 'Размер: максимум 5 МБ',
+    en: 'Size: max 5 MB',
+  },
+  rule3: {
+    uz: 'Yuz aniq ko‘rinsin',
+    ru: 'Лицо должно быть чётко видно',
+    en: 'Face must be clearly visible',
+  },
+  rule4: {
+    uz: 'Orqa fon oq bo‘lishi shart',
+    ru: 'Белый фон обязателен',
+    en: 'White background required',
   },
   orgs: { uz: 'Tashkilot', ru: 'Организаций', en: 'Organizations' },
   access: { uz: 'Ruxsat', ru: 'Доступ', en: 'Access' },
@@ -156,21 +198,27 @@ const AvatarCard = memo(function AvatarCard({
   avatarSrc,
   initials,
   uploading,
+  deleting,
   onUpload,
+  onDelete,
   t
 }: {
   me: UserProfile;
   avatarSrc: string | null;
   initials: string;
   uploading: boolean;
+  deleting: boolean;
   onUpload: (file: File) => void;
+  onDelete: () => void;
   t: TFn;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const busy = uploading || deleting;
 
   const handleClick = useCallback(() => {
+    if (busy) return;
     fileInputRef.current?.click();
-  }, []);
+  }, [busy]);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,12 +253,12 @@ const AvatarCard = memo(function AvatarCard({
           </div>
           <button
             type="button"
-            disabled={uploading}
+            disabled={busy}
             onClick={handleClick}
             className="absolute inset-0 w-32 h-32 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all duration-200 cursor-pointer"
           >
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {uploading ? (
+              {busy ? (
                 <Spin size="small" />
               ) : (
                 <Camera className="text-white" size={24} />
@@ -220,15 +268,48 @@ const AvatarCard = memo(function AvatarCard({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
             onChange={handleFileChange}
           />
         </div>
 
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-          {t(T.clickPhoto)}
-        </p>
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <Button
+            size="small"
+            icon={<Upload size={14} />}
+            loading={uploading}
+            disabled={busy}
+            onClick={handleClick}
+          >
+            {t(T.changePhoto)}
+          </Button>
+          {avatarSrc ? (
+            <Button
+              size="small"
+              danger
+              icon={<Trash2 size={14} />}
+              loading={deleting}
+              disabled={busy}
+              onClick={onDelete}
+            >
+              {t(T.deletePhoto)}
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left dark:border-slate-700 dark:bg-slate-900/50">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {t(T.rulesTitle)}
+          </p>
+          <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+            <li>{t(T.rule1)}</li>
+            <li>{t(T.rule2)}</li>
+            <li>{t(T.rule3)}</li>
+            <li>{t(T.rule4)}</li>
+          </ul>
+        </div>
+
         <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-4">
           {me.firstName} {me.lastName}
         </h2>
@@ -455,6 +536,7 @@ export default function ProfilePage() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [changingPw, setChangingPw] = useState(false);
   const [me, setMe] = useState<UserProfile | null>(null);
@@ -518,6 +600,30 @@ export default function ProfilePage() {
     },
     [t]
   );
+
+  const handleAvatarDelete = useCallback(async () => {
+    if (
+      !window.confirm(
+        t({
+          uz: 'Rasm o‘chirilsinmi?',
+          en: 'Delete this photo?',
+          ru: 'Удалить фото?',
+        }),
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await apiService.deleteMyAvatar();
+      setMe((prev) => (prev ? { ...prev, avatarUrl: null } : prev));
+      void message.success(t(T.avatarDeleted));
+    } catch {
+      void message.error(t(T.error));
+    } finally {
+      setDeleting(false);
+    }
+  }, [t]);
 
   const handleProfileSave = useCallback(
     async (values: { firstName: string; lastName: string }) => {
@@ -597,7 +703,9 @@ export default function ProfilePage() {
             avatarSrc={avatarSrc}
             initials={initials}
             uploading={uploading}
+            deleting={deleting}
             onUpload={handleAvatarUpload}
+            onDelete={handleAvatarDelete}
             t={t}
           />
         </div>
