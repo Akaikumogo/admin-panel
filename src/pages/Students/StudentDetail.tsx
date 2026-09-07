@@ -267,8 +267,10 @@ const StudentDetailPage = () => {
             lastName={student.lastName}
             avatarUrl={student.avatarUrl}
             size={72}
+            variant="panel"
             className="text-2xl"
             onUploaded={() => refetch()}
+            onDeleted={() => refetch()}
           />
 
           <div className="flex-1 min-w-0">

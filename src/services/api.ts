@@ -1917,6 +1917,24 @@ class ApiService {
     return response.data;
   }
 
+  async deleteUserAvatar(
+    userId: string,
+  ): Promise<{ success: boolean; avatarUrl: null }> {
+    const response = await this.api.delete<{
+      success: boolean;
+      avatarUrl: null;
+    }>(`/users/${userId}/avatar`);
+    return response.data;
+  }
+
+  async deleteMyAvatar(): Promise<{ success: boolean; avatarUrl: null }> {
+    const response = await this.api.delete<{
+      success: boolean;
+      avatarUrl: null;
+    }>('/users/me/avatar');
+    return response.data;
+  }
+
   // ─── Generic media uploads (audio/video/image) ─────────────────────────
   async adminUploadAudio(
     file: File,
