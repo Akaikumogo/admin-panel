@@ -235,6 +235,8 @@ export type EmployeeSafetyRecord = {
   protocolNumber: string | null;
   protocolDate: string | null;
   doctorConclusion: string | null;
+  commissionChairName: string | null;
+  medicalResponsibleName: string | null;
   isLatest: boolean;
   approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdBy: SafetyUserBrief | null;
@@ -301,6 +303,18 @@ export type EmployeeSafetySection = {
   pendingChange: EmployeeSafetyChange | null;
 };
 
+export type EmployeeSafetyProfile = {
+  userId: string;
+  specialWorks: string;
+  specialWorkType: string;
+  updatedAt?: string;
+};
+
+export type EmployeeSafetyBundle = {
+  profile: EmployeeSafetyProfile;
+  sections: EmployeeSafetySection[];
+};
+
 export type EmployeeSafetyHistory = {
   type: SafetyRecordType;
   records: EmployeeSafetyRecord[];
@@ -318,6 +332,13 @@ export type UpsertSafetyRecordPayload = {
   protocolNumber?: string | null;
   protocolDate?: string | null;
   doctorConclusion?: string | null;
+  commissionChairName?: string | null;
+  medicalResponsibleName?: string | null;
+};
+
+export type UpsertSafetyProfilePayload = {
+  specialWorks?: string | null;
+  specialWorkType?: string | null;
 };
 
 export type AppNotification = {
@@ -3661,9 +3682,31 @@ class ApiService {
   // ===== Safety / certification records =====
   async getEmployeeSafetyRecords(
     userId: string,
-  ): Promise<EmployeeSafetySection[]> {
-    const response = await this.api.get<EmployeeSafetySection[]>(
-      `/admin/students/${userId}/safety-records`,
+  ): Promise<EmployeeSafetyBundle> {
+    const response = await this.api.get<
+      EmployeeSafetyBundle | EmployeeSafetySection[]
+    >(`/admin/students/${userId}/safety-records`);
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return {
+        profile: {
+          userId,
+          specialWorks: 'Йўқ',
+          specialWorkType: 'Йўқ',
+        },
+        sections: data,
+      };
+    }
+    return data;
+  }
+
+  async upsertEmployeeSafetyProfile(
+    userId: string,
+    payload: UpsertSafetyProfilePayload,
+  ): Promise<EmployeeSafetyProfile> {
+    const response = await this.api.put<EmployeeSafetyProfile>(
+      `/admin/students/${userId}/safety-profile`,
+      payload,
     );
     return response.data;
   }

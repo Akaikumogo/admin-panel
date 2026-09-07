@@ -4,6 +4,7 @@ import { Plus, Check, X, Save, Trash2 } from 'lucide-react';
 import { Button, Input, Spin, Tag } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService, {
+  type EmployeeSafetyProfile,
   type EmployeeSafetyRecord,
   type EmployeeSafetySection,
   type Role,
@@ -74,6 +75,31 @@ const T = {
     en: 'Doctor conclusion',
     ru: 'Заключение',
   },
+  chair: {
+    uz: 'Komissiya raisi',
+    en: 'Commission chair',
+    ru: 'Председатель',
+  },
+  medicalResp: {
+    uz: 'Javobgar shaxs',
+    en: 'Responsible person',
+    ru: 'Ответственный',
+  },
+  specialWorks: {
+    uz: 'Maxsus ishlar',
+    en: 'Special works',
+    ru: 'Спец. работы',
+  },
+  specialWorkType: {
+    uz: 'Maxsus ish turi',
+    en: 'Special work type',
+    ru: 'Вид спец. работ',
+  },
+  profileSave: {
+    uz: 'Profilni saqlash',
+    en: 'Save profile',
+    ru: 'Сохранить профиль',
+  },
   medicalDate: {
     uz: 'Koʻrik sanasi',
     en: 'Exam date',
@@ -105,6 +131,8 @@ const EMPTY_FIELDS: UpsertSafetyRecordPayload = {
   protocolNumber: null,
   protocolDate: null,
   doctorConclusion: null,
+  commissionChairName: null,
+  medicalResponsibleName: null,
 };
 
 function personLabel(u: SafetyUserBrief | null | undefined): string {
@@ -227,6 +255,12 @@ export function EmployeeSafetySection({ userId, me }: Props) {
   const changeIdParam = searchParams.get('changeId');
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<EmployeeSafetySection[]>([]);
+  const [profile, setProfile] = useState<EmployeeSafetyProfile | null>(null);
+  const [profileDraft, setProfileDraft] = useState({
+    specialWorks: 'Йўқ',
+    specialWorkType: 'Йўқ',
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
@@ -244,7 +278,12 @@ export function EmployeeSafetySection({ userId, me }: Props) {
     setLoading(true);
     try {
       const data = await apiService.getEmployeeSafetyRecords(userId);
-      setSections(data);
+      setSections(data.sections);
+      setProfile(data.profile);
+      setProfileDraft({
+        specialWorks: data.profile.specialWorks || 'Йўқ',
+        specialWorkType: data.profile.specialWorkType || 'Йўқ',
+      });
     } catch {
       notification.error({
         message: t({
@@ -257,6 +296,39 @@ export function EmployeeSafetySection({ userId, me }: Props) {
       setLoading(false);
     }
   }, [userId, t]);
+
+  const onSaveProfile = async () => {
+    if (!canEdit) return;
+    setSavingProfile(true);
+    try {
+      const saved = await apiService.upsertEmployeeSafetyProfile(userId, {
+        specialWorks: profileDraft.specialWorks,
+        specialWorkType: profileDraft.specialWorkType,
+      });
+      setProfile(saved);
+      setProfileDraft({
+        specialWorks: saved.specialWorks || 'Йўқ',
+        specialWorkType: saved.specialWorkType || 'Йўқ',
+      });
+      notification.success({
+        message: t({
+          uz: 'Profil saqlandi (Energo ID sync)',
+          en: 'Profile saved (Energo ID sync)',
+          ru: 'Профиль сохранён',
+        }),
+      });
+    } catch {
+      notification.error({
+        message: t({
+          uz: 'Profil saqlanmadi',
+          en: 'Profile save failed',
+          ru: 'Не сохранено',
+        }),
+      });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   useEffect(() => {
     void load();
@@ -415,6 +487,71 @@ export function EmployeeSafetySection({ userId, me }: Props) {
         </p>
       </div>
 
+      <section className="overflow-hidden rounded-xl border border-border/80 bg-card px-4 py-3 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.2)]">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+          {t({
+            uz: 'Beydj / B-ilova profili',
+            en: 'Badge / B-ilova profile',
+            ru: 'Профиль бейджа',
+          })}
+        </h3>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="min-w-[200px] flex-1 space-y-1">
+            <span className="text-[11px] font-medium text-slate-500">
+              {t(T.specialWorks)}
+            </span>
+            <Input
+              className="!h-9 text-xs"
+              disabled={!canEdit}
+              value={profileDraft.specialWorks}
+              onChange={(e) =>
+                setProfileDraft((p) => ({
+                  ...p,
+                  specialWorks: e.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="min-w-[200px] flex-1 space-y-1">
+            <span className="text-[11px] font-medium text-slate-500">
+              {t(T.specialWorkType)}
+            </span>
+            <Input
+              className="!h-9 text-xs"
+              disabled={!canEdit}
+              value={profileDraft.specialWorkType}
+              onChange={(e) =>
+                setProfileDraft((p) => ({
+                  ...p,
+                  specialWorkType: e.target.value,
+                }))
+              }
+            />
+          </label>
+          {canEdit ? (
+            <Button
+              type="primary"
+              size="small"
+              loading={savingProfile}
+              icon={<Save size={14} />}
+              onClick={() => void onSaveProfile()}
+              className="!h-9"
+            >
+              {t(T.profileSave)}
+            </Button>
+          ) : null}
+        </div>
+        {profile?.updatedAt ? (
+          <p className="mt-2 text-[10px] text-slate-400">
+            {t({
+              uz: `Oxirgi yangilanish: ${profile.updatedAt}`,
+              en: `Updated: ${profile.updatedAt}`,
+              ru: `Обновлено: ${profile.updatedAt}`,
+            })}
+          </p>
+        ) : null}
+      </section>
+
       {sections.map((section) => {
         const code = section.type.code;
         const isMedical = code === 'MEDICAL_EXAM';
@@ -429,12 +566,12 @@ export function EmployeeSafetySection({ userId, me }: Props) {
         );
         const sectionDrafts = draftsByType.get(code) ?? [];
         const colCount = isMedical
-          ? 6
+          ? 7
           : isIndustrial
-            ? 10
+            ? 11
             : isOccupational
-              ? 9
-              : 8;
+              ? 10
+              : 9;
 
         const sectionHighlight =
           sectionParam === section.type.sectionSlug ||
@@ -484,6 +621,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                       <>
                         <th className="px-3 py-2.5">{t(T.medicalDate)}</th>
                         <th className="px-3 py-2.5">{t(T.doctor)}</th>
+                        <th className="px-3 py-2.5">{t(T.medicalResp)}</th>
                       </>
                     ) : isIndustrial ? (
                       <>
@@ -499,6 +637,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                         <th className="px-3 py-2.5 whitespace-nowrap">
                           {t(T.nextExam)}
                         </th>
+                        <th className="px-3 py-2.5">{t(T.chair)}</th>
                       </>
                     ) : (
                       <>
@@ -513,6 +652,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                         <th className="px-3 py-2.5 whitespace-nowrap">
                           {t(T.nextExam)}
                         </th>
+                        <th className="px-3 py-2.5">{t(T.chair)}</th>
                       </>
                     )}
                     <th className="px-3 py-2.5">{t(T.status)}</th>
@@ -550,6 +690,19 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                                 onChange={(e) =>
                                   updateDraftFields(draft.key, {
                                     doctorConclusion: e.target.value || null,
+                                  })
+                                }
+                              />,
+                            )}
+                            {cell(
+                              <Input
+                                className="!h-8 text-xs min-w-[140px]"
+                                placeholder={t(T.medicalResp)}
+                                value={f.medicalResponsibleName ?? ''}
+                                onChange={(e) =>
+                                  updateDraftFields(draft.key, {
+                                    medicalResponsibleName:
+                                      e.target.value || null,
                                   })
                                 }
                               />,
@@ -629,6 +782,19 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                                 }
                               />,
                             )}
+                            {cell(
+                              <Input
+                                className="!h-8 text-xs min-w-[140px]"
+                                placeholder={t(T.chair)}
+                                value={f.commissionChairName ?? ''}
+                                onChange={(e) =>
+                                  updateDraftFields(draft.key, {
+                                    commissionChairName:
+                                      e.target.value || null,
+                                  })
+                                }
+                              />,
+                            )}
                           </>
                         ) : (
                           <>
@@ -691,6 +857,19 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                                 onChange={(e) =>
                                   updateDraftFields(draft.key, {
                                     nextExamDate: e.target.value || null,
+                                  })
+                                }
+                              />,
+                            )}
+                            {cell(
+                              <Input
+                                className="!h-8 text-xs min-w-[140px]"
+                                placeholder={t(T.chair)}
+                                value={f.commissionChairName ?? ''}
+                                onChange={(e) =>
+                                  updateDraftFields(draft.key, {
+                                    commissionChairName:
+                                      e.target.value || null,
                                   })
                                 }
                               />,
@@ -798,6 +977,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                                   {record.doctorConclusion || '—'}
                                 </span>,
                               )}
+                              {cell(record.medicalResponsibleName || '—')}
                             </>
                           ) : isIndustrial ? (
                             <>
@@ -833,6 +1013,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                                   {record.nextExamDate || '—'}
                                 </span>,
                               )}
+                              {cell(record.commissionChairName || '—')}
                             </>
                           ) : (
                             <>
@@ -872,6 +1053,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                                   {record.nextExamDate || '—'}
                                 </span>,
                               )}
+                              {cell(record.commissionChairName || '—')}
                             </>
                           )}
                           {cell(statusTag(record.approvalStatus, t))}
