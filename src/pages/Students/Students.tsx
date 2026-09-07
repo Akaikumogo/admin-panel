@@ -39,6 +39,7 @@ import { downloadCsv } from '@/lib/csv';
 import apiService from '@/services/api';
 import type { StudentSummary, Level, Organization } from '@/services/api';
 import { can } from '@/utils/can';
+import { isSuperAdmin, readCachedUserRole } from '@/utils/isSuperAdmin';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
 import { cn } from '@/lib/utils';
 import { formatPersonName } from '@/lib/person-name';
@@ -90,7 +91,9 @@ const Students = () => {
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
   const pageSize = qp.limit ? parseInt(qp.limit, 10) : 20;
   const viewMode = qp.view === 'tree' ? 'tree' : 'flat';
-  const canEditEmployee = can('students', 'update');
+  /** Xodim hisobot OFF/ON — barcha moderator + superadmin */
+  const canToggleReport =
+    isSuperAdmin() || readCachedUserRole() === 'MODERATOR';
 
   const columnSearch = useMemo(
     () =>
@@ -206,7 +209,7 @@ const Students = () => {
   };
 
   const handleEmployeeSwitch = (record: StudentSummary, next: boolean) => {
-    if (!canEditEmployee || busyId) return;
+    if (!canToggleReport || busyId) return;
     const title = formatPersonName(record) || record.email;
     if (!next) {
       setPendingOff({ id: record.id, title });
@@ -402,7 +405,7 @@ const Students = () => {
             <Switch
               size="small"
               checked={checked}
-              disabled={!canEditEmployee || busyId === record.id}
+              disabled={!canToggleReport || busyId === record.id}
               onCheckedChange={(next) => handleEmployeeSwitch(record, next)}
             />
           </div>
@@ -494,7 +497,7 @@ const Students = () => {
               organizations={reportingActivation.organizations}
               divisions={reportingActivation.divisions}
               canEditOrg={can('organizations', 'update')}
-              canEditEmployee={canEditEmployee}
+              canEditEmployee={canToggleReport}
               onActivationChange={() => {
                 void refetchTree();
                 void refetchActivation();

@@ -439,7 +439,7 @@ export function EmployeesHierarchy({
   organizations?: Array<{ id: string; reportActive: boolean }>;
   /** Filial / bo‘lim switch — organizations.update */
   canEditOrg?: boolean;
-  /** Xodim switch — students.update */
+  /** Xodim hisobot switch — barcha moderatorlarga ochiq */
   canEditEmployee?: boolean;
   className?: string;
   onActivationChange?: () => void;
