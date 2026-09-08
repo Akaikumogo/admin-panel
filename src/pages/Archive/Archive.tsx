@@ -142,14 +142,20 @@ export default function ArchivePage() {
     setAbortingSync(true);
     try {
       const res = await apiService.abortElektroSync();
-      message.success(res.message || 'Sinxronizatsiya to‘xtatildi va qulflar tozalandi');
+      message.success(
+        res.message || 'Sinxronizatsiya to‘xtatildi va qulflar tozalandi'
+      );
       const preview = await apiService.getElektroCutoverPreview();
       setPreviewData(preview);
       if (!preview?.activeSync) {
         setActiveProcessPrompt(null);
       }
     } catch (err: any) {
-      message.error(err?.response?.data?.message || err?.message || 'Qulflarni tozalashda xatolik');
+      message.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          'Qulflarni tozalashda xatolik'
+      );
     } finally {
       setAbortingSync(false);
     }
@@ -523,7 +529,8 @@ export default function ArchivePage() {
                       <div>
                         Superadmin:{' '}
                         <b className="text-emerald-700">
-                          {previewData.preservedContent.superadmins} ta (saqlanadi)
+                          {previewData.preservedContent.superadmins} ta
+                          (saqlanadi)
                         </b>
                       </div>
                     </div>
@@ -565,7 +572,8 @@ export default function ArchivePage() {
                         <div className="flex items-start gap-2">
                           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
                           <div>
-                            <strong>Ogohlantirish:</strong> Sinxronizatsiya jarayoni faol (
+                            <strong>Ogohlantirish:</strong> Sinxronizatsiya
+                            jarayoni faol (
                             <span className="font-mono">
                               {previewData.activeSyncReason || 'Lock mavjud'}
                             </span>
@@ -617,10 +625,12 @@ export default function ArchivePage() {
                   className="text-xs text-foreground cursor-pointer select-none"
                 >
                   <span className="font-medium text-foreground">
-                    Fondagi barcha jarayonlarni majburiy to‘xtatish (Force Cutover)
+                    Fondagi barcha jarayonlarni majburiy to‘xtatish (Force
+                    Cutover)
                   </span>
                   <span className="block text-[11px] text-muted-foreground pt-0.5">
-                    Faol sinxronizatsiya yoki qulflarni to‘xtatib, Cutoverni darhol davom ettiradi.
+                    Faol sinxronizatsiya yoki qulflarni to‘xtatib, Cutoverni
+                    darhol davom ettiradi.
                   </span>
                 </label>
               </div>
