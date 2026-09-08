@@ -563,7 +563,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
             : section.record
               ? [section.record]
               : [],
-        );
+        ).filter((r) => !r.deletedAt);
         const sectionDrafts = draftsByType.get(code) ?? [];
         const colCount = isMedical
           ? 7
@@ -591,7 +591,7 @@ export function EmployeeSafetySection({ userId, me }: Props) {
                 <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-50">
                   {section.type.titleUz}
                 </h3>
-                {section.record ? (
+                {section.record && !section.record.deletedAt ? (
                   <p className="mt-0.5 text-[11px] text-slate-500">
                     {t(T.latest)}: {section.record.examDate || '—'} ·{' '}
                     {statusTag(section.record.approvalStatus, t)}

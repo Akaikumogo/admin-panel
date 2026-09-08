@@ -3,13 +3,13 @@ import { notification } from '@/lib/toast';
 import type {
   CertificateEligibility,
   CertificateVerification,
-  EmployeeCertificate,
+  EmployeeCertificate
 } from '@/components/certificate/types';
 
 export type {
   CertificateEligibility,
   CertificateVerification,
-  EmployeeCertificate,
+  EmployeeCertificate
 };
 
 const API_BASE_STORAGE_KEY = 'elektrolearn_api_base_v2';
@@ -44,14 +44,13 @@ function normalizeApiBase(url: string): string {
 }
 
 const PRIMARY_API_BASE_URL = normalizeApiBase(
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-    '/api',
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '/api'
 );
 
 /** Asosiy domen ishlamasa ishlatiladigan rezerv backend. */
 const FALLBACK_API_BASE_URL = normalizeApiBase(
   (import.meta.env.VITE_API_FALLBACK_URL as string | undefined)?.trim() ||
-    PRIMARY_API_BASE_URL,
+    PRIMARY_API_BASE_URL
 );
 
 function readStoredApiBase(): string | null {
@@ -124,10 +123,16 @@ function setActiveApiBaseUrl(url: string) {
 
 function otherApiBaseUrl(current: string): string | null {
   const cur = normalizeApiBase(current);
-  if (cur === PRIMARY_API_BASE_URL && PRIMARY_API_BASE_URL !== FALLBACK_API_BASE_URL) {
+  if (
+    cur === PRIMARY_API_BASE_URL &&
+    PRIMARY_API_BASE_URL !== FALLBACK_API_BASE_URL
+  ) {
     return FALLBACK_API_BASE_URL;
   }
-  if (cur === FALLBACK_API_BASE_URL && PRIMARY_API_BASE_URL !== FALLBACK_API_BASE_URL) {
+  if (
+    cur === FALLBACK_API_BASE_URL &&
+    PRIMARY_API_BASE_URL !== FALLBACK_API_BASE_URL
+  ) {
     return PRIMARY_API_BASE_URL;
   }
   if (cur !== FALLBACK_API_BASE_URL) return FALLBACK_API_BASE_URL;
@@ -199,7 +204,12 @@ function showErrorNotification(error: unknown) {
   });
 }
 
-export type Role = 'SUPERADMIN' | 'MODERATOR' | 'APPROVER' | 'ACCOUNTING' | 'USER';
+export type Role =
+  | 'SUPERADMIN'
+  | 'MODERATOR'
+  | 'APPROVER'
+  | 'ACCOUNTING'
+  | 'USER';
 
 export type SafetyUserBrief = {
   id: string;
@@ -832,7 +842,12 @@ export type HourlyProgress = {
 
 export type DailyTrend = {
   dailyGoalCorrect: number;
-  points: Array<{ date: string; percent: number; completed: number; plan: number }>;
+  points: Array<{
+    date: string;
+    percent: number;
+    completed: number;
+    plan: number;
+  }>;
 };
 
 export type WeekdayHeatmapCell = {
@@ -1711,7 +1726,7 @@ class ApiService {
         'Content-Type': 'application/json',
         // Admin API: brauzer HTTP 304 keshini ishlatmasin (firewall/tunnel/localhost bir xil)
         'Cache-Control': 'no-cache',
-        Pragma: 'no-cache',
+        Pragma: 'no-cache'
       }
     });
 
@@ -1748,8 +1763,14 @@ class ApiService {
         const status = error.response?.status;
 
         // Asosiy domen ishlamasa — rezerv IP ga o‘tish
-        if (originalRequest && !originalRequest._apiFailover && shouldFailoverToReserve(error)) {
-          const nextBase = otherApiBaseUrl(originalRequest.baseURL || activeApiBaseUrl);
+        if (
+          originalRequest &&
+          !originalRequest._apiFailover &&
+          shouldFailoverToReserve(error)
+        ) {
+          const nextBase = otherApiBaseUrl(
+            originalRequest.baseURL || activeApiBaseUrl
+          );
           if (nextBase) {
             originalRequest._apiFailover = true;
             setActiveApiBaseUrl(nextBase);
@@ -1810,8 +1831,8 @@ class ApiService {
     }>('/auth/energo-id/authorize-url', {
       params: {
         client,
-        ...(callbackOrigin ? { callback_origin: callbackOrigin } : {}),
-      },
+        ...(callbackOrigin ? { callback_origin: callbackOrigin } : {})
+      }
     });
     return response.data;
   }
@@ -1821,7 +1842,7 @@ class ApiService {
     redirectUri?: string,
     state?: string,
     client?: 'mobile' | 'web',
-    codeVerifier?: string,
+    codeVerifier?: string
   ): Promise<LoginResponse> {
     const response = await this.api.post<LoginResponse>(
       '/auth/admin/energo-id/exchange',
@@ -1831,8 +1852,8 @@ class ApiService {
         redirect_uri: redirectUri,
         state,
         client,
-        code_verifier: codeVerifier,
-      },
+        code_verifier: codeVerifier
+      }
     );
     const payload = response.data;
     localStorage.setItem('accessToken', payload.data.accessToken);
@@ -1888,7 +1909,7 @@ class ApiService {
       avatarUrl: string;
     }>('/users/me/avatar', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 5 * 60 * 1000,
+      timeout: 5 * 60 * 1000
     });
     return response.data;
   }
@@ -1896,7 +1917,7 @@ class ApiService {
   async uploadUserAvatar(
     userId: string,
     file: File,
-    meta?: { hasFace?: boolean; faceConfidence?: number },
+    meta?: { hasFace?: boolean; faceConfidence?: number }
   ): Promise<{ success: boolean; avatarUrl: string; userId: string }> {
     const form = new FormData();
     form.append('file', file);
@@ -1912,13 +1933,13 @@ class ApiService {
       userId: string;
     }>(`/users/${userId}/avatar`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 5 * 60 * 1000,
+      timeout: 5 * 60 * 1000
     });
     return response.data;
   }
 
   async deleteUserAvatar(
-    userId: string,
+    userId: string
   ): Promise<{ success: boolean; avatarUrl: null }> {
     const response = await this.api.delete<{
       success: boolean;
@@ -1991,7 +2012,7 @@ class ApiService {
       onUploadProgress: (e) => {
         if (!onProgress || !e.total) return;
         onProgress(Math.round((e.loaded / e.total) * 100));
-      },
+      }
     });
     return response.data;
   }
@@ -2082,14 +2103,16 @@ class ApiService {
   }
 
   async getHomeOverview(): Promise<HomeOverview> {
-    const response = await this.api.get<HomeOverview>('/admin/analytics/home-overview');
+    const response = await this.api.get<HomeOverview>(
+      '/admin/analytics/home-overview'
+    );
     const data = response.data;
     return {
       scopeLabel: data?.scopeLabel ?? '',
       branchHeatmap: data?.branchHeatmap ?? [],
       mostActiveBranch: data?.mostActiveBranch ?? null,
       topErrorBranches: data?.topErrorBranches ?? [],
-      insight: data?.insight,
+      insight: data?.insight
     };
   }
 
@@ -2127,7 +2150,7 @@ class ApiService {
   }): Promise<BranchAnalyticsSummary> {
     const response = await this.api.get<BranchAnalyticsSummary>(
       '/admin/branch-analytics/summary',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2139,7 +2162,7 @@ class ApiService {
   }): Promise<BranchActivityMatrix> {
     const response = await this.api.get<BranchActivityMatrix>(
       '/admin/branch-analytics/activity-matrix',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2150,7 +2173,7 @@ class ApiService {
   }): Promise<BranchDailyPlanResult> {
     const response = await this.api.get<BranchDailyPlanResult>(
       '/admin/branch-analytics/daily-plan-result',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2165,7 +2188,7 @@ class ApiService {
   }): Promise<EmployeeAttemptsResponse> {
     const response = await this.api.get<EmployeeAttemptsResponse>(
       '/admin/branch-analytics/employee-attempts',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2176,7 +2199,7 @@ class ApiService {
   }): Promise<BranchMonthlyProgress> {
     const response = await this.api.get<BranchMonthlyProgress>(
       '/admin/branch-analytics/monthly-progress',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2192,7 +2215,7 @@ class ApiService {
   }): Promise<MonthlyPlanMatrix> {
     const response = await this.api.get<MonthlyPlanMatrix>(
       '/admin/branch-analytics/monthly-plan-matrix',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2203,7 +2226,7 @@ class ApiService {
   }): Promise<YearlyPlanMatrix> {
     const response = await this.api.get<YearlyPlanMatrix>(
       '/admin/branch-analytics/yearly-plan-matrix',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2213,15 +2236,17 @@ class ApiService {
   }): Promise<BranchComparison> {
     const response = await this.api.get<BranchComparison>(
       '/admin/branch-analytics/branch-comparison',
-      { params },
+      { params }
     );
     return response.data;
   }
 
-  async getExecutiveDashboard(params?: { date?: string }): Promise<ExecutiveDashboard> {
+  async getExecutiveDashboard(params?: {
+    date?: string;
+  }): Promise<ExecutiveDashboard> {
     const response = await this.api.get<ExecutiveDashboard>(
       '/admin/branch-analytics/executive-dashboard',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2229,7 +2254,7 @@ class ApiService {
   async getBranchRanking(params?: { date?: string }): Promise<BranchRanking> {
     const response = await this.api.get<BranchRanking>(
       '/admin/branch-analytics/branch-ranking',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2240,7 +2265,7 @@ class ApiService {
   }): Promise<DivisionSummary> {
     const response = await this.api.get<DivisionSummary>(
       '/admin/branch-analytics/division-summary',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2252,7 +2277,7 @@ class ApiService {
   }): Promise<EmployeeRanking> {
     const response = await this.api.get<EmployeeRanking>(
       '/admin/branch-analytics/employee-ranking',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2263,7 +2288,7 @@ class ApiService {
   }): Promise<HourlyProgress> {
     const response = await this.api.get<HourlyProgress>(
       '/admin/branch-analytics/hourly-progress',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2279,9 +2304,9 @@ class ApiService {
       {
         params: {
           ...rest,
-          ...(orgId && orgId !== 'all' ? { orgId } : {}),
-        },
-      },
+          ...(orgId && orgId !== 'all' ? { orgId } : {})
+        }
+      }
     );
     return response.data;
   }
@@ -2293,7 +2318,7 @@ class ApiService {
   }): Promise<WeekdayHeatmap> {
     const response = await this.api.get<WeekdayHeatmap>(
       '/admin/branch-analytics/weekday-heatmap',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2304,7 +2329,7 @@ class ApiService {
   }): Promise<Underperformers> {
     const response = await this.api.get<Underperformers>(
       '/admin/branch-analytics/underperformers',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2315,7 +2340,7 @@ class ApiService {
   }): Promise<DailyReport> {
     const response = await this.api.get<DailyReport>(
       '/admin/branch-analytics/daily-report',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2326,7 +2351,7 @@ class ApiService {
   }): Promise<MonthlyReport> {
     const response = await this.api.get<MonthlyReport>(
       '/admin/branch-analytics/monthly-report',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -2340,11 +2365,11 @@ class ApiService {
       '/admin/branch-analytics/export/daily-report',
       {
         params: { date: params.date, orgId: params.orgId },
-        responseType: 'blob',
-      },
+        responseType: 'blob'
+      }
     );
     const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -2365,11 +2390,11 @@ class ApiService {
       '/admin/branch-analytics/export/monthly-report',
       {
         params: { month: params.month, orgId: params.orgId },
-        responseType: 'blob',
-      },
+        responseType: 'blob'
+      }
     );
     const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -2390,16 +2415,17 @@ class ApiService {
       '/admin/branch-analytics/export/monthly-progress',
       {
         params: { orgId: params.orgId, month: params.month },
-        responseType: 'blob',
-      },
+        responseType: 'blob'
+      }
     );
     const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = params.filename ?? `${params.month ?? 'monthly'}-progress.xlsx`;
+    link.download =
+      params.filename ?? `${params.month ?? 'monthly'}-progress.xlsx`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2424,13 +2450,13 @@ class ApiService {
           period: params.period,
           date: params.date,
           userId: params.userId,
-          showFilial: params.showFilial ? 'true' : 'false',
+          showFilial: params.showFilial ? 'true' : 'false'
         },
-        responseType: 'blob',
-      },
+        responseType: 'blob'
+      }
     );
     const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -2460,13 +2486,13 @@ class ApiService {
           orgId: params.orgId,
           year: params.year,
           userId: params.userId,
-          showFilial: params.showFilial ? 'true' : 'false',
+          showFilial: params.showFilial ? 'true' : 'false'
         },
-        responseType: 'blob',
-      },
+        responseType: 'blob'
+      }
     );
     const blob = new Blob([response.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -2482,7 +2508,7 @@ class ApiService {
   private async downloadJson(path: string, filename: string) {
     const response = await this.api.get(path, { responseType: 'blob' });
     const blob = new Blob([response.data], {
-      type: 'application/json;charset=utf-8',
+      type: 'application/json;charset=utf-8'
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -2497,7 +2523,7 @@ class ApiService {
   async exportContentBundle() {
     await this.downloadJson(
       '/admin/import-export/content/export',
-      'elektrolearn-kontent.json',
+      'elektrolearn-kontent.json'
     );
   }
 
@@ -2509,8 +2535,8 @@ class ApiService {
       form,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 300000,
-      },
+        timeout: 300000
+      }
     );
     return response.data as {
       success: boolean;
@@ -2525,7 +2551,7 @@ class ApiService {
   async exportModeratorsBundle() {
     await this.downloadJson(
       '/admin/import-export/moderators/export',
-      'elektrolearn-moderatorlar.json',
+      'elektrolearn-moderatorlar.json'
     );
   }
 
@@ -2537,8 +2563,8 @@ class ApiService {
       form,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000,
-      },
+        timeout: 120000
+      }
     );
     return response.data as {
       success: boolean;
@@ -2550,7 +2576,9 @@ class ApiService {
   }
 
   async getOAuthIntegration() {
-    const response = await this.api.get('/admin/import-export/oauth/integration');
+    const response = await this.api.get(
+      '/admin/import-export/oauth/integration'
+    );
     return response.data as {
       mobileRedirectUri: string;
       webRedirectUri: string;
@@ -2580,7 +2608,7 @@ class ApiService {
   }) {
     const response = await this.api.patch(
       '/admin/import-export/oauth/integration',
-      data,
+      data
     );
     return response.data;
   }
@@ -2621,7 +2649,7 @@ class ApiService {
   async getTelegramBotMessages(chatId: string, limit = 100) {
     const response = await this.api.get(
       `/admin/telegram-bot/chats/${chatId}/messages`,
-      { params: { limit } },
+      { params: { limit } }
     );
     return response.data as {
       chat: TelegramBotChat;
@@ -2632,27 +2660,29 @@ class ApiService {
   async replyTelegramBotChat(chatId: string, text: string) {
     const response = await this.api.post(
       `/admin/telegram-bot/chats/${chatId}/reply`,
-      { text },
+      { text }
     );
     return response.data as { ok: boolean };
   }
 
   async sendTelegramBotReport(chatId: string) {
     const response = await this.api.post(
-      `/admin/telegram-bot/chats/${chatId}/send-report`,
+      `/admin/telegram-bot/chats/${chatId}/send-report`
     );
     return response.data as { ok: boolean };
   }
 
   async broadcastTelegramBotReport() {
-    const response = await this.api.post('/admin/telegram-bot/broadcast-report');
+    const response = await this.api.post(
+      '/admin/telegram-bot/broadcast-report'
+    );
     return response.data as { ok: boolean };
   }
 
   async exportOAuthEnvBundle() {
     const response = await this.api.get(
       '/admin/import-export/oauth/integration/env-export',
-      { responseType: 'blob' },
+      { responseType: 'blob' }
     );
     const blob = new Blob([response.data], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -3047,7 +3077,7 @@ class ApiService {
 
   async importModuleDocx(
     file: File,
-    opts?: { dryRun?: boolean; latinize?: boolean },
+    opts?: { dryRun?: boolean; latinize?: boolean }
   ): Promise<{
     success: boolean;
     dryRun: boolean;
@@ -3067,7 +3097,7 @@ class ApiService {
     form.append('latinize', opts?.latinize === false ? 'false' : 'true');
     const response = await this.api.post('/admin/levels/import-docx', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 300000,
+      timeout: 300000
     });
     return response.data;
   }
@@ -3235,7 +3265,7 @@ class ApiService {
       theoryId: string;
       dryRun?: boolean;
       latinize?: boolean;
-    },
+    }
   ): Promise<{
     success: boolean;
     dryRun: boolean;
@@ -3262,7 +3292,7 @@ class ApiService {
     form.append('latinize', opts.latinize === false ? 'false' : 'true');
     const response = await this.api.post('/admin/questions/import-docx', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 300000,
+      timeout: 300000
     });
     return response.data;
   }
@@ -3340,18 +3370,18 @@ class ApiService {
     }>;
   }> {
     const response = await this.api.get('/admin/reporting-activation', {
-      params: orgId ? { orgId } : undefined,
+      params: orgId ? { orgId } : undefined
     });
     return response.data;
   }
 
   async setOrganizationReportActive(
     orgId: string,
-    isActive: boolean,
+    isActive: boolean
   ): Promise<{ id: string; reportActive: boolean }> {
     const response = await this.api.patch(
       `/admin/reporting-activation/organizations/${orgId}`,
-      { isActive },
+      { isActive }
     );
     return response.data;
   }
@@ -3359,7 +3389,7 @@ class ApiService {
   async setDivisionReportActive(
     organizationId: string,
     division: string,
-    isActive: boolean,
+    isActive: boolean
   ): Promise<{
     organizationId: string;
     division: string;
@@ -3367,18 +3397,18 @@ class ApiService {
   }> {
     const response = await this.api.patch(
       '/admin/reporting-activation/divisions',
-      { organizationId, division, isActive },
+      { organizationId, division, isActive }
     );
     return response.data;
   }
 
   async setEmployeeReportActive(
     userId: string,
-    isActive: boolean,
+    isActive: boolean
   ): Promise<{ id: string; reportActive: boolean }> {
     const response = await this.api.patch(
       `/admin/reporting-activation/employees/${userId}`,
-      { isActive },
+      { isActive }
     );
     return response.data;
   }
@@ -3412,8 +3442,8 @@ class ApiService {
           orgId: filters?.organizationId,
           orgMode: filters?.organizationMode,
           page: filters?.page,
-          limit: filters?.limit,
-        },
+          limit: filters?.limit
+        }
       }
     );
     return response.data;
@@ -3434,9 +3464,9 @@ class ApiService {
           orgId: filters?.organizationId,
           orgMode: filters?.organizationMode,
           page: filters?.page,
-          limit: filters?.limit,
-        },
-      },
+          limit: filters?.limit
+        }
+      }
     );
     return response.data;
   }
@@ -3447,14 +3477,14 @@ class ApiService {
   }): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
       '/admin/users/approvers/promote',
-      data,
+      data
     );
     return response.data;
   }
 
   async demoteApprover(id: string): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
-      `/admin/users/approvers/${id}/demote`,
+      `/admin/users/approvers/${id}/demote`
     );
     return response.data;
   }
@@ -3474,9 +3504,9 @@ class ApiService {
           orgId: filters?.organizationId,
           orgMode: filters?.organizationMode,
           page: filters?.page,
-          limit: filters?.limit,
-        },
-      },
+          limit: filters?.limit
+        }
+      }
     );
     return response.data;
   }
@@ -3487,14 +3517,14 @@ class ApiService {
   }): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
       '/admin/users/accounting/promote',
-      data,
+      data
     );
     return response.data;
   }
 
   async demoteAccounting(id: string): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
-      `/admin/users/accounting/${id}/demote`,
+      `/admin/users/accounting/${id}/demote`
     );
     return response.data;
   }
@@ -3510,14 +3540,14 @@ class ApiService {
   }): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
       '/admin/users/moderators/promote',
-      data,
+      data
     );
     return response.data;
   }
 
   async demoteModerator(id: string): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
-      `/admin/users/moderators/${id}/demote`,
+      `/admin/users/moderators/${id}/demote`
     );
     return response.data;
   }
@@ -3525,21 +3555,21 @@ class ApiService {
   async promoteSuperAdmin(userId: string): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
       '/admin/users/superadmins/promote',
-      { userId },
+      { userId }
     );
     return response.data;
   }
 
   async demoteSuperAdmin(id: string): Promise<UserProfile> {
     const response = await this.api.post<UserProfile>(
-      `/admin/users/superadmins/${id}/demote`,
+      `/admin/users/superadmins/${id}/demote`
     );
     return response.data;
   }
 
   async listLegacyModerators(): Promise<UserProfile[]> {
     const response = await this.api.get<UserProfile[]>(
-      '/admin/migrations/legacy-moderators',
+      '/admin/migrations/legacy-moderators'
     );
     return response.data;
   }
@@ -3549,18 +3579,18 @@ class ApiService {
     if (q.length < 2) return [];
     const response = await this.api.get<UserProfile[]>(
       '/admin/migrations/legacy-moderators/targets',
-      { params: { search: q, limit: 50 } },
+      { params: { search: q, limit: 50 } }
     );
     return response.data;
   }
 
   async suggestMigrationTargets(
     sourceUserId: string,
-    limit = 5,
+    limit = 5
   ): Promise<MigrationSuggestion[]> {
     const response = await this.api.get<MigrationSuggestion[]>(
       `/admin/migrations/legacy-moderators/${sourceUserId}/suggestions`,
-      { params: { limit } },
+      { params: { limit } }
     );
     return response.data;
   }
@@ -3573,7 +3603,7 @@ class ApiService {
   }): Promise<LegacyModeratorMergePreview> {
     const response = await this.api.post<LegacyModeratorMergePreview>(
       '/admin/migrations/legacy-moderators/merge',
-      payload,
+      payload
     );
     return response.data;
   }
@@ -3581,7 +3611,7 @@ class ApiService {
   async previewBulkModeratorMigration(fileBase64: string) {
     const response = await this.api.post<BulkModeratorMigrationPreview>(
       '/admin/migrations/legacy-moderators/bulk/preview',
-      { fileBase64 },
+      { fileBase64 }
     );
     return response.data;
   }
@@ -3613,11 +3643,11 @@ class ApiService {
       lastName?: string;
       password?: string;
       organizationId?: string | null;
-    },
+    }
   ): Promise<UserProfile> {
     const response = await this.api.put<UserProfile>(
       `/admin/users/moderators/${id}`,
-      data,
+      data
     );
     return response.data;
   }
@@ -3666,9 +3696,9 @@ class ApiService {
       {
         params: {
           ...filters,
-          light: filters?.light ? '1' : undefined,
-        },
-      },
+          light: filters?.light ? '1' : undefined
+        }
+      }
     );
     return response.data;
   }
@@ -3688,18 +3718,18 @@ class ApiService {
       middleName: string | null;
       division: string | null;
       post: string | null;
-    }>,
+    }>
   ) {
     const response = await this.api.patch(
       `/admin/field-overrides/employees/${userId}`,
-      fields,
+      fields
     );
     return response.data;
   }
 
   // ===== Safety / certification records =====
   async getEmployeeSafetyRecords(
-    userId: string,
+    userId: string
   ): Promise<EmployeeSafetyBundle> {
     const response = await this.api.get<
       EmployeeSafetyBundle | EmployeeSafetySection[]
@@ -3710,9 +3740,9 @@ class ApiService {
         profile: {
           userId,
           specialWorks: 'Йўқ',
-          specialWorkType: 'Йўқ',
+          specialWorkType: 'Йўқ'
         },
-        sections: data,
+        sections: data
       };
     }
     return data;
@@ -3720,11 +3750,11 @@ class ApiService {
 
   async upsertEmployeeSafetyProfile(
     userId: string,
-    payload: UpsertSafetyProfilePayload,
+    payload: UpsertSafetyProfilePayload
   ): Promise<EmployeeSafetyProfile> {
     const response = await this.api.put<EmployeeSafetyProfile>(
       `/admin/students/${userId}/safety-profile`,
-      payload,
+      payload
     );
     return response.data;
   }
@@ -3732,85 +3762,85 @@ class ApiService {
   async upsertEmployeeSafetyRecord(
     userId: string,
     typeCode: string,
-    payload: UpsertSafetyRecordPayload,
+    payload: UpsertSafetyRecordPayload
   ): Promise<{ record: EmployeeSafetyRecord; change: EmployeeSafetyChange }> {
     const response = await this.api.put(
       `/admin/students/${userId}/safety-records/${typeCode}`,
-      payload,
+      payload
     );
     return response.data;
   }
 
   async getEmployeeSafetyHistory(
     userId: string,
-    typeCode: string,
+    typeCode: string
   ): Promise<EmployeeSafetyHistory> {
     const response = await this.api.get<EmployeeSafetyHistory>(
-      `/admin/students/${userId}/safety-records/${typeCode}/history`,
+      `/admin/students/${userId}/safety-records/${typeCode}/history`
     );
     return response.data;
   }
 
   async approveSafetyChange(
-    changeId: string,
+    changeId: string
   ): Promise<{ record: EmployeeSafetyRecord; change: EmployeeSafetyChange }> {
     const response = await this.api.post(
-      `/admin/safety-changes/${changeId}/approve`,
+      `/admin/safety-changes/${changeId}/approve`
     );
     return response.data;
   }
 
   async rejectSafetyChange(
     changeId: string,
-    reviewNote?: string,
+    reviewNote?: string
   ): Promise<{ record: EmployeeSafetyRecord; change: EmployeeSafetyChange }> {
     const response = await this.api.post(
       `/admin/safety-changes/${changeId}/reject`,
-      { reviewNote },
+      { reviewNote }
     );
     return response.data;
   }
 
   async deleteSafetyRecord(
-    recordId: string,
+    recordId: string
   ): Promise<{ record: EmployeeSafetyRecord; archived: boolean }> {
     const response = await this.api.post(
-      `/admin/safety-records/${recordId}/delete`,
+      `/admin/safety-records/${recordId}/delete`
     );
     return response.data;
   }
 
   async getPendingSafetyApprovals(): Promise<PendingSafetyApprovalsResponse> {
     const response = await this.api.get<PendingSafetyApprovalsResponse>(
-      '/admin/safety-changes/pending',
+      '/admin/safety-changes/pending'
     );
     return response.data;
   }
 
   async getPendingSafetyApprovalsCount(): Promise<{ total: number }> {
     const response = await this.api.get<{ total: number }>(
-      '/admin/safety-changes/pending/count',
+      '/admin/safety-changes/pending/count'
     );
     return response.data;
   }
 
   async bulkApproveSafetyChanges(
-    changeIds: string[],
+    changeIds: string[]
   ): Promise<BulkSafetyActionResult> {
     const response = await this.api.post<BulkSafetyActionResult>(
       '/admin/safety-changes/bulk-approve',
-      { changeIds },
+      { changeIds }
     );
     return response.data;
   }
 
   async bulkRejectSafetyChanges(
     changeIds: string[],
-    reviewNote?: string,
+    reviewNote?: string
   ): Promise<BulkSafetyActionResult> {
     const response = await this.api.post<BulkSafetyActionResult>(
       '/admin/safety-changes/bulk-reject',
-      { changeIds, reviewNote },
+      { changeIds, reviewNote }
     );
     return response.data;
   }
@@ -3822,7 +3852,7 @@ class ApiService {
 
   async markNotificationRead(id: string): Promise<AppNotification | null> {
     const response = await this.api.patch<AppNotification | null>(
-      `/notifications/${id}/read`,
+      `/notifications/${id}/read`
     );
     return response.data;
   }
@@ -3836,39 +3866,44 @@ class ApiService {
 
   async getStudentXpHistory(
     id: string,
-    filters?: { page?: number; limit?: number },
+    filters?: { page?: number; limit?: number }
   ): Promise<StudentXpHistoryResponse> {
     const response = await this.api.get<StudentXpHistoryResponse>(
       `/admin/employees/${id}/xp-history`,
-      { params: filters },
+      { params: filters }
     );
     return response.data;
   }
 
   async getXpAnomalyAudit(limit = 50): Promise<XpAnomalyAudit> {
-    const response = await this.api.get<XpAnomalyAudit>('/admin/xp-anomalies/audit', {
-      params: { limit },
-    });
+    const response = await this.api.get<XpAnomalyAudit>(
+      '/admin/xp-anomalies/audit',
+      {
+        params: { limit }
+      }
+    );
     return response.data;
   }
 
   async reconcileXpAnomalies(): Promise<XpAnomalyReconcileResult> {
     const response = await this.api.post<XpAnomalyReconcileResult>(
-      '/admin/xp-anomalies/reconcile',
+      '/admin/xp-anomalies/reconcile'
     );
     return response.data;
   }
 
   async getBlockedEmailLogins(): Promise<BlockedEmailLoginsResponse> {
     const response = await this.api.get<BlockedEmailLoginsResponse>(
-      '/admin/blocked-email-logins',
+      '/admin/blocked-email-logins'
     );
     return response.data;
   }
 
-  async deleteBlockedEmailLogin(userId: string): Promise<{ deleted: number; userId: string }> {
+  async deleteBlockedEmailLogin(
+    userId: string
+  ): Promise<{ deleted: number; userId: string }> {
     const response = await this.api.delete<{ deleted: number; userId: string }>(
-      `/admin/blocked-email-logins/${userId}`,
+      `/admin/blocked-email-logins/${userId}`
     );
     return response.data;
   }
@@ -3878,9 +3913,12 @@ class ApiService {
     deletedIds: string[];
     skipped: Array<{ userId: string; reason: string }>;
   }> {
-    const response = await this.api.post('/admin/blocked-email-logins/bulk-delete', {
-      userIds,
-    });
+    const response = await this.api.post(
+      '/admin/blocked-email-logins/bulk-delete',
+      {
+        userIds
+      }
+    );
     return response.data;
   }
 
@@ -3889,7 +3927,7 @@ class ApiService {
     form.append('file', file);
     const response = await this.api.post<ReportSubmissionListItem>(
       '/admin/report-submissions/upload',
-      form,
+      form
     );
     return response.data;
   }
@@ -3900,21 +3938,23 @@ class ApiService {
   }): Promise<ReportSubmissionListItem[]> {
     const response = await this.api.get<ReportSubmissionListItem[]>(
       '/admin/report-submissions',
-      { params },
+      { params }
     );
     return response.data;
   }
 
   async getReportSubmission(id: string): Promise<ReportSubmissionDetail> {
     const response = await this.api.get<ReportSubmissionDetail>(
-      `/admin/report-submissions/${id}`,
+      `/admin/report-submissions/${id}`
     );
     return response.data;
   }
 
-  async compareReportSubmission(id: string): Promise<ReportSubmissionCompareResult> {
+  async compareReportSubmission(
+    id: string
+  ): Promise<ReportSubmissionCompareResult> {
     const response = await this.api.get<ReportSubmissionCompareResult>(
-      `/admin/report-submissions/${id}/compare`,
+      `/admin/report-submissions/${id}/compare`
     );
     return response.data;
   }
@@ -3928,51 +3968,51 @@ class ApiService {
 
   // ─── Guvohnomalar ───────────────────────────────────────────────────────
   async getEmployeeCertificates(
-    userId: string,
+    userId: string
   ): Promise<EmployeeCertificate[]> {
     const response = await this.api.get<EmployeeCertificate[]>(
-      `/admin/certificates/employees/${userId}`,
+      `/admin/certificates/employees/${userId}`
     );
     return response.data;
   }
 
   async getCertificateEligibility(
-    userId: string,
+    userId: string
   ): Promise<CertificateEligibility> {
     const response = await this.api.get<CertificateEligibility>(
-      `/admin/certificates/employees/${userId}/eligibility`,
+      `/admin/certificates/employees/${userId}/eligibility`
     );
     return response.data;
   }
 
   async issueCertificate(
     userId: string,
-    data?: { examAttemptId?: string },
+    data?: { examAttemptId?: string }
   ): Promise<EmployeeCertificate> {
     const response = await this.api.post<EmployeeCertificate>(
       `/admin/certificates/employees/${userId}`,
-      data ?? {},
+      data ?? {}
     );
     return response.data;
   }
 
   async revokeCertificate(
     id: string,
-    reason?: string,
+    reason?: string
   ): Promise<EmployeeCertificate> {
     const response = await this.api.post<EmployeeCertificate>(
       `/admin/certificates/${id}/revoke`,
-      reason ? { reason } : {},
+      reason ? { reason } : {}
     );
     return response.data;
   }
 
   /** Ochiq tekshiruv — QR kod havolasi shu yerga olib keladi (auth talab qilinmaydi). */
   async verifyCertificate(
-    certificateNumber: string,
+    certificateNumber: string
   ): Promise<CertificateVerification> {
     const response = await this.api.get<CertificateVerification>(
-      `/public/certificates/verify/${encodeURIComponent(certificateNumber)}`,
+      `/public/certificates/verify/${encodeURIComponent(certificateNumber)}`
     );
     return response.data;
   }
@@ -4097,7 +4137,7 @@ class ApiService {
   }): Promise<LibraryDocumentRow[]> {
     const response = await this.api.get<LibraryDocumentRow[]>(
       '/admin/library-documents',
-      { params },
+      { params }
     );
     return response.data;
   }
@@ -4115,7 +4155,7 @@ class ApiService {
   }): Promise<LibraryDocumentRow> {
     const response = await this.api.post<LibraryDocumentRow>(
       '/admin/library-documents',
-      data,
+      data
     );
     return response.data;
   }
@@ -4132,18 +4172,18 @@ class ApiService {
       fileSize: string | null;
       orderIndex: number;
       isActive: boolean;
-    }>,
+    }>
   ): Promise<LibraryDocumentRow> {
     const response = await this.api.put<LibraryDocumentRow>(
       `/admin/library-documents/${id}`,
-      data,
+      data
     );
     return response.data;
   }
 
   async adminDeleteLibraryDocument(id: string): Promise<LibraryDocumentRow> {
     const response = await this.api.delete<LibraryDocumentRow>(
-      `/admin/library-documents/${id}`,
+      `/admin/library-documents/${id}`
     );
     return response.data;
   }
@@ -4177,10 +4217,10 @@ class ApiService {
   async getNesDepartments(filters?: {
     search?: string;
   }): Promise<{ data: NesDepartment[]; total: number }> {
-    const response = await this.api.get<{ data: NesDepartment[]; total: number }>(
-      '/admin/nes-employees/departments',
-      { params: filters },
-    );
+    const response = await this.api.get<{
+      data: NesDepartment[];
+      total: number;
+    }>('/admin/nes-employees/departments', { params: filters });
     return response.data;
   }
 
@@ -4218,6 +4258,72 @@ class ApiService {
     return response.data;
   }
 
+  async getElektroCutoverPreview(): Promise<{
+    toArchive: {
+      testUsers: number;
+      examAttempts: number;
+      certificates: number;
+      progressRows: number;
+    };
+    preservedContent: {
+      levels: number;
+      theories: number;
+      questions: number;
+      examQuestions: number;
+      admins: number;
+    };
+  }> {
+    const response = await this.api.get('/admin/archive/preview');
+    return response.data;
+  }
+
+  async executeElektroCutover(confirmationCode: string): Promise<{
+    success: boolean;
+    archiveId: string;
+    fileName: string;
+    checksumSha256: string;
+    tableCounts: Record<string, number>;
+  }> {
+    const response = await this.api.post('/admin/archive/cutover', {
+      confirmationCode
+    });
+    return response.data;
+  }
+
+  async getElektroArchiveList(): Promise<
+    Array<{
+      archiveId: string;
+      createdAt: string;
+      sourceDatabase: string;
+      schemaVersion: string;
+      tableCounts: Record<string, number>;
+      checksumSha256: string;
+      status: string;
+      verifiedAt: string;
+      executedBy: string;
+    }>
+  > {
+    const response = await this.api.get('/admin/archive/list');
+    return response.data;
+  }
+
+  async downloadElektroArchive(archiveId: string): Promise<void> {
+    const response = await this.api.get(
+      `/admin/archive/${archiveId}/download`,
+      {
+        responseType: 'blob'
+      }
+    );
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${archiveId}.sqlite`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
   async deleteAllNesEmployees(): Promise<{
     success: boolean;
     deleted: number;
@@ -4232,22 +4338,45 @@ class ApiService {
   async syncNesEmployees(_date?: string): Promise<NesEmployeeSyncResponse> {
     const response = await this.api.post<NesEmployeeSyncResponse>(
       '/admin/nes-employees/sync',
-      {},
+      {}
     );
     return response.data;
   }
 
   async getNesEmployeesSyncStatus(): Promise<NesEmployeesSyncStatus> {
     const response = await this.api.get<NesEmployeesSyncStatus>(
-      '/admin/nes-employees/sync-status',
+      '/admin/nes-employees/sync-status'
     );
     return response.data;
   }
 
   async getNesEmployeesSyncHealth(): Promise<NesEmployeesSyncHealth> {
     const response = await this.api.get<NesEmployeesSyncHealth>(
-      '/admin/nes-employees/sync-health',
+      '/admin/nes-employees/sync-health'
     );
+    return response.data;
+  }
+
+  async getNesEmployeeDuplicates(): Promise<{
+    groups: Array<{
+      keeperId: string;
+      keeperEmail: string | null;
+      members: Array<{
+        id: string;
+        email: string | null;
+        firstName: string;
+        lastName: string;
+        middleName: string | null;
+        personnelNumber: string | null;
+        organizationName: string | null;
+        energoId: string | null;
+        createdAt: string;
+      }>;
+    }>;
+    totalGroups: number;
+    totalDuplicates: number;
+  }> {
+    const response = await this.api.get('/admin/nes-employees/duplicates');
     return response.data;
   }
 
@@ -4396,7 +4525,7 @@ export const userActivityApi = {
   async listOnline(params: { group?: ActivityGroup; organizationId?: string }) {
     const { data } = await apiService.api.get<OnlineUserRow[]>(
       '/user-activity/online',
-      { params },
+      { params }
     );
     return data;
   },
@@ -4407,7 +4536,7 @@ export const userActivityApi = {
   }) {
     const { data } = await apiService.api.get<ActivityUserRow[]>(
       '/user-activity/users',
-      { params },
+      { params }
     );
     return data;
   },
@@ -4418,38 +4547,38 @@ export const userActivityApi = {
   }) {
     const { data } = await apiService.api.get<ActivityStats>(
       '/user-activity/stats',
-      { params },
+      { params }
     );
     return data;
   },
   async onlineSummary(params: { organizationId: string }) {
     const { data } = await apiService.api.get<EmployeeOnlineSummary[]>(
       '/user-activity/online-summary',
-      { params },
+      { params }
     );
     return data;
   },
   async timeline(userId: string) {
     const { data } = await apiService.api.get<ActivityTimelineEvent[]>(
-      `/user-activity/timeline/${userId}`,
+      `/user-activity/timeline/${userId}`
     );
     return data;
   },
   async sessions(userId: string, range?: ActivityRange) {
     const { data } = await apiService.api.get<ActivitySession[]>(
       `/user-activity/sessions/${userId}`,
-      { params: { range } },
+      { params: { range } }
     );
     return data;
   },
   async questionStats(params: { userId?: string; organizationId?: string }) {
     const { data } = await apiService.api.get<QuestionStatsRow[]>(
       '/user-activity/question-stats',
-      { params },
+      { params }
     );
     return data;
   },
   async heartbeat() {
     await apiService.api.post('/user-activity/heartbeat');
-  },
+  }
 };
