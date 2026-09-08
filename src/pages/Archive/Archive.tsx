@@ -56,6 +56,9 @@ export default function ArchivePage() {
   const [cutoverOpen, setCutoverOpen] = useState(false);
   const [confirmCode, setConfirmCode] = useState('');
   const [cutoverLoading, setCutoverLoading] = useState(false);
+  const [activeProcessPrompt, setActiveProcessPrompt] = useState<{
+    message: string;
+  } | null>(null);
   const [cutoverDone, setCutoverDone] = useState<{
     archiveId: string;
     checksum: string;
@@ -109,6 +112,7 @@ export default function ArchivePage() {
     setCutoverOpen(true);
     setCutoverDone(null);
     setConfirmCode('');
+    setActiveProcessPrompt(null);
     setPreviewLoading(true);
     try {
       const preview = await apiService.getElektroCutoverPreview();
@@ -120,7 +124,7 @@ export default function ArchivePage() {
     }
   };
 
-  const handleExecuteCutover = async () => {
+  const handleExecuteCutover = async (force = false) => {
     if (confirmCode !== 'CONFIRM-CUTOVER') {
       message.error(
         'Tasdiqlash kodi noto‘g‘ri. "CONFIRM-CUTOVER" deb kiriting.'
@@ -129,19 +133,41 @@ export default function ArchivePage() {
     }
     setCutoverLoading(true);
     try {
-      const res = await apiService.executeElektroCutover('CONFIRM-CUTOVER');
+      const res = await apiService.executeElektroCutover(
+        'CONFIRM-CUTOVER',
+        force
+      );
       setCutoverDone({
         archiveId: res.archiveId,
         checksum: res.checksumSha256
       });
+      setActiveProcessPrompt(null);
       message.success(
         'ElektroLearn test maʼlumotlari SQLite ga muvaffaqiyatli arxivlandi!'
       );
       fetchArchives();
-    } catch (err) {
-      message.error(
-        err instanceof Error ? err.message : 'Cutover xatolik bilan tugadi'
-      );
+    } catch (err: any) {
+      const respData = err?.response?.data;
+      const msg =
+        respData?.message || err?.message || 'Cutover xatolik bilan tugadi';
+
+      if (
+        err?.response?.status === 409 &&
+        (respData?.canForce ||
+          (typeof msg === 'string' &&
+            (msg.includes('sinxronizatsiya') || msg.includes('faol'))))
+      ) {
+        setActiveProcessPrompt({
+          message:
+            typeof msg === 'string'
+              ? msg
+              : 'Sinxronizatsiya jarayoni ayni paytda faol.'
+        });
+      } else {
+        message.error(
+          typeof msg === 'string' ? msg : 'Cutover xatolik bilan tugadi'
+        );
+      }
     } finally {
       setCutoverLoading(false);
     }
@@ -464,7 +490,9 @@ export default function ArchivePage() {
                   </div>
 
                   <div className="rounded-lg border p-2.5 bg-muted/30 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Energo ID Server Holati:</span>
+                    <span className="text-muted-foreground">
+                      Energo ID Server Holati:
+                    </span>
                     {previewData.energoIdStatus?.reachable ? (
                       <span className="font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
                         ALOQA MAVJUD
@@ -476,16 +504,18 @@ export default function ArchivePage() {
                     )}
                   </div>
 
-                  {previewData.energoIdStatus && !previewData.energoIdStatus.reachable && (
-                    <div className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                      <div>
-                        <strong>Energo ID serveriga ulanib bo‘lmadi!</strong>{' '}
-                        Cutover amalga oshirilgandan so‘ng yangi xodimlarni Energo ID dan
-                        yuklab olish uchun Energo ID ishlab turishi shart.
+                  {previewData.energoIdStatus &&
+                    !previewData.energoIdStatus.reachable && (
+                      <div className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <div>
+                          <strong>Energo ID serveriga ulanib bo‘lmadi!</strong>{' '}
+                          Cutover amalga oshirilgandan so‘ng yangi xodimlarni
+                          Energo ID dan yuklab olish uchun Energo ID ishlab
+                          turishi shart.
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               ) : null}
 
@@ -505,6 +535,34 @@ export default function ArchivePage() {
                 />
               </div>
 
+              {activeProcessPrompt && (
+                <div className="rounded-lg border border-amber-300 bg-amber-500/10 p-3 text-xs space-y-2">
+                  <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200 font-medium">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                    <div>{activeProcessPrompt.message}</div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Barcha faol jarayonlarni to‘xtatishni istaysizmi? Ushbu amal
+                    faol jarayonlar va blokirovkalarni majburiy to‘xtatib,
+                    Cutoverni darhol davom ettiradi.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="w-full text-xs font-semibold"
+                    disabled={cutoverLoading}
+                    onClick={() => handleExecuteCutover(true)}
+                  >
+                    {cutoverLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    Ha, barcha jarayonlarni to‘xtatib Cutoverni davom ettirish
+                  </Button>
+                </div>
+              )}
+
               <DialogFooter className="pt-2">
                 <Button
                   variant="ghost"
@@ -516,7 +574,7 @@ export default function ArchivePage() {
                 <Button
                   variant="destructive"
                   disabled={confirmCode !== 'CONFIRM-CUTOVER' || cutoverLoading}
-                  onClick={handleExecuteCutover}
+                  onClick={() => handleExecuteCutover(false)}
                 >
                   {cutoverLoading ? (
                     <>
