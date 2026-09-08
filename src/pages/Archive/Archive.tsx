@@ -541,7 +541,8 @@ export default function ArchivePage() {
                   SQLite ga Ko‘chirish Jarayoni (Part-by-Part)
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Test maʼlumotlari jadvalma-jadval SQLite ga xavfsiz o‘tkazilmoqda. Iltimos oynani yopmang.
+                  Test maʼlumotlari jadvalma-jadval SQLite ga xavfsiz
+                  o‘tkazilmoqda. Iltimos oynani yopmang.
                 </p>
               </div>
 
@@ -579,7 +580,9 @@ export default function ArchivePage() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground shrink-0 mr-2">Holat:</span>
+                  <span className="text-muted-foreground shrink-0 mr-2">
+                    Holat:
+                  </span>
                   <span
                     className="text-foreground font-medium truncate max-w-[260px] text-right"
                     title={activeJob.message}
@@ -590,7 +593,8 @@ export default function ArchivePage() {
               </div>
 
               <div className="text-center text-[11px] text-muted-foreground bg-muted/40 p-2.5 rounded-md border">
-                ⚡ Xotira (RAM) tejash rejimida ishlamoqda. Jarayon tugagach Superadmin saqlanadi.
+                ⚡ Xotira (RAM) tejash rejimida ishlamoqda. Jarayon tugagach
+                Superadmin saqlanadi.
               </div>
             </div>
           ) : (
