@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Layers,
   Loader2,
+  RefreshCw,
   ShieldAlert
 } from 'lucide-react';
 import {
@@ -58,6 +59,19 @@ export default function ArchivePage() {
   const [cutoverLoading, setCutoverLoading] = useState(false);
   const [forceCutover, setForceCutover] = useState(false);
   const [abortingSync, setAbortingSync] = useState(false);
+  const [activeJob, setActiveJob] = useState<{
+    status: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+    stage: string;
+    currentTable?: string;
+    processedTables: number;
+    totalTables: number;
+    percent: number;
+    message: string;
+    archiveId?: string;
+    checksumSha256?: string;
+    tableCounts?: Record<string, number>;
+    error?: string;
+  } | null>(null);
   const [activeProcessPrompt, setActiveProcessPrompt] = useState<{
     message: string;
   } | null>(null);
@@ -118,6 +132,59 @@ export default function ArchivePage() {
     fetchArchives();
   }, []);
 
+  // Modal ochilganda agar orqa fonda job ketyotgan bo'lsa aniqlash
+  useEffect(() => {
+    if (!cutoverOpen) return;
+    let isMounted = true;
+    apiService
+      .getElektroCutoverStatus()
+      .then((st) => {
+        if (!isMounted) return;
+        if (st?.status === 'RUNNING') {
+          setActiveJob(st);
+          setCutoverLoading(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [cutoverOpen]);
+
+  // Real-time polling har 800ms
+  useEffect(() => {
+    if (!activeJob || activeJob.status !== 'RUNNING') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const job = await apiService.getElektroCutoverStatus();
+        setActiveJob(job);
+        if (job.status === 'COMPLETED') {
+          clearInterval(interval);
+          setCutoverLoading(false);
+          setCutoverDone({
+            archiveId: job.archiveId || '',
+            checksum: job.checksumSha256 || ''
+          });
+          message.success(
+            'ElektroLearn test maʼlumotlari SQLite ga muvaffaqiyatli arxivlandi!'
+          );
+          fetchArchives();
+        } else if (job.status === 'FAILED') {
+          clearInterval(interval);
+          setCutoverLoading(false);
+          message.error(
+            job.error || job.message || 'Cutover xatolik bilan to‘xtadi'
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, [activeJob?.status]);
+
   const openCutoverModal = async () => {
     setCutoverOpen(true);
     setCutoverDone(null);
@@ -175,16 +242,23 @@ export default function ArchivePage() {
         'CONFIRM-CUTOVER',
         shouldForce
       );
-      setCutoverDone({
-        archiveId: res.archiveId,
-        checksum: res.checksumSha256
-      });
       setActiveProcessPrompt(null);
-      message.success(
-        'ElektroLearn test maʼlumotlari SQLite ga muvaffaqiyatli arxivlandi!'
-      );
-      fetchArchives();
+      if (res.status === 'COMPLETED') {
+        setCutoverDone({
+          archiveId: res.archiveId || '',
+          checksum: res.checksumSha256 || ''
+        });
+        setCutoverLoading(false);
+        message.success(
+          'ElektroLearn test maʼlumotlari SQLite ga muvaffaqiyatli arxivlandi!'
+        );
+        fetchArchives();
+      } else {
+        // res.status === 'RUNNING'
+        setActiveJob(res);
+      }
     } catch (err: any) {
+      setCutoverLoading(false);
       const respData = err?.response?.data;
       const msg =
         respData?.message || err?.message || 'Cutover xatolik bilan tugadi';
@@ -206,8 +280,6 @@ export default function ArchivePage() {
           typeof msg === 'string' ? msg : 'Cutover xatolik bilan tugadi'
         );
       }
-    } finally {
-      setCutoverLoading(false);
     }
   };
 
@@ -458,6 +530,68 @@ export default function ArchivePage() {
               <Button onClick={() => setCutoverOpen(false)} className="w-full">
                 Tushunarli
               </Button>
+            </div>
+          ) : activeJob && activeJob.status === 'RUNNING' ? (
+            <div className="py-6 space-y-5">
+              <div className="text-center space-y-1.5">
+                <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <RefreshCw className="h-6 w-6 animate-spin" />
+                </div>
+                <h3 className="text-base font-semibold text-foreground">
+                  SQLite ga Ko‘chirish Jarayoni (Part-by-Part)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Test maʼlumotlari jadvalma-jadval SQLite ga xavfsiz o‘tkazilmoqda. Iltimos oynani yopmang.
+                </p>
+              </div>
+
+              {/* Progress Bar & Percentage */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs font-medium">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    Bosqich: <Tag color="blue">{activeJob.stage}</Tag>
+                  </span>
+                  <span className="font-mono text-primary font-bold text-sm">
+                    {activeJob.percent}%
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden border p-0.5">
+                  <div
+                    className="bg-primary h-full rounded-full transition-all duration-300 ease-out shadow-sm"
+                    style={{ width: `${Math.max(activeJob.percent, 3)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Details Card */}
+              <div className="p-3.5 bg-muted/30 rounded-lg border space-y-2 text-xs">
+                <div className="flex justify-between items-center pb-1.5 border-b border-border">
+                  <span className="text-muted-foreground">Hozirgi jadval:</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    {activeJob.currentTable || 'Boshlanmoqda...'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pb-1.5 border-b border-border">
+                  <span className="text-muted-foreground">Jadvallar soni:</span>
+                  <span className="font-mono text-foreground">
+                    {activeJob.processedTables} / {activeJob.totalTables || 28}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground shrink-0 mr-2">Holat:</span>
+                  <span
+                    className="text-foreground font-medium truncate max-w-[260px] text-right"
+                    title={activeJob.message}
+                  >
+                    {activeJob.message}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-center text-[11px] text-muted-foreground bg-muted/40 p-2.5 rounded-md border">
+                ⚡ Xotira (RAM) tejash rejimida ishlamoqda. Jarayon tugagach Superadmin saqlanadi.
+              </div>
             </div>
           ) : (
             <div className="space-y-4 py-2">
