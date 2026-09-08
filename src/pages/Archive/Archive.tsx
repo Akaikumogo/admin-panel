@@ -56,6 +56,8 @@ export default function ArchivePage() {
   const [cutoverOpen, setCutoverOpen] = useState(false);
   const [confirmCode, setConfirmCode] = useState('');
   const [cutoverLoading, setCutoverLoading] = useState(false);
+  const [forceCutover, setForceCutover] = useState(false);
+  const [abortingSync, setAbortingSync] = useState(false);
   const [activeProcessPrompt, setActiveProcessPrompt] = useState<{
     message: string;
   } | null>(null);
@@ -67,6 +69,7 @@ export default function ArchivePage() {
   const [previewData, setPreviewData] = useState<{
     toArchive: {
       testUsers: number;
+      moderators: number;
       examAttempts: number;
       certificates: number;
       progressRows: number;
@@ -76,8 +79,15 @@ export default function ArchivePage() {
       theories: number;
       questions: number;
       examQuestions: number;
-      admins: number;
+      superadmins: number;
     };
+    energoIdStatus?: {
+      configured: boolean;
+      reachable: boolean;
+      error?: string;
+    };
+    activeSync?: boolean;
+    activeSyncReason?: string;
   } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -113,10 +123,14 @@ export default function ArchivePage() {
     setCutoverDone(null);
     setConfirmCode('');
     setActiveProcessPrompt(null);
+    setForceCutover(false);
     setPreviewLoading(true);
     try {
       const preview = await apiService.getElektroCutoverPreview();
       setPreviewData(preview);
+      if (preview?.activeSync) {
+        setForceCutover(true);
+      }
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Preview yuklab bo‘lmadi');
     } finally {
@@ -124,18 +138,36 @@ export default function ArchivePage() {
     }
   };
 
-  const handleExecuteCutover = async (force = false) => {
+  const handleAbortSync = async () => {
+    setAbortingSync(true);
+    try {
+      const res = await apiService.abortElektroSync();
+      message.success(res.message || 'Sinxronizatsiya to‘xtatildi va qulflar tozalandi');
+      const preview = await apiService.getElektroCutoverPreview();
+      setPreviewData(preview);
+      if (!preview?.activeSync) {
+        setActiveProcessPrompt(null);
+      }
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || err?.message || 'Qulflarni tozalashda xatolik');
+    } finally {
+      setAbortingSync(false);
+    }
+  };
+
+  const handleExecuteCutover = async (isForce?: boolean) => {
     if (confirmCode !== 'CONFIRM-CUTOVER') {
       message.error(
         'Tasdiqlash kodi noto‘g‘ri. "CONFIRM-CUTOVER" deb kiriting.'
       );
       return;
     }
+    const shouldForce = typeof isForce === 'boolean' ? isForce : forceCutover;
     setCutoverLoading(true);
     try {
       const res = await apiService.executeElektroCutover(
         'CONFIRM-CUTOVER',
-        force
+        shouldForce
       );
       setCutoverDone({
         archiveId: res.archiveId,
@@ -152,11 +184,11 @@ export default function ArchivePage() {
         respData?.message || err?.message || 'Cutover xatolik bilan tugadi';
 
       if (
-        err?.response?.status === 409 &&
-        (respData?.canForce ||
-          (typeof msg === 'string' &&
-            (msg.includes('sinxronizatsiya') || msg.includes('faol'))))
+        err?.response?.status === 409 ||
+        (typeof msg === 'string' &&
+          (msg.includes('sinxronizatsiya') || msg.includes('faol')))
       ) {
+        setForceCutover(true);
         setActiveProcessPrompt({
           message:
             typeof msg === 'string'
@@ -447,6 +479,12 @@ export default function ArchivePage() {
                         <b>{previewData.toArchive.testUsers} ta</b>
                       </div>
                       <div>
+                        Moderator va boshqa adminlar:{' '}
+                        <b className="text-destructive">
+                          {previewData.toArchive.moderators} ta (o‘chiriladi)
+                        </b>
+                      </div>
+                      <div>
                         Imtihon topshirishlar:{' '}
                         <b>{previewData.toArchive.examAttempts} ta</b>
                       </div>
@@ -483,8 +521,10 @@ export default function ArchivePage() {
                         <b>{previewData.preservedContent.examQuestions} ta</b>
                       </div>
                       <div>
-                        Admin va moderatorlar:{' '}
-                        <b>{previewData.preservedContent.admins} ta</b>
+                        Superadmin:{' '}
+                        <b className="text-emerald-700">
+                          {previewData.preservedContent.superadmins} ta (saqlanadi)
+                        </b>
                       </div>
                     </div>
                   </div>
@@ -504,6 +544,50 @@ export default function ArchivePage() {
                     )}
                   </div>
 
+                  <div className="rounded-lg border p-2.5 bg-muted/30 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      Energo ID Sinxronizatsiyasi:
+                    </span>
+                    {previewData.activeSync ? (
+                      <span className="font-semibold text-destructive bg-destructive/10 px-2 py-0.5 rounded">
+                        FAOL / QULFLANGAN
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                        TINCH (BO‘SH)
+                      </span>
+                    )}
+                  </div>
+
+                  {previewData.activeSync && (
+                    <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                          <div>
+                            <strong>Ogohlantirish:</strong> Sinxronizatsiya jarayoni faol (
+                            <span className="font-mono">
+                              {previewData.activeSyncReason || 'Lock mavjud'}
+                            </span>
+                            ).
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={abortingSync}
+                          onClick={handleAbortSync}
+                          className="shrink-0 text-[11px] h-7 px-2"
+                        >
+                          {abortingSync ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : null}
+                          Qulflarni tozalash
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {previewData.energoIdStatus &&
                     !previewData.energoIdStatus.reachable && (
                       <div className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 flex items-start gap-2">
@@ -518,6 +602,28 @@ export default function ArchivePage() {
                     )}
                 </div>
               ) : null}
+
+              {/* Force Cutover Switch / Checkbox */}
+              <div className="flex items-start gap-2.5 p-3 bg-muted/40 border border-border rounded-lg">
+                <input
+                  type="checkbox"
+                  id="forceCutoverToggle"
+                  checked={forceCutover}
+                  onChange={(e) => setForceCutover(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-destructive focus:ring-destructive border-border bg-background cursor-pointer"
+                />
+                <label
+                  htmlFor="forceCutoverToggle"
+                  className="text-xs text-foreground cursor-pointer select-none"
+                >
+                  <span className="font-medium text-foreground">
+                    Fondagi barcha jarayonlarni majburiy to‘xtatish (Force Cutover)
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground pt-0.5">
+                    Faol sinxronizatsiya yoki qulflarni to‘xtatib, Cutoverni darhol davom ettiradi.
+                  </span>
+                </label>
+              </div>
 
               <div className="space-y-1.5 pt-1">
                 <label className="text-xs font-medium text-foreground">
