@@ -4290,15 +4290,47 @@ class ApiService {
     return response.data;
   }
 
+  async getElektroCutoverStatus(): Promise<{
+    status: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+    stage:
+      | 'IDLE'
+      | 'STARTING'
+      | 'ARCHIVING'
+      | 'VERIFYING'
+      | 'CLEANING'
+      | 'DONE'
+      | 'ERROR';
+    currentTable?: string;
+    processedTables: number;
+    totalTables: number;
+    percent: number;
+    message: string;
+    archiveId?: string;
+    checksumSha256?: string;
+    tableCounts?: Record<string, number>;
+    error?: string;
+    startedAt?: string;
+    finishedAt?: string;
+  }> {
+    const response = await this.api.get('/admin/archive/status');
+    return response.data;
+  }
+
   async executeElektroCutover(
     confirmationCode: string,
     force?: boolean
   ): Promise<{
-    success: boolean;
-    archiveId: string;
-    fileName: string;
-    checksumSha256: string;
-    tableCounts: Record<string, number>;
+    status: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+    stage: string;
+    currentTable?: string;
+    processedTables: number;
+    totalTables: number;
+    percent: number;
+    message: string;
+    archiveId?: string;
+    checksumSha256?: string;
+    tableCounts?: Record<string, number>;
+    error?: string;
   }> {
     const response = await this.api.post('/admin/archive/cutover', {
       confirmationCode,
