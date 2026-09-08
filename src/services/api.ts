@@ -4282,7 +4282,10 @@ class ApiService {
     return response.data;
   }
 
-  async executeElektroCutover(confirmationCode: string): Promise<{
+  async executeElektroCutover(
+    confirmationCode: string,
+    force?: boolean
+  ): Promise<{
     success: boolean;
     archiveId: string;
     fileName: string;
@@ -4290,7 +4293,8 @@ class ApiService {
     tableCounts: Record<string, number>;
   }> {
     const response = await this.api.post('/admin/archive/cutover', {
-      confirmationCode
+      confirmationCode,
+      force
     });
     return response.data;
   }
