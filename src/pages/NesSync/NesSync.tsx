@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button, Card, Input, Modal, Progress, Select, Table, Tag, message } from '@/components/ui';
 import type { ColumnsType } from '@/components/ui';
-import { Trash2, RefreshCw, Search, IdCard, AlertCircle } from 'lucide-react';
+import { Trash2, RefreshCw, Search, IdCard, AlertCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar } from '@/components/FilterBar';
 import NoData from '@/components/NoData';
@@ -249,6 +250,14 @@ export default function NesSync() {
       : 'Sinxronlanmoqda...'
     : 'Tayyor';
 
+  const [dupOpen, setDupOpen] = useState(false);
+  const duplicates = useQuery({
+    queryKey: ['nes-employees', 'duplicates'],
+    queryFn: () => apiService.getNesEmployeeDuplicates(),
+    staleTime: 60_000,
+    retry: false,
+  });
+
   const columns = useMemo<ColumnsType<NesEmployee>>(() => {
     const base: ColumnsType<NesEmployee> = [
       {
@@ -368,6 +377,60 @@ export default function NesSync() {
               Qayta urinish
             </Button>
           </div>
+        </Card>
+      )}
+
+      {duplicates.data && duplicates.data.totalGroups > 0 && (
+        <Card className="!border-amber-200 dark:!border-amber-800 !bg-amber-50/50 dark:!bg-amber-950/20">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-700 dark:text-amber-300">
+                  Dublikat xodimlar aniqlandi
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  {duplicates.data.totalGroups} ta guruh, {duplicates.data.totalDuplicates} ta dublikat. Energo ID da tab № o'zgartirganda ikkita user paydo bo'lishi mumkin.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDupOpen((v) => !v)}
+            >
+              {dupOpen ? <ChevronUp size={14} className="mr-1" /> : <ChevronDown size={14} className="mr-1" />}
+              {dupOpen ? 'Yashirish' : 'Ko\'rsatish'}
+            </Button>
+          </div>
+          {dupOpen && (
+            <div className="mt-3 space-y-2">
+              {duplicates.data.groups.map((g) => (
+                <div key={g.keeperId} className="rounded-lg border border-border-soft bg-card p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-fg-4 mb-1.5">
+                    Asosiy: {g.members[0]?.email ?? g.keeperId}
+                  </div>
+                  <div className="space-y-1">
+                    {g.members.map((m) => (
+                      <div key={m.id} className="flex items-center gap-2 text-sm">
+                        <span className="truncate">
+                          {m.firstName} {m.lastName}
+                        </span>
+                        <span className="text-xs text-fg-4 truncate">
+                          {m.email ?? '—'} · tab № {m.personnelNumber ?? '—'} · {m.organizationName ?? '—'}
+                        </span>
+                        {m.id === g.keeperId ? (
+                          <Tag color="green" className="ml-auto text-[10px]">ASOSIY</Tag>
+                        ) : (
+                          <Tag color="orange" className="ml-auto text-[10px]">DUBLIKAT</Tag>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       )}
 
