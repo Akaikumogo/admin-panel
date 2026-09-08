@@ -461,6 +461,30 @@ export default function ArchivePage() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="rounded-lg border p-2.5 bg-muted/30 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Energo ID Server Holati:</span>
+                    {previewData.energoIdStatus?.reachable ? (
+                      <span className="font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                        ALOQA MAVJUD
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-destructive bg-destructive/10 px-2 py-0.5 rounded">
+                        JAVOB BERMADI
+                      </span>
+                    )}
+                  </div>
+
+                  {previewData.energoIdStatus && !previewData.energoIdStatus.reachable && (
+                    <div className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Energo ID serveriga ulanib bo‘lmadi!</strong>{' '}
+                        Cutover amalga oshirilgandan so‘ng yangi xodimlarni Energo ID dan
+                        yuklab olish uchun Energo ID ishlab turishi shart.
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
 
