@@ -4261,6 +4261,7 @@ class ApiService {
   async getElektroCutoverPreview(): Promise<{
     toArchive: {
       testUsers: number;
+      moderators: number;
       examAttempts: number;
       certificates: number;
       progressRows: number;
@@ -4270,15 +4271,22 @@ class ApiService {
       theories: number;
       questions: number;
       examQuestions: number;
-      admins: number;
+      superadmins: number;
     };
     energoIdStatus?: {
       configured: boolean;
       reachable: boolean;
       error?: string;
     };
+    activeSync?: boolean;
+    activeSyncReason?: string;
   }> {
     const response = await this.api.get('/admin/archive/preview');
+    return response.data;
+  }
+
+  async abortElektroSync(): Promise<{ success: boolean; message: string }> {
+    const response = await this.api.post('/admin/archive/abort-sync');
     return response.data;
   }
 
