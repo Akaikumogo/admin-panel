@@ -4272,6 +4272,11 @@ class ApiService {
       examQuestions: number;
       admins: number;
     };
+    energoIdStatus?: {
+      configured: boolean;
+      reachable: boolean;
+      error?: string;
+    };
   }> {
     const response = await this.api.get('/admin/archive/preview');
     return response.data;
