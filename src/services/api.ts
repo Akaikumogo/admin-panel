@@ -3405,6 +3405,25 @@ class ApiService {
     return response.data;
   }
 
+  async setPositionReportActive(
+    organizationId: string,
+    division: string | undefined,
+    post: string,
+    isActive: boolean
+  ): Promise<{
+    organizationId: string;
+    division: string;
+    post: string;
+    isActive: boolean;
+    affectedCount: number;
+  }> {
+    const response = await this.api.patch(
+      '/admin/reporting-activation/positions',
+      { organizationId, division, post, isActive }
+    );
+    return response.data;
+  }
+
   async setEmployeeReportActive(
     userId: string,
     isActive: boolean
