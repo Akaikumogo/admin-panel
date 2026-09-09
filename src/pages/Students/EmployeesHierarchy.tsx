@@ -190,6 +190,7 @@ function buildTree(
 
 type PendingOff = {
   kind: 'org' | 'division' | 'employee';
+  kind: 'org' | 'division' | 'position' | 'employee';
   title: string;
   apply: () => Promise<void>;
 };
@@ -199,11 +200,13 @@ const EmployeeRow = memo(function EmployeeRow({
   canEdit,
   checked,
   onToggle,
+  tooltip,
 }: {
   s: StudentSummary;
   canEdit: boolean;
   checked: boolean;
   onToggle: (next: boolean) => void;
+  tooltip?: string;
 }) {
   const navigate = useNavigate();
   return (
@@ -249,8 +252,11 @@ const EmployeeRow = memo(function EmployeeRow({
         onClick={(e: MouseEvent) => e.stopPropagation()}
         title={
           checked
+          tooltip ??
+          (checked
             ? 'ON — hisobotda hisobga olinadi'
             : 'OFF — reportingda hisobga olinmaydi'
+            : 'OFF — reportingda hisobga olinmaydi')
         }
       >
         <Switch
@@ -270,12 +276,14 @@ function EmployeePanel({
   canEdit,
   empActive,
   onToggleEmp,
+  tooltip,
 }: {
   people: StudentSummary[];
   warn?: boolean;
   canEdit: boolean;
   empActive: Map<string, boolean>;
   onToggleEmp: (userId: string, next: boolean, name: string) => void;
+  tooltip?: string;
 }) {
   if (people.length === 0) return null;
   return (
@@ -295,6 +303,7 @@ function EmployeePanel({
             s={s}
             canEdit={canEdit}
             checked={checked}
+            tooltip={tooltip}
             onToggle={(next) =>
               onToggleEmp(s.id, next, formatPersonName(s))
             }
@@ -317,6 +326,7 @@ function BranchToggle({
   switchChecked,
   canEditSwitch,
   onSwitch,
+  switchTooltip,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -329,6 +339,7 @@ function BranchToggle({
   switchChecked?: boolean;
   canEditSwitch?: boolean;
   onSwitch?: (next: boolean) => void;
+  switchTooltip?: string;
 }) {
   const pad =
     depth === 0
@@ -407,8 +418,11 @@ function BranchToggle({
           className="mt-0.5 shrink-0"
           title={
             switchChecked
+            switchTooltip ??
+            (switchChecked
               ? 'ON — hisobotda hisobga olinadi'
               : 'OFF — reportingda hisobga olinmaydi'
+              : 'OFF — reportingda hisobga olinmaydi')
           }
         >
           <Switch
@@ -520,12 +534,17 @@ export function EmployeesHierarchy({
           );
         } catch {
           message.error(
+        } catch (error: any) {
+          const msg =
+            error?.response?.data?.message ||
             t({
               uz: 'Saqlashda xato',
               en: 'Could not save',
               ru: 'Не удалось сохранить',
             }),
           );
+            });
+          message.error(msg);
         } finally {
           setBusyKey(null);
         }
@@ -551,12 +570,17 @@ export function EmployeesHierarchy({
       );
     } catch {
       message.error(
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
         t({
           uz: 'Saqlashda xato',
           en: 'Could not save',
           ru: 'Не удалось сохранить',
         }),
       );
+        });
+      message.error(msg);
     } finally {
       setBusyKey(null);
     }
@@ -635,6 +659,29 @@ export function EmployeesHierarchy({
                           m.set(org.id, next);
                           return m;
                         });
+                        // Kaskad: barcha bo'limlarni filial holatiga o'tkazish
+                        setDivActive((prev) => {
+                          const m = new Map(prev);
+                          for (const d of org.departments) {
+                            m.set(divKey(org.id, d.division), next);
+                          }
+                          m.set(divKey(org.id, ''), next);
+                          return m;
+                        });
+                        // Kaskad: barcha xodimlarni filial holatiga o'tkazish
+                        setEmpActive((prev) => {
+                          const m = new Map(prev);
+                          for (const d of org.departments) {
+                            for (const p of d.positions) {
+                              for (const s of p.employees) {
+                                m.set(s.id, next);
+                              }
+                            }
+                          }
+                          for (const s of org.noDivision) m.set(s.id, next);
+                          for (const s of org.noPost) m.set(s.id, next);
+                          return m;
+                        });
                       },
                     })
                   }
@@ -646,6 +693,18 @@ export function EmployeesHierarchy({
                       const deptOpen = isOpen(dept.key);
                       const dOn =
                         divActive.get(divKey(org.id, dept.division)) ?? true;
+                      const dOn = orgOn
+                        ? (divActive.get(divKey(org.id, dept.division)) ?? true)
+                        : false;
+                      const canEditDept = canEditOrg && orgOn && !busyKey;
+                      const deptTooltip = !orgOn
+                        ? t({
+                            uz: 'Filial o‘chiq bo‘lgani sababli bo‘limni yoqib bo‘lmaydi',
+                            en: 'Branch is OFF, department cannot be enabled',
+                            ru: 'Филиал отключен, нельзя включить отдел',
+                          })
+                        : undefined;
+
                       return (
                         <div key={dept.key}>
                           <BranchToggle
@@ -662,6 +721,8 @@ export function EmployeesHierarchy({
                             count={dept.total}
                             switchChecked={dOn}
                             canEditSwitch={canEditOrg && !busyKey}
+                            canEditSwitch={canEditDept}
+                            switchTooltip={deptTooltip}
                             onSwitch={(next) =>
                               requestSwitch(next, {
                                 kind: 'division',
@@ -677,6 +738,16 @@ export function EmployeesHierarchy({
                                     m.set(divKey(org.id, dept.division), next);
                                     return m;
                                   });
+                                  // Kaskad: bo'lim ostidagi barcha xodimlar
+                                  setEmpActive((prev) => {
+                                    const m = new Map(prev);
+                                    for (const p of dept.positions) {
+                                      for (const s of p.employees) {
+                                        m.set(s.id, next);
+                                      }
+                                    }
+                                    return m;
+                                  });
                                 },
                               })
                             }
@@ -685,6 +756,47 @@ export function EmployeesHierarchy({
                             <div className="pb-1">
                               {dept.positions.map((pos) => {
                                 const posOpen = isOpen(pos.key);
+                                const posOn =
+                                  orgOn &&
+                                  dOn &&
+                                  pos.employees.length > 0 &&
+                                  pos.employees.every(
+                                    (e) =>
+                                      (empActive.get(e.id) ??
+                                        e.reportActive !== false),
+                                  );
+                                const canEditPos =
+                                  canEditOrg && orgOn && dOn && !busyKey;
+                                const posTooltip = !orgOn
+                                  ? t({
+                                      uz: 'Filial o‘chiq bo‘lgani sababli lavozimni yoqib bo‘lmaydi',
+                                      en: 'Branch is OFF, position cannot be enabled',
+                                      ru: 'Филиал отключен, нельзя включить должность',
+                                    })
+                                  : !dOn
+                                    ? t({
+                                        uz: 'Bo‘lim o‘chiq bo‘lgani sababli lavozimni yoqib bo‘lmaydi',
+                                        en: 'Department is OFF, position cannot be enabled',
+                                        ru: 'Отдел отключен, нельзя включить должность',
+                                      })
+                                    : undefined;
+
+                                const canEditEmp =
+                                  canEditEmployee && orgOn && dOn && !busyKey;
+                                const empTooltip = !orgOn
+                                  ? t({
+                                      uz: 'Filial o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
+                                      en: 'Branch is OFF, employee cannot be enabled',
+                                      ru: 'Филиал отключен, нельзя включить сотрудника',
+                                    })
+                                  : !dOn
+                                    ? t({
+                                        uz: 'Bo‘lim o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
+                                        en: 'Department is OFF, employee cannot be enabled',
+                                        ru: 'Отдел отключен, нельзя включить сотрудника',
+                                      })
+                                    : undefined;
+
                                 return (
                                   <div key={pos.key}>
                                     <BranchToggle
@@ -701,12 +813,38 @@ export function EmployeesHierarchy({
                                         ru: 'Должность',
                                       })}
                                       count={pos.employees.length}
+                                      switchChecked={posOn}
+                                      canEditSwitch={canEditPos}
+                                      switchTooltip={posTooltip}
+                                      onSwitch={(next) =>
+                                        requestSwitch(next, {
+                                          kind: 'position',
+                                          title: pos.name,
+                                          apply: async () => {
+                                            await apiService.setPositionReportActive(
+                                              org.id,
+                                              dept.division,
+                                              pos.name,
+                                              next,
+                                            );
+                                            setEmpActive((prev) => {
+                                              const m = new Map(prev);
+                                              for (const s of pos.employees) {
+                                                m.set(s.id, next);
+                                              }
+                                              return m;
+                                            });
+                                          },
+                                        })
+                                      }
                                     />
                                     {posOpen ? (
                                       <div className="px-3 pb-2 pl-10">
                                         <EmployeePanel
                                           people={pos.employees}
                                           canEdit={canEditEmployee && !busyKey}
+                                          canEdit={canEditEmp}
+                                          tooltip={empTooltip}
                                           empActive={empActive}
                                           onToggleEmp={(
                                             userId,
@@ -767,8 +905,21 @@ export function EmployeesHierarchy({
                               accent="warn"
                               switchChecked={
                                 divActive.get(divKey(org.id, '')) ?? true
+                                orgOn
+                                  ? (divActive.get(divKey(org.id, '')) ?? true)
+                                  : false
                               }
                               canEditSwitch={canEditOrg && !busyKey}
+                              canEditSwitch={canEditOrg && orgOn && !busyKey}
+                              switchTooltip={
+                                !orgOn
+                                  ? t({
+                                      uz: 'Filial o‘chiq bo‘lgani sababli bo‘limni yoqib bo‘lmaydi',
+                                      en: 'Branch is OFF, department cannot be enabled',
+                                      ru: 'Филиал отключен, нельзя включить отдел',
+                                    })
+                                  : undefined
+                              }
                               onSwitch={(next) =>
                                 requestSwitch(next, {
                                   kind: 'division',
@@ -784,6 +935,13 @@ export function EmployeesHierarchy({
                                       m.set(divKey(org.id, ''), next);
                                       return m;
                                     });
+                                    setEmpActive((prev) => {
+                                      const m = new Map(prev);
+                                      for (const s of org.noDivision) {
+                                        m.set(s.id, next);
+                                      }
+                                      return m;
+                                    });
                                   },
                                 })
                               }
@@ -794,6 +952,16 @@ export function EmployeesHierarchy({
                                   people={org.noDivision}
                                   warn
                                   canEdit={canEditEmployee && !busyKey}
+                                  canEdit={canEditEmployee && orgOn && !busyKey}
+                                  tooltip={
+                                    !orgOn
+                                      ? t({
+                                          uz: 'Filial o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
+                                          en: 'Branch is OFF, employee cannot be enabled',
+                                          ru: 'Филиал отключен, нельзя включить сотрудника',
+                                        })
+                                      : undefined
+                                  }
                                   empActive={empActive}
                                   onToggleEmp={(userId, next, name) =>
                                     requestSwitch(next, {
@@ -832,6 +1000,46 @@ export function EmployeesHierarchy({
                               })}
                               count={org.noPost.length}
                               accent="warn"
+                              switchChecked={
+                                orgOn &&
+                                org.noPost.length > 0 &&
+                                org.noPost.every(
+                                  (e) =>
+                                    (empActive.get(e.id) ??
+                                      e.reportActive !== false),
+                                )
+                              }
+                              canEditSwitch={canEditOrg && orgOn && !busyKey}
+                              switchTooltip={
+                                !orgOn
+                                  ? t({
+                                      uz: 'Filial o‘chiq bo‘lgani sababli lavozimni yoqib bo‘lmaydi',
+                                      en: 'Branch is OFF, position cannot be enabled',
+                                      ru: 'Филиал отключен, нельзя включить должность',
+                                    })
+                                  : undefined
+                              }
+                              onSwitch={(next) =>
+                                requestSwitch(next, {
+                                  kind: 'position',
+                                  title: 'Lavozimsiz',
+                                  apply: async () => {
+                                    await apiService.setPositionReportActive(
+                                      org.id,
+                                      '',
+                                      '',
+                                      next,
+                                    );
+                                    setEmpActive((prev) => {
+                                      const m = new Map(prev);
+                                      for (const s of org.noPost) {
+                                        m.set(s.id, next);
+                                      }
+                                      return m;
+                                    });
+                                  },
+                                })
+                              }
                             />
                             {isOpen(`${org.key}::no-post`) ? (
                               <div className="px-3 pb-2 pl-10">
@@ -839,6 +1047,16 @@ export function EmployeesHierarchy({
                                   people={org.noPost}
                                   warn
                                   canEdit={canEditEmployee && !busyKey}
+                                  canEdit={canEditEmployee && orgOn && !busyKey}
+                                  tooltip={
+                                    !orgOn
+                                      ? t({
+                                          uz: 'Filial o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
+                                          en: 'Branch is OFF, employee cannot be enabled',
+                                          ru: 'Филиал отключен, нельзя включить сотрудника',
+                                        })
+                                      : undefined
+                                  }
                                   empActive={empActive}
                                   onToggleEmp={(userId, next, name) =>
                                     requestSwitch(next, {
