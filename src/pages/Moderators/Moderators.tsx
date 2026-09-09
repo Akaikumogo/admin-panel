@@ -612,18 +612,37 @@ const Moderators = () => {
             .map((o) => o.name)
             .filter(Boolean)
             .join(' '),
-        render: (_: unknown, mod: UserProfile) => (
-          <div className="moderator-filial-cell">
-            <ModeratorOrgSelect
-            value={getModeratorOrgId(mod)}
-            options={orgOptions}
-            loading={!!orgUpdating[mod.id]}
-            placeholder={t(T.selectOrg)}
-            notFoundText={t(T.notFound)}
-            onChange={(next) => void handleInlineOrgChange(mod.id, next)}
-            />
-          </div>
-        ),
+        render: (_: unknown, mod: UserProfile) => {
+          const selectedOrgId = getModeratorOrgId(mod);
+          const selectedOrg = orgOptions.find((o) => o.value === selectedOrgId);
+          const selectedName = selectedOrg?.label as string | undefined;
+          const homeOrgName = mod.primaryOrganization?.name?.trim();
+          const isCrossBranch =
+            homeOrgName &&
+            selectedName &&
+            homeOrgName.toLowerCase() !== selectedName.toLowerCase();
+
+          return (
+            <div className="moderator-filial-cell">
+              <ModeratorOrgSelect
+                value={selectedOrgId}
+                options={orgOptions}
+                loading={!!orgUpdating[mod.id]}
+                placeholder={t(T.selectOrg)}
+                notFoundText={t(T.notFound)}
+                onChange={(next) => void handleInlineOrgChange(mod.id, next)}
+              />
+              {isCrossBranch ? (
+                <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">
+                    Asosiy (1C):
+                  </span>
+                  <span>{homeOrgName}</span>
+                </div>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         title: t(T.role),
