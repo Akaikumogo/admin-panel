@@ -280,9 +280,28 @@ export default function ApproversPage() {
       {
         title: t(T.filial),
         key: 'organization',
-        render: (_: unknown, row: UserProfile) => (
-          <span className="text-sm">{orgLabel(row) || '—'}</span>
-        ),
+        render: (_: unknown, row: UserProfile) => {
+          const assignedOrg = orgLabel(row) || '—';
+          const homeOrgName = row.primaryOrganization?.name?.trim();
+          const isCrossBranch =
+            homeOrgName &&
+            assignedOrg !== '—' &&
+            homeOrgName.toLowerCase() !== assignedOrg.toLowerCase();
+
+          return (
+            <div>
+              <span className="text-sm">{assignedOrg}</span>
+              {isCrossBranch ? (
+                <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    Asosiy (1C):
+                  </span>
+                  <span>{homeOrgName}</span>
+                </div>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         title: t(T.role),

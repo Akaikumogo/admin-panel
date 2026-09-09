@@ -409,6 +409,9 @@ export type UserProfile = {
   avatarUrl?: string | null;
   organizationIds: string[];
   organizations: { id: string; name: string; isDefault?: boolean }[];
+  primaryOrganization?: { id: string; name: string } | null;
+  personnelNumber?: string | null;
+  post?: string | null;
   energoId?: string | null;
 };
 
