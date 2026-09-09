@@ -6,13 +6,10 @@ import {
   useState,
   startTransition,
   type ReactNode,
-  type MouseEvent,
+  type MouseEvent
 } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Switch,
-  message,
-} from '@/components/ui';
+import { Switch, message } from '@/components/ui';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +18,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 import {
   Briefcase,
@@ -29,7 +26,7 @@ import {
   ChevronRight,
   FolderTree,
   Users,
-  Zap,
+  Zap
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { StudentSummary } from '@/services/api';
@@ -74,7 +71,7 @@ export type DivisionActivation = {
 
 function buildTree(
   students: StudentSummary[],
-  orgActiveMap: Map<string, boolean>,
+  orgActiveMap: Map<string, boolean>
 ): OrgNode[] {
   type Acc = {
     id: string;
@@ -87,11 +84,7 @@ function buildTree(
 
   const orgs = new Map<string, Acc>();
 
-  const ensureOrg = (
-    id: string,
-    name: string,
-    reportActive: boolean,
-  ): Acc => {
+  const ensureOrg = (id: string, name: string, reportActive: boolean): Acc => {
     let o = orgs.get(id);
     if (!o) {
       o = {
@@ -100,7 +93,7 @@ function buildTree(
         reportActive,
         assigned: new Map(),
         noDivision: [],
-        noPost: [],
+        noPost: []
       };
       orgs.set(id, o);
     } else if (orgActiveMap.has(id)) {
@@ -119,9 +112,7 @@ function buildTree(
       const oid = org.id || '__none__';
       const fromMap = orgActiveMap.get(oid);
       const reportActive =
-        fromMap !== undefined
-          ? fromMap
-          : org.reportActive !== false;
+        fromMap !== undefined ? fromMap : org.reportActive !== false;
       const node = ensureOrg(oid, org.name || '—', reportActive);
       const division = s.division?.trim() || '';
       const post = s.post?.trim() || '';
@@ -155,14 +146,14 @@ function buildTree(
             .map(([postName, employees]) => ({
               key: `${o.id}::${deptName}::${postName}`,
               name: postName,
-              employees: [...employees].sort(byName),
+              employees: [...employees].sort(byName)
             }));
           return {
             key: `${o.id}::dept::${deptName}`,
             name: deptName,
             division: deptName,
             positions,
-            total: positions.reduce((n, p) => n + p.employees.length, 0),
+            total: positions.reduce((n, p) => n + p.employees.length, 0)
           };
         });
 
@@ -180,7 +171,7 @@ function buildTree(
         total:
           departments.reduce((n, d) => n + d.total, 0) +
           noDivision.length +
-          noPost.length,
+          noPost.length
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'uz'));
@@ -200,7 +191,7 @@ const EmployeeRow = memo(function EmployeeRow({
   canEdit,
   checked,
   onToggle,
-  tooltip,
+  tooltip
 }: {
   s: StudentSummary;
   canEdit: boolean;
@@ -213,7 +204,7 @@ const EmployeeRow = memo(function EmployeeRow({
     <div
       className={cn(
         'group flex w-full items-center gap-3 border-b border-border/40 px-3 py-2 last:border-b-0',
-        !checked && 'opacity-55',
+        !checked && 'opacity-55'
       )}
     >
       <EmployeeAvatarUpload
@@ -251,11 +242,9 @@ const EmployeeRow = memo(function EmployeeRow({
         className="shrink-0"
         onClick={(e: MouseEvent) => e.stopPropagation()}
         title={
-          checked
           tooltip ??
           (checked
             ? 'ON — hisobotda hisobga olinadi'
-            : 'OFF — reportingda hisobga olinmaydi'
             : 'OFF — reportingda hisobga olinmaydi')
         }
       >
@@ -276,7 +265,7 @@ function EmployeePanel({
   canEdit,
   empActive,
   onToggleEmp,
-  tooltip,
+  tooltip
 }: {
   people: StudentSummary[];
   warn?: boolean;
@@ -292,7 +281,7 @@ function EmployeePanel({
         'overflow-hidden rounded-md border',
         warn
           ? 'border-amber-200/90 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/25'
-          : 'border-border/60 bg-background',
+          : 'border-border/60 bg-background'
       )}
     >
       {people.map((s) => {
@@ -304,9 +293,7 @@ function EmployeePanel({
             canEdit={canEdit}
             checked={checked}
             tooltip={tooltip}
-            onToggle={(next) =>
-              onToggleEmp(s.id, next, formatPersonName(s))
-            }
+            onToggle={(next) => onToggleEmp(s.id, next, formatPersonName(s))}
           />
         );
       })}
@@ -326,7 +313,7 @@ function BranchToggle({
   switchChecked,
   canEditSwitch,
   onSwitch,
-  switchTooltip,
+  switchTooltip
 }: {
   open: boolean;
   onToggle: () => void;
@@ -356,7 +343,7 @@ function BranchToggle({
         'flex w-full items-start gap-2 border-b border-border/50 py-2.5 pr-3',
         open && depth === 0 && 'bg-muted/30',
         switchChecked === false && 'opacity-70',
-        pad,
+        pad
       )}
     >
       <button
@@ -369,7 +356,7 @@ function BranchToggle({
           strokeWidth={2}
           className={cn(
             'mt-0.5 shrink-0 text-muted-foreground transition-transform duration-200',
-            open && 'rotate-90',
+            open && 'rotate-90'
           )}
         />
         <span
@@ -381,7 +368,7 @@ function BranchToggle({
                 ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200'
                 : depth === 1
                   ? 'bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200',
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'
           )}
         >
           {icon}
@@ -390,7 +377,7 @@ function BranchToggle({
           <span
             className={cn(
               'block text-left text-[13px] leading-snug text-foreground',
-              depth === 0 ? 'font-semibold tracking-tight' : 'font-medium',
+              depth === 0 ? 'font-semibold tracking-tight' : 'font-medium'
             )}
             style={{ textWrap: 'pretty' as const }}
           >
@@ -407,7 +394,7 @@ function BranchToggle({
             'mt-0.5 shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums',
             accent === 'warn'
               ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
-              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
           )}
         >
           {count}
@@ -417,11 +404,9 @@ function BranchToggle({
         <div
           className="mt-0.5 shrink-0"
           title={
-            switchChecked
             switchTooltip ??
             (switchChecked
               ? 'ON — hisobotda hisobga olinadi'
-              : 'OFF — reportingda hisobga olinmaydi'
               : 'OFF — reportingda hisobga olinmaydi')
           }
         >
@@ -446,7 +431,7 @@ export function EmployeesHierarchy({
   canEditOrg = false,
   canEditEmployee = false,
   className,
-  onActivationChange,
+  onActivationChange
 }: {
   students: StudentSummary[];
   divisions?: DivisionActivation[];
@@ -463,9 +448,15 @@ export function EmployeesHierarchy({
   const [pendingOff, setPendingOff] = useState<PendingOff | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  const [orgActive, setOrgActive] = useState<Map<string, boolean>>(() => new Map());
-  const [divActive, setDivActive] = useState<Map<string, boolean>>(() => new Map());
-  const [empActive, setEmpActive] = useState<Map<string, boolean>>(() => new Map());
+  const [orgActive, setOrgActive] = useState<Map<string, boolean>>(
+    () => new Map()
+  );
+  const [divActive, setDivActive] = useState<Map<string, boolean>>(
+    () => new Map()
+  );
+  const [empActive, setEmpActive] = useState<Map<string, boolean>>(
+    () => new Map()
+  );
 
   useEffect(() => {
     const m = new Map<string, boolean>();
@@ -493,7 +484,7 @@ export function EmployeesHierarchy({
 
   const tree = useMemo(
     () => buildTree(students, orgActive),
-    [students, orgActive],
+    [students, orgActive]
   );
 
   const toggle = useCallback((key: string) => {
@@ -513,8 +504,7 @@ export function EmployeesHierarchy({
 
   const requestSwitch = useCallback(
     (next: boolean, draft: PendingOff) => {
-      const allowed =
-        draft.kind === 'employee' ? canEditEmployee : canEditOrg;
+      const allowed = draft.kind === 'employee' ? canEditEmployee : canEditOrg;
       if (!allowed || busyKey) return;
       if (!next) {
         setPendingOff(draft);
@@ -529,20 +519,16 @@ export function EmployeesHierarchy({
             t({
               uz: 'Hisobotga qaytarildi',
               en: 'Included in reporting again',
-              ru: 'Снова в отчётах',
-            }),
+              ru: 'Снова в отчётах'
+            })
           );
-        } catch {
-          message.error(
         } catch (error: any) {
           const msg =
             error?.response?.data?.message ||
             t({
               uz: 'Saqlashda xato',
               en: 'Could not save',
-              ru: 'Не удалось сохранить',
-            }),
-          );
+              ru: 'Не удалось сохранить'
             });
           message.error(msg);
         } finally {
@@ -550,7 +536,7 @@ export function EmployeesHierarchy({
         }
       })();
     },
-    [busyKey, canEditEmployee, canEditOrg, onActivationChange, t],
+    [busyKey, canEditEmployee, canEditOrg, onActivationChange, t]
   );
 
   const confirmOff = async () => {
@@ -565,20 +551,16 @@ export function EmployeesHierarchy({
         t({
           uz: 'Hisobotdan chiqarildi (ma’lumotlar saqlanadi)',
           en: 'Excluded from reporting (data kept)',
-          ru: 'Исключено из отчётов (данные сохранены)',
-        }),
+          ru: 'Исключено из отчётов (данные сохранены)'
+        })
       );
-    } catch {
-      message.error(
     } catch (error: any) {
       const msg =
         error?.response?.data?.message ||
         t({
           uz: 'Saqlashda xato',
           en: 'Could not save',
-          ru: 'Не удалось сохранить',
-        }),
-      );
+          ru: 'Не удалось сохранить'
         });
       message.error(msg);
     } finally {
@@ -591,7 +573,11 @@ export function EmployeesHierarchy({
       <div className="rounded-lg border border-dashed border-border px-6 py-12 text-center">
         <Users className="mx-auto mb-3 h-8 w-8 text-muted-foreground/50" />
         <p className="text-sm font-medium text-foreground">
-          {t({ uz: 'Xodimlar yo‘q', en: 'No employees', ru: 'Нет сотрудников' })}
+          {t({
+            uz: 'Xodimlar yo‘q',
+            en: 'No employees',
+            ru: 'Нет сотрудников'
+          })}
         </p>
       </div>
     );
@@ -602,7 +588,7 @@ export function EmployeesHierarchy({
       <div
         className={cn(
           'min-w-0 overflow-hidden rounded-lg border border-border bg-card',
-          className,
+          className
         )}
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
@@ -610,14 +596,14 @@ export function EmployeesHierarchy({
             {t({
               uz: 'Filial → Bo‘lim → Lavozim → Xodim',
               en: 'Branch → Dept → Position → Employee',
-              ru: 'Филиал → Отдел → Должность → Сотрудник',
+              ru: 'Филиал → Отдел → Должность → Сотрудник'
             })}
           </p>
           <p className="text-[11px] text-muted-foreground">
             {t({
               uz: 'Switch OFF = hisobotdan chiqarish (o‘chirish emas)',
               en: 'Switch OFF = exclude from reports (not delete)',
-              ru: 'Switch OFF = исключить из отчётов (не удаление)',
+              ru: 'Switch OFF = исключить из отчётов (не удаление)'
             })}
           </p>
         </div>
@@ -631,7 +617,7 @@ export function EmployeesHierarchy({
                 key={org.key}
                 style={{
                   contentVisibility: 'auto',
-                  containIntrinsicSize: '72px',
+                  containIntrinsicSize: '72px'
                 }}
                 className={cn(idx % 2 === 1 && !orgOpen && 'bg-muted/15')}
               >
@@ -652,7 +638,7 @@ export function EmployeesHierarchy({
                       apply: async () => {
                         await apiService.setOrganizationReportActive(
                           org.id,
-                          next,
+                          next
                         );
                         setOrgActive((prev) => {
                           const m = new Map(prev);
@@ -682,7 +668,7 @@ export function EmployeesHierarchy({
                           for (const s of org.noPost) m.set(s.id, next);
                           return m;
                         });
-                      },
+                      }
                     })
                   }
                 />
@@ -691,8 +677,6 @@ export function EmployeesHierarchy({
                   <div className="border-t border-border/40 bg-muted/10 pb-2">
                     {org.departments.map((dept) => {
                       const deptOpen = isOpen(dept.key);
-                      const dOn =
-                        divActive.get(divKey(org.id, dept.division)) ?? true;
                       const dOn = orgOn
                         ? (divActive.get(divKey(org.id, dept.division)) ?? true)
                         : false;
@@ -701,7 +685,7 @@ export function EmployeesHierarchy({
                         ? t({
                             uz: 'Filial o‘chiq bo‘lgani sababli bo‘limni yoqib bo‘lmaydi',
                             en: 'Branch is OFF, department cannot be enabled',
-                            ru: 'Филиал отключен, нельзя включить отдел',
+                            ru: 'Филиал отключен, нельзя включить отдел'
                           })
                         : undefined;
 
@@ -716,11 +700,10 @@ export function EmployeesHierarchy({
                             meta={t({
                               uz: 'Bo‘lim',
                               en: 'Department',
-                              ru: 'Отдел',
+                              ru: 'Отдел'
                             })}
                             count={dept.total}
                             switchChecked={dOn}
-                            canEditSwitch={canEditOrg && !busyKey}
                             canEditSwitch={canEditDept}
                             switchTooltip={deptTooltip}
                             onSwitch={(next) =>
@@ -731,7 +714,7 @@ export function EmployeesHierarchy({
                                   await apiService.setDivisionReportActive(
                                     org.id,
                                     dept.division,
-                                    next,
+                                    next
                                   );
                                   setDivActive((prev) => {
                                     const m = new Map(prev);
@@ -748,7 +731,7 @@ export function EmployeesHierarchy({
                                     }
                                     return m;
                                   });
-                                },
+                                }
                               })
                             }
                           />
@@ -762,8 +745,8 @@ export function EmployeesHierarchy({
                                   pos.employees.length > 0 &&
                                   pos.employees.every(
                                     (e) =>
-                                      (empActive.get(e.id) ??
-                                        e.reportActive !== false),
+                                      empActive.get(e.id) ??
+                                      e.reportActive !== false
                                   );
                                 const canEditPos =
                                   canEditOrg && orgOn && dOn && !busyKey;
@@ -771,13 +754,13 @@ export function EmployeesHierarchy({
                                   ? t({
                                       uz: 'Filial o‘chiq bo‘lgani sababli lavozimni yoqib bo‘lmaydi',
                                       en: 'Branch is OFF, position cannot be enabled',
-                                      ru: 'Филиал отключен, нельзя включить должность',
+                                      ru: 'Филиал отключен, нельзя включить должность'
                                     })
                                   : !dOn
                                     ? t({
                                         uz: 'Bo‘lim o‘chiq bo‘lgani sababli lavozimni yoqib bo‘lmaydi',
                                         en: 'Department is OFF, position cannot be enabled',
-                                        ru: 'Отдел отключен, нельзя включить должность',
+                                        ru: 'Отдел отключен, нельзя включить должность'
                                       })
                                     : undefined;
 
@@ -787,13 +770,13 @@ export function EmployeesHierarchy({
                                   ? t({
                                       uz: 'Filial o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
                                       en: 'Branch is OFF, employee cannot be enabled',
-                                      ru: 'Филиал отключен, нельзя включить сотрудника',
+                                      ru: 'Филиал отключен, нельзя включить сотрудника'
                                     })
                                   : !dOn
                                     ? t({
                                         uz: 'Bo‘lim o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
                                         en: 'Department is OFF, employee cannot be enabled',
-                                        ru: 'Отдел отключен, нельзя включить сотрудника',
+                                        ru: 'Отдел отключен, нельзя включить сотрудника'
                                       })
                                     : undefined;
 
@@ -810,7 +793,7 @@ export function EmployeesHierarchy({
                                       meta={t({
                                         uz: 'Lavozim',
                                         en: 'Position',
-                                        ru: 'Должность',
+                                        ru: 'Должность'
                                       })}
                                       count={pos.employees.length}
                                       switchChecked={posOn}
@@ -825,7 +808,7 @@ export function EmployeesHierarchy({
                                               org.id,
                                               dept.division,
                                               pos.name,
-                                              next,
+                                              next
                                             );
                                             setEmpActive((prev) => {
                                               const m = new Map(prev);
@@ -834,7 +817,7 @@ export function EmployeesHierarchy({
                                               }
                                               return m;
                                             });
-                                          },
+                                          }
                                         })
                                       }
                                     />
@@ -842,29 +825,24 @@ export function EmployeesHierarchy({
                                       <div className="px-3 pb-2 pl-10">
                                         <EmployeePanel
                                           people={pos.employees}
-                                          canEdit={canEditEmployee && !busyKey}
                                           canEdit={canEditEmp}
                                           tooltip={empTooltip}
                                           empActive={empActive}
-                                          onToggleEmp={(
-                                            userId,
-                                            next,
-                                            name,
-                                          ) =>
+                                          onToggleEmp={(userId, next, name) =>
                                             requestSwitch(next, {
                                               kind: 'employee',
                                               title: name,
                                               apply: async () => {
                                                 await apiService.setEmployeeReportActive(
                                                   userId,
-                                                  next,
+                                                  next
                                                 );
                                                 setEmpActive((prev) => {
                                                   const m = new Map(prev);
                                                   m.set(userId, next);
                                                   return m;
                                                 });
-                                              },
+                                              }
                                             })
                                           }
                                         />
@@ -885,7 +863,7 @@ export function EmployeesHierarchy({
                           {t({
                             uz: 'Biriktirilmagan',
                             en: 'Unassigned',
-                            ru: 'Не привязаны',
+                            ru: 'Не привязаны'
                           })}
                         </p>
 
@@ -899,24 +877,22 @@ export function EmployeesHierarchy({
                               title={t({
                                 uz: 'Bo‘limsiz',
                                 en: 'No department',
-                                ru: 'Без отдела',
+                                ru: 'Без отдела'
                               })}
                               count={org.noDivision.length}
                               accent="warn"
                               switchChecked={
-                                divActive.get(divKey(org.id, '')) ?? true
                                 orgOn
                                   ? (divActive.get(divKey(org.id, '')) ?? true)
                                   : false
                               }
-                              canEditSwitch={canEditOrg && !busyKey}
                               canEditSwitch={canEditOrg && orgOn && !busyKey}
                               switchTooltip={
                                 !orgOn
                                   ? t({
                                       uz: 'Filial o‘chiq bo‘lgani sababli bo‘limni yoqib bo‘lmaydi',
                                       en: 'Branch is OFF, department cannot be enabled',
-                                      ru: 'Филиал отключен, нельзя включить отдел',
+                                      ru: 'Филиал отключен, нельзя включить отдел'
                                     })
                                   : undefined
                               }
@@ -928,7 +904,7 @@ export function EmployeesHierarchy({
                                     await apiService.setDivisionReportActive(
                                       org.id,
                                       '',
-                                      next,
+                                      next
                                     );
                                     setDivActive((prev) => {
                                       const m = new Map(prev);
@@ -942,7 +918,7 @@ export function EmployeesHierarchy({
                                       }
                                       return m;
                                     });
-                                  },
+                                  }
                                 })
                               }
                             />
@@ -951,14 +927,13 @@ export function EmployeesHierarchy({
                                 <EmployeePanel
                                   people={org.noDivision}
                                   warn
-                                  canEdit={canEditEmployee && !busyKey}
                                   canEdit={canEditEmployee && orgOn && !busyKey}
                                   tooltip={
                                     !orgOn
                                       ? t({
                                           uz: 'Filial o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
                                           en: 'Branch is OFF, employee cannot be enabled',
-                                          ru: 'Филиал отключен, нельзя включить сотрудника',
+                                          ru: 'Филиал отключен, нельзя включить сотрудника'
                                         })
                                       : undefined
                                   }
@@ -970,14 +945,14 @@ export function EmployeesHierarchy({
                                       apply: async () => {
                                         await apiService.setEmployeeReportActive(
                                           userId,
-                                          next,
+                                          next
                                         );
                                         setEmpActive((prev) => {
                                           const m = new Map(prev);
                                           m.set(userId, next);
                                           return m;
                                         });
-                                      },
+                                      }
                                     })
                                   }
                                 />
@@ -996,7 +971,7 @@ export function EmployeesHierarchy({
                               title={t({
                                 uz: 'Lavozimsiz',
                                 en: 'No position',
-                                ru: 'Без должности',
+                                ru: 'Без должности'
                               })}
                               count={org.noPost.length}
                               accent="warn"
@@ -1005,8 +980,8 @@ export function EmployeesHierarchy({
                                 org.noPost.length > 0 &&
                                 org.noPost.every(
                                   (e) =>
-                                    (empActive.get(e.id) ??
-                                      e.reportActive !== false),
+                                    empActive.get(e.id) ??
+                                    e.reportActive !== false
                                 )
                               }
                               canEditSwitch={canEditOrg && orgOn && !busyKey}
@@ -1015,7 +990,7 @@ export function EmployeesHierarchy({
                                   ? t({
                                       uz: 'Filial o‘chiq bo‘lgani sababli lavozimni yoqib bo‘lmaydi',
                                       en: 'Branch is OFF, position cannot be enabled',
-                                      ru: 'Филиал отключен, нельзя включить должность',
+                                      ru: 'Филиал отключен, нельзя включить должность'
                                     })
                                   : undefined
                               }
@@ -1028,7 +1003,7 @@ export function EmployeesHierarchy({
                                       org.id,
                                       '',
                                       '',
-                                      next,
+                                      next
                                     );
                                     setEmpActive((prev) => {
                                       const m = new Map(prev);
@@ -1037,7 +1012,7 @@ export function EmployeesHierarchy({
                                       }
                                       return m;
                                     });
-                                  },
+                                  }
                                 })
                               }
                             />
@@ -1046,14 +1021,13 @@ export function EmployeesHierarchy({
                                 <EmployeePanel
                                   people={org.noPost}
                                   warn
-                                  canEdit={canEditEmployee && !busyKey}
                                   canEdit={canEditEmployee && orgOn && !busyKey}
                                   tooltip={
                                     !orgOn
                                       ? t({
                                           uz: 'Filial o‘chiq bo‘lgani sababli xodimni yoqib bo‘lmaydi',
                                           en: 'Branch is OFF, employee cannot be enabled',
-                                          ru: 'Филиал отключен, нельзя включить сотрудника',
+                                          ru: 'Филиал отключен, нельзя включить сотрудника'
                                         })
                                       : undefined
                                   }
@@ -1065,14 +1039,14 @@ export function EmployeesHierarchy({
                                       apply: async () => {
                                         await apiService.setEmployeeReportActive(
                                           userId,
-                                          next,
+                                          next
                                         );
                                         setEmpActive((prev) => {
                                           const m = new Map(prev);
                                           m.set(userId, next);
                                           return m;
                                         });
-                                      },
+                                      }
                                     })
                                   }
                                 />
@@ -1102,7 +1076,7 @@ export function EmployeesHierarchy({
               {t({
                 uz: 'Hisobotdan chiqarish',
                 en: 'Exclude from reporting',
-                ru: 'Исключить из отчётов',
+                ru: 'Исключить из отчётов'
               })}
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -1110,7 +1084,7 @@ export function EmployeesHierarchy({
                 ? t({
                     uz: `«${pendingOff.title}» reporting va KPI hisob-kitoblaridan chiqariladi. Ma’lumotlar o‘chirilmaydi.`,
                     en: `“${pendingOff.title}” will be excluded from reporting and KPI. Data is not deleted.`,
-                    ru: `«${pendingOff.title}» будет исключён из отчётов и KPI. Данные не удаляются.`,
+                    ru: `«${pendingOff.title}» будет исключён из отчётов и KPI. Данные не удаляются.`
                   })
                 : null}
             </AlertDialogDescription>
