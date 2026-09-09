@@ -14,7 +14,6 @@ import {
   Avatar,
   Divider,
   Switch,
-  Table,
   Table
 } from '@/components/ui';
 import type { DefaultOptionType } from '@/components/ui';
@@ -26,7 +25,6 @@ import {
   Settings,
   Star,
   Table2,
-  UserMinus,
   UserMinus
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -40,7 +38,6 @@ import apiService, {
   resolveAssetUrl,
   type Organization,
   type StudentSummary,
-  type UserProfile,
   type UserProfile
 } from '@/services/api';
 import { filterSelectOption } from '@/utils/selectSearch.util';
@@ -50,7 +47,6 @@ const T = {
   addModerator: {
     uz: 'Rol berish',
     en: 'Assign role',
-    ru: 'Назначить роль',
     ru: 'Назначить роль'
   },
   assignRole: { uz: 'Rol', en: 'Role', ru: 'Роль' },
@@ -58,20 +54,17 @@ const T = {
   roleApprover: {
     uz: 'Tasdiqlovchi shaxs',
     en: 'Approver',
-    ru: 'Утверждающий',
     ru: 'Утверждающий'
   },
   roleAccounting: {
     uz: 'Hisob bo‘limi xodimi',
     en: 'Accounting staff',
-    ru: 'Сотрудник бухгалтерии',
     ru: 'Сотрудник бухгалтерии'
   },
   tabModerators: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
   tabAccounting: {
     uz: 'Hisob bo‘limi',
     en: 'Accounting',
-    ru: 'Бухгалтерия',
     ru: 'Бухгалтерия'
   },
   organization: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
@@ -82,45 +75,38 @@ const T = {
   demoteConfirm: {
     uz: 'Rol olib tashlansinmi? Xodim USER bo`lib qoladi.',
     en: 'Remove role? User becomes USER again.',
-    ru: 'Снять роль?',
     ru: 'Снять роль?'
   },
   demote: { uz: 'Olib tashlash', en: 'Remove', ru: 'Снять' },
   noData: {
     uz: 'Ro‘yxat bo‘sh',
     en: 'No staff found',
-    ru: 'Список пуст',
     ru: 'Список пуст'
   },
   search: {
     uz: 'Ism, login, email...',
     en: 'Name, login, email...',
-    ru: 'Имя, логин, email...',
     ru: 'Имя, логин, email...'
   },
   searchLabel: { uz: 'Qidiruv', en: 'Search', ru: 'Поиск' },
   filialFilter: {
     uz: 'Filial bo‘yicha',
     en: 'Filter by branch',
-    ru: 'Фильтр по филиалу',
     ru: 'Фильтр по филиалу'
   },
   allFiliallar: {
     uz: 'Barcha filiallar',
     en: 'All branches',
-    ru: 'Все филиалы',
     ru: 'Все филиалы'
   },
   orgModeInclude: {
     uz: 'Faqat tanlangan filial',
     en: 'Selected branch only',
-    ru: 'Только выбранный филиал',
     ru: 'Только выбранный филиал'
   },
   orgModeExclude: {
     uz: 'Tanlanganlardan tashqari',
     en: 'Except selected',
-    ru: 'Кроме выбранного',
     ru: 'Кроме выбранного'
   },
   filterMode: { uz: 'Filtr rejimi', en: 'Filter mode', ru: 'Режим фильтра' },
@@ -135,44 +121,36 @@ const T = {
   selectOrg: {
     uz: 'Filial tanlang',
     en: 'Select branch',
-    ru: 'Выберите филиал',
     ru: 'Выберите филиал'
   },
   notFound: {
     uz: 'Filial topilmadi',
     en: 'Branch not found',
-    ru: 'Филиал не найден',
     ru: 'Филиал не найден'
   },
   orgUpdated: {
     uz: 'Filial yangilandi',
     en: 'Branch updated',
-    ru: 'Филиал обновлён',
     ru: 'Филиал обновлён'
   },
   orgSaveError: {
     uz: 'Filialni saqlashda xato',
     en: 'Failed to save branch',
-    ru: 'Ошибка сохранения филиала',
     ru: 'Ошибка сохранения филиала'
   },
   employeeSearch: {
     uz: 'Ism, login, tabel №, email yoki filial...',
     en: 'Name, login, personnel #, email or branch...',
-    ru: 'Имя, логин, табельный №, email или филиал...',
     ru: 'Имя, логин, табельный №, email или филиал...'
   },
   permissionsPage: {
     uz: 'Ruxsatlar (jadval)',
     en: 'Permissions (table)',
-    ru: 'Права (таблица)',
     ru: 'Права (таблица)'
   },
   mainBranchModerator: {
     uz: 'Bosh filial moderatori',
     en: 'Main branch moderator',
-    ru: 'Модератор главного филиала',
-  },
     ru: 'Модератор главного филиала'
   }
 } as const;
@@ -187,7 +165,6 @@ const QP_DEFAULTS = {
   orgMode: undefined,
   page: undefined,
   limit: undefined,
-  staffRole: undefined,
   staffRole: undefined
 } as const;
 
@@ -201,7 +178,6 @@ function resolveUserOrganizations(mod: UserProfile): OrgRow[] {
       if (nested.organization?.id && nested.organization?.name) {
         return {
           id: nested.organization.id,
-          name: nested.organization.name,
           name: nested.organization.name
         };
       }
@@ -229,7 +205,6 @@ const ModeratorOrgSelect = memo(function ModeratorOrgSelect({
   loading,
   placeholder,
   notFoundText,
-  onChange,
   onChange
 }: {
   value?: string;
@@ -281,8 +256,6 @@ const ModeratorOrgSelect = memo(function ModeratorOrgSelect({
 const Moderators = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { params: qp, setParam, setParams } =
-    useQueryParams<typeof QP_DEFAULTS>(QP_DEFAULTS);
   const {
     params: qp,
     setParam,
@@ -294,19 +267,16 @@ const Moderators = () => {
   const { data: organizations } = useFetch(
     ['organizations'],
     () => apiService.getOrganizations(),
-    [] as Organization[],
     [] as Organization[]
   );
 
   const orgOptions = useMemo<DefaultOptionType[]>(
     () => organizations.map((o) => ({ value: o.id, label: o.name })),
-    [organizations],
     [organizations]
   );
 
   const defaultOrgIds = useMemo(
     () => new Set(organizations.filter((o) => o.isDefault).map((o) => o.id)),
-    [organizations],
     [organizations]
   );
 
@@ -318,7 +288,6 @@ const Moderators = () => {
     total,
     loading,
     initialLoading,
-    refetch,
     refetch
   } = usePaginatedFetch(
     ['staff-roles', staffRoleTab, qp.orgId, qp.orgMode],
@@ -329,19 +298,16 @@ const Moderators = () => {
           | 'include'
           | 'exclude',
         page: 1,
-        limit: 500,
         limit: 500
       };
       return staffRoleTab === 'ACCOUNTING'
         ? apiService.getAccountingStaff(filters)
         : apiService.getModerators(filters);
-    },
     }
   );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
-  const assignRole = (Form.useWatch('assignRole', form) as AssignableRole | undefined) ?? 'MODERATOR';
   const assignRole =
     (Form.useWatch('assignRole', form) as AssignableRole | undefined) ??
     'MODERATOR';
@@ -351,7 +317,6 @@ const Moderators = () => {
   const [employeeOptions, setEmployeeOptions] = useState<StudentSummary[]>([]);
   const [employeeLoading, setEmployeeLoading] = useState(false);
   const employeeSearchSeq = useRef(0);
-  const [orgOverrides, setOrgOverrides] = useState<Record<string, string | null>>({});
   const [orgOverrides, setOrgOverrides] = useState<
     Record<string, string | null>
   >({});
@@ -363,7 +328,6 @@ const Moderators = () => {
   const [permSaving, setPermSaving] = useState(false);
   const [permUserId, setPermUserId] = useState<string | null>(null);
   const [permUserName, setPermUserName] = useState<string>('');
-  const [permissions, setPermissions] = useState<import('@/services/api').ModeratorPermissions | null>(null);
   const [permissions, setPermissions] = useState<
     import('@/services/api').ModeratorPermissions | null
   >(null);
@@ -375,7 +339,6 @@ const Moderators = () => {
       }
       return resolveModeratorOrgId(mod);
     },
-    [orgOverrides],
     [orgOverrides]
   );
 
@@ -386,18 +349,15 @@ const Moderators = () => {
       if (!orgId) return false;
       if (defaultOrgIds.size > 0) return defaultOrgIds.has(orgId);
       return (mod.organizations ?? []).some(
-        (o) => o.id === orgId && o.isDefault === true,
         (o) => o.id === orgId && o.isDefault === true
       );
     },
-    [defaultOrgIds, getModeratorOrgId],
     [defaultOrgIds, getModeratorOrgId]
   );
 
   const handleInlineOrgChange = useCallback(
     async (moderatorId: string, organizationId: string | null) => {
       const mod = moderators.find((m) => m.id === moderatorId);
-      const previous = mod ? getModeratorOrgId(mod) ?? null : null;
       const previous = mod ? (getModeratorOrgId(mod) ?? null) : null;
       if (previous === organizationId) return;
 
@@ -418,14 +378,12 @@ const Moderators = () => {
         });
       }
     },
-    [getModeratorOrgId, moderators, t],
     [getModeratorOrgId, moderators, t]
   );
 
   const setCrud = (
     moduleKey: keyof import('@/services/api').ModeratorPermissions,
     field: keyof import('@/services/api').ModeratorPermissions[keyof import('@/services/api').ModeratorPermissions],
-    value: boolean,
     value: boolean
   ) => {
     setPermissions((prev) => {
@@ -438,8 +396,6 @@ const Moderators = () => {
           update: false,
           delete: false,
           ...prev[moduleKey],
-          [field]: value,
-        },
           [field]: value
         }
       };
@@ -482,13 +438,9 @@ const Moderators = () => {
       const res = await apiService.getStudents({
         search: q || undefined,
         limit: q ? (looksLikeLogin ? 50 : 100) : 40,
-        page: 1,
         page: 1
       });
       if (seq !== employeeSearchSeq.current) return;
-      setEmployeeOptions(
-        res.data.filter((s) => !s.role || s.role === 'USER'),
-      );
       setEmployeeOptions(res.data.filter((s) => !s.role || s.role === 'USER'));
     } finally {
       if (seq === employeeSearchSeq.current) {
@@ -501,13 +453,11 @@ const Moderators = () => {
     setParams({
       orgId: value || undefined,
       orgMode: value ? qp.orgMode || undefined : undefined,
-      page: undefined,
       page: undefined
     });
   };
 
   const handleOrgModeChange = (value: 'include' | 'exclude') => {
-    setParams({ orgMode: value === 'include' ? undefined : value, page: undefined });
     setParams({
       orgMode: value === 'include' ? undefined : value,
       page: undefined
@@ -517,7 +467,6 @@ const Moderators = () => {
   const openCreateModal = () => {
     form.resetFields();
     form.setFieldsValue({
-      assignRole: staffRoleTab === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR',
       assignRole: staffRoleTab === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR'
     });
     setEmployeeSearch('');
@@ -534,14 +483,12 @@ const Moderators = () => {
       if (role === 'APPROVER') {
         await apiService.promoteApprover({
           userId: values.userId,
-          organizationId: values.organizationId,
           organizationId: values.organizationId
         });
         message.success('Tasdiqlovchi shaxs tayinlandi');
       } else if (role === 'ACCOUNTING') {
         await apiService.promoteAccounting({
           userId: values.userId,
-          organizationId: values.organizationId,
           organizationId: values.organizationId
         });
         message.success('Hisob bo‘limi roli berildi');
@@ -551,7 +498,6 @@ const Moderators = () => {
       } else {
         await apiService.promoteModerator({
           userId: values.userId,
-          organizationId: values.organizationId || undefined,
           organizationId: values.organizationId || undefined
         });
         message.success('Xodimga moderator statusi berildi');
@@ -577,14 +523,12 @@ const Moderators = () => {
         await apiService.demoteAccounting(id);
         message.success({
           content: 'Hisob bo‘limi roli olib tashlandi',
-          key: 'demote-staff',
           key: 'demote-staff'
         });
       } else {
         await apiService.demoteModerator(id);
         message.success({
           content: 'Moderatorlik olib tashlandi',
-          key: 'demote-staff',
           key: 'demote-staff'
         });
       }
@@ -619,7 +563,6 @@ const Moderators = () => {
           <span className="text-sm font-medium text-muted-foreground">
             {(currentPage - 1) * pageSize + index + 1}
           </span>
-        ),
         )
       },
       {
@@ -633,9 +576,6 @@ const Moderators = () => {
           <div className="flex items-center gap-3 min-w-[180px]">
             <Avatar
               size={36}
-              src={
-                mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : undefined
-              }
               src={mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : undefined}
               className="flex-shrink-0 bg-gradient-to-br from-slate-600 to-slate-800"
             >
@@ -653,7 +593,6 @@ const Moderators = () => {
               ) : null}
             </span>
           </div>
-        ),
         )
       },
       {
@@ -667,7 +606,6 @@ const Moderators = () => {
             <Mail size={12} />
             <HighlightText text={mod.email} />
           </span>
-        ),
         )
       },
       {
@@ -682,18 +620,6 @@ const Moderators = () => {
             .map((o) => o.name)
             .filter(Boolean)
             .join(' '),
-        render: (_: unknown, mod: UserProfile) => (
-          <div className="moderator-filial-cell">
-            <ModeratorOrgSelect
-            value={getModeratorOrgId(mod)}
-            options={orgOptions}
-            loading={!!orgUpdating[mod.id]}
-            placeholder={t(T.selectOrg)}
-            notFoundText={t(T.notFound)}
-            onChange={(next) => void handleInlineOrgChange(mod.id, next)}
-            />
-          </div>
-        ),
         render: (_: unknown, mod: UserProfile) => {
           const selectedOrgId = getModeratorOrgId(mod);
           const selectedOrg = orgOptions.find((o) => o.value === selectedOrgId);
@@ -738,7 +664,6 @@ const Moderators = () => {
               {staffRoleTab === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR'}
             </span>
           </Tag>
-        ),
         )
       },
       {
@@ -755,7 +680,6 @@ const Moderators = () => {
                 icon={<Settings size={14} />}
                 title={t(T.permissions)}
                 onClick={() =>
-                  void openPermissions(mod.id, `${mod.firstName} ${mod.lastName}`)
                   void openPermissions(
                     mod.id,
                     `${mod.firstName} ${mod.lastName}`
@@ -780,8 +704,6 @@ const Moderators = () => {
               />
             </Popconfirm>
           </div>
-        ),
-      },
         )
       }
     ],
@@ -795,8 +717,6 @@ const Moderators = () => {
       orgUpdating,
       demotingId,
       staffRoleTab,
-      t,
-    ],
       t
     ]
   );
@@ -809,7 +729,6 @@ const Moderators = () => {
         description={t({
           uz: 'Moderator, tasdiqlovchi yoki hisob bo‘limi rolini berish',
           en: 'Assign moderator, approver, or accounting role',
-          ru: 'Назначение роли модератора, утверждающего или бухгалтерии',
           ru: 'Назначение роли модератора, утверждающего или бухгалтерии'
         })}
         actions={
@@ -845,7 +764,6 @@ const Moderators = () => {
         </Button>
         <Button
           type={staffRoleTab === 'ACCOUNTING' ? 'primary' : 'default'}
-          onClick={() => setParams({ staffRole: 'ACCOUNTING', page: undefined })}
           onClick={() =>
             setParams({ staffRole: 'ACCOUNTING', page: undefined })
           }
@@ -861,7 +779,6 @@ const Moderators = () => {
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(320px,1fr)_260px]">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">{t(T.filialFilter)}</span>
             <span className="text-xs font-medium text-muted-foreground">
               {t(T.filialFilter)}
             </span>
@@ -884,7 +801,6 @@ const Moderators = () => {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">{t(T.filterMode)}</span>
             <span className="text-xs font-medium text-muted-foreground">
               {t(T.filterMode)}
             </span>
@@ -894,7 +810,6 @@ const Moderators = () => {
               disabled={!qp.orgId}
               options={[
                 { value: 'include', label: t(T.orgModeInclude) },
-                { value: 'exclude', label: t(T.orgModeExclude) },
                 { value: 'exclude', label: t(T.orgModeExclude) }
               ]}
             />
@@ -924,10 +839,8 @@ const Moderators = () => {
               onChange: (page, size) => {
                 setParams({
                   page: page > 1 ? String(page) : undefined,
-                  limit: size && size !== PAGE_SIZE ? String(size) : undefined,
                   limit: size && size !== PAGE_SIZE ? String(size) : undefined
                 });
-              },
               }
             }}
             scroll={{ x: 1280 }}
@@ -945,7 +858,6 @@ const Moderators = () => {
         okText={t(T.save)}
         cancelText={t(T.cancel)}
       >
-        <Form form={form} layout="vertical" initialValues={{ assignRole: 'MODERATOR' }}>
         <Form
           form={form}
           layout="vertical"
@@ -960,7 +872,6 @@ const Moderators = () => {
               options={[
                 { value: 'MODERATOR', label: t(T.roleModerator) },
                 { value: 'APPROVER', label: t(T.roleApprover) },
-                { value: 'ACCOUNTING', label: t(T.roleAccounting) },
                 { value: 'ACCOUNTING', label: t(T.roleAccounting) }
               ]}
             />
@@ -999,9 +910,6 @@ const Moderators = () => {
                   .map((o) => o.name)
                   .join(', ');
                 const name = `${u.lastName} ${u.firstName}`.trim();
-                const tabel = u.personnelNumber
-                  ? `№${u.personnelNumber}`
-                  : '';
                 const tabel = u.personnelNumber ? `№${u.personnelNumber}` : '';
                 // Login birinchi — qidiruv natijasida ko‘rinadi
                 const label = [u.email, name, tabel, org]
@@ -1092,7 +1000,6 @@ const Moderators = () => {
                 ['logs', 'Tizim loglari (Logs)'],
                 ['nesSync', '1C sinxronizatsiya (NES sync)'],
                 ['aiAssistant', 'AI yordamchi (AI Assistant)'],
-                ['telegramBot', 'Telegram bot'],
                 ['telegramBot', 'Telegram bot']
               ] as const
             ).map(([key, label], idx) => (
@@ -1112,7 +1019,6 @@ const Moderators = () => {
                             onChange={(v) => setCrud(key, field, v)}
                           />
                         </div>
-                      ),
                       )
                     )}
                   </div>
