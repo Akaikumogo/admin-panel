@@ -9,6 +9,7 @@ import {
   message,
   Avatar,
   Table,
+  Table
 } from '@/components/ui';
 import type { DefaultOptionType } from '@/components/ui';
 import { Plus, Mail, BadgeCheck, Filter, UserMinus } from 'lucide-react';
@@ -23,6 +24,7 @@ import apiService, {
   type Organization,
   type StudentSummary,
   type UserProfile,
+  type UserProfile
 } from '@/services/api';
 import { filterSelectOption } from '@/utils/selectSearch.util';
 
@@ -34,11 +36,13 @@ const T = {
     uz: 'Tasdiqlovchilar',
     en: 'Approvers',
     ru: 'Утверждающие',
+    ru: 'Утверждающие'
   },
   add: {
     uz: 'Filialga tasdiqlovchi berish',
     en: 'Assign branch approver',
     ru: 'Назначить утверждающего',
+    ru: 'Назначить утверждающего'
   },
   filial: { uz: 'Filial', en: 'Branch', ru: 'Филиал' },
   login: { uz: 'Login', en: 'Login', ru: 'Логин' },
@@ -48,22 +52,26 @@ const T = {
     uz: 'Tasdiqlovchilikdan olib tashlansinmi? Xodim USER bo`lib qoladi.',
     en: 'Remove approver role? User becomes USER again.',
     ru: 'Снять роль утверждающего?',
+    ru: 'Снять роль утверждающего?'
   },
   demote: { uz: 'Olib tashlash', en: 'Remove', ru: 'Снять' },
   noData: {
     uz: 'Tasdiqlovchilar yo`q',
     en: 'No approvers',
     ru: 'Нет утверждающих',
+    ru: 'Нет утверждающих'
   },
   filialFilter: {
     uz: 'Filial bo‘yicha',
     en: 'Filter by branch',
     ru: 'Фильтр по филиалу',
+    ru: 'Фильтр по филиалу'
   },
   allFiliallar: {
     uz: 'Barcha filiallar',
     en: 'All branches',
     ru: 'Все филиалы',
+    ru: 'Все филиалы'
   },
   total: { uz: 'Jami', en: 'Total', ru: 'Всего' },
   actions: { uz: 'Amallar', en: 'Actions', ru: 'Действия' },
@@ -74,35 +82,49 @@ const T = {
     uz: 'Filial tanlang (majburiy)',
     en: 'Select branch (required)',
     ru: 'Выберите филиал (обязательно)',
+    ru: 'Выберите филиал (обязательно)'
   },
   employeeHint: {
     uz: 'Barcha xodimlar izlanadi (ism, login, tabel №, email, filial). Ular moderator kiritgan jadvallarni tasdiqlaydi.',
     en: 'Search all employees (name, login, personnel #, email, branch). They approve tables entered by moderators.',
     ru: 'Ищутся все сотрудники (имя, логин, табельный №, email, филиал). Утверждают таблицы модераторов.',
+    ru: 'Ищутся все сотрудники (имя, логин, табельный №, email, филиал). Утверждают таблицы модераторов.'
   },
   employeeSearch: {
     uz: 'Ism, login, tabel №, email yoki filial...',
     en: 'Name, login, personnel #, email or branch...',
     ru: 'Имя, логин, табельный №, email или филиал...',
+    ru: 'Имя, логин, табельный №, email или филиал...'
   },
   requiredOrg: {
     uz: 'Filial majburiy',
     en: 'Branch is required',
     ru: 'Филиал обязателен',
+    ru: 'Филиал обязателен'
   },
   requiredEmployee: {
     uz: 'Xodimni tanlang',
     en: 'Select an employee',
     ru: 'Выберите сотрудника',
   },
+    ru: 'Выберите сотрудника'
+  }
 } as const;
 
 function orgLabelFromStudent(u: StudentSummary) {
   return (u.organizations ?? []).map((o) => o.name).filter(Boolean).join(', ');
+  return (u.organizations ?? [])
+    .map((o) => o.name)
+    .filter(Boolean)
+    .join(', ');
 }
 
 function orgLabel(u: UserProfile) {
   return (u.organizations ?? []).map((o) => o.name).filter(Boolean).join(', ');
+  return (u.organizations ?? [])
+    .map((o) => o.name)
+    .filter(Boolean)
+    .join(', ');
 }
 
 export default function ApproversPage() {
@@ -116,11 +138,13 @@ export default function ApproversPage() {
     ['organizations'],
     () => apiService.getOrganizations(),
     [] as Organization[],
+    [] as Organization[]
   );
 
   const orgOptions = useMemo<DefaultOptionType[]>(
     () => organizations.map((o) => ({ value: o.id, label: o.name })),
     [organizations],
+    [organizations]
   );
 
   const {
@@ -137,6 +161,14 @@ export default function ApproversPage() {
         page: 1,
         limit: 500,
       }),
+    refetch
+  } = usePaginatedFetch(['approvers', qp.orgId, qp.orgMode], () =>
+    apiService.getApprovers({
+      organizationId: qp.orgId || undefined,
+      organizationMode: qp.orgMode === 'exclude' ? 'exclude' : 'include',
+      page: 1,
+      limit: 500
+    })
   );
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -154,11 +186,13 @@ export default function ApproversPage() {
       const res = await apiService.getStudents({
         search: search || undefined,
         limit: 100,
+        limit: 100
       });
       // Tasdiqlovchiga faqat oddiy xodim (USER) tayinlanadi.
       setEmployeeOptions(
         res.data.filter((s) => !s.role || s.role === 'USER'),
       );
+      setEmployeeOptions(res.data.filter((s) => !s.role || s.role === 'USER'));
     } finally {
       setEmployeeLoading(false);
     }
@@ -187,6 +221,7 @@ export default function ApproversPage() {
       await apiService.promoteApprover({
         userId: values.userId,
         organizationId: values.organizationId,
+        organizationId: values.organizationId
       });
       message.success(
         t({
@@ -194,6 +229,8 @@ export default function ApproversPage() {
           en: 'Approver assigned',
           ru: 'Утверждающий назначен',
         }),
+          ru: 'Утверждающий назначен'
+        })
       );
       setModalOpen(false);
       form.resetFields();
@@ -216,6 +253,8 @@ export default function ApproversPage() {
           en: 'Approver role removed',
           ru: 'Роль снята',
         }),
+          ru: 'Роль снята'
+        })
       );
       refetch();
     } finally {
@@ -232,9 +271,11 @@ export default function ApproversPage() {
         return {
           value: u.id,
           label: `${name}${tabel} — ${org} (${u.email})`,
+          label: `${name}${tabel} — ${org} (${u.email})`
         };
       }),
     [employeeOptions],
+    [employeeOptions]
   );
 
   const columns = useMemo(
@@ -248,6 +289,7 @@ export default function ApproversPage() {
             {(currentPage - 1) * pageSize + index + 1}
           </span>
         ),
+        )
       },
       {
         title: t(T.name),
@@ -266,6 +308,7 @@ export default function ApproversPage() {
             </span>
           </div>
         ),
+        )
       },
       {
         title: t(T.login),
@@ -276,10 +319,14 @@ export default function ApproversPage() {
             <HighlightText text={row.email} />
           </span>
         ),
+        )
       },
       {
         title: t(T.filial),
         key: 'organization',
+        render: (_: unknown, row: UserProfile) => (
+          <span className="text-sm">{orgLabel(row) || '—'}</span>
+        ),
         render: (_: unknown, row: UserProfile) => {
           const assignedOrg = orgLabel(row) || '—';
           const homeOrgName = row.primaryOrganization?.name?.trim();
@@ -301,7 +348,7 @@ export default function ApproversPage() {
               ) : null}
             </div>
           );
-        },
+        }
       },
       {
         title: t(T.role),
@@ -315,6 +362,7 @@ export default function ApproversPage() {
             </span>
           </Tag>
         ),
+        )
       },
       {
         title: t(T.actions),
@@ -340,8 +388,11 @@ export default function ApproversPage() {
           </Popconfirm>
         ),
       },
+        )
+      }
     ],
     [currentPage, pageSize, demotingId, t],
+    [currentPage, pageSize, demotingId, t]
   );
 
   return (
@@ -353,6 +404,7 @@ export default function ApproversPage() {
           uz: 'Filial bo‘yicha tasdiqlovchi shaxslar — moderator kiritgan xavfsizlik jadvallarini tasdiqlaydi',
           en: 'Branch approvers — confirm safety tables entered by moderators',
           ru: 'Утверждающие по филиалам — подтверждают таблицы модераторов',
+          ru: 'Утверждающие по филиалам — подтверждают таблицы модераторов'
         })}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -433,6 +485,9 @@ export default function ApproversPage() {
               options={employeeSelectOptions}
               notFoundContent={
                 employeeLoading ? '…' : t({ uz: 'Topilmadi', en: 'Not found', ru: 'Не найдено' })
+                employeeLoading
+                  ? '…'
+                  : t({ uz: 'Topilmadi', en: 'Not found', ru: 'Не найдено' })
               }
             />
           </Form.Item>
