@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ChevronRight,
   Download,
+  Eye,
   GraduationCap,
   Mail,
   Trophy,
@@ -666,6 +667,38 @@ const Students = () => {
           </span>
         );
       },
+    },
+    {
+      title: '',
+      key: 'view',
+      width: 52,
+      fixed: 'right' as const,
+      filterable: false,
+      align: 'center' as const,
+      render: (_: unknown, record: StudentSummary) => (
+        <div
+          data-stop-row-click
+          className="flex justify-center"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <Button
+            size="small"
+            icon={<Eye size={14} />}
+            title={t({
+              uz: "Ko'rish",
+              en: 'View',
+              ru: 'Просмотр',
+            })}
+            aria-label={t({
+              uz: "Ko'rish",
+              en: 'View',
+              ru: 'Просмотр',
+            })}
+            onClick={() => navigate(`/dashboard/employees/${record.id}`)}
+          />
+        </div>
+      ),
     },
     {
       title: 'Saqlash',
