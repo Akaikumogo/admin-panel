@@ -400,7 +400,8 @@ const Students = () => {
     {
       title: '',
       key: 'expand',
-      width: 44,
+      width: 48,
+      fixed: 'left' as const,
       filterable: false,
       align: 'center' as const,
       render: (_: unknown, record: StudentSummary) => {
@@ -425,7 +426,8 @@ const Students = () => {
     {
       title: '№',
       key: 'rowNumber',
-      width: 64,
+      width: 56,
+      fixed: 'left' as const,
       filterable: false,
       render: (_: unknown, __: StudentSummary, index: number) => (
         <span className="text-sm font-medium text-muted-foreground">
@@ -436,7 +438,8 @@ const Students = () => {
     {
       title: 'Tabel',
       key: 'personnelNumber',
-      width: 200,
+      width: 220,
+      fixed: 'left' as const,
       filterable: true,
       filterPlaceholder: 'Tabel / ism...',
       getFilterValue: (record: StudentSummary) =>
@@ -469,7 +472,7 @@ const Students = () => {
     {
       title: 'Ism',
       key: 'firstName',
-      width: 120,
+      width: 150,
       filterable: true,
       filterPlaceholder: 'Ism...',
       getFilterValue: (record: StudentSummary) => record.firstName ?? '',
@@ -485,7 +488,7 @@ const Students = () => {
             <Input
               value={draft.firstName}
               onChange={(e) => updateFieldDraft(record, 'firstName', e.target.value)}
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-[140px] text-xs"
             />
           </div>
         );
@@ -494,7 +497,7 @@ const Students = () => {
     {
       title: 'Familiya',
       key: 'lastName',
-      width: 120,
+      width: 150,
       filterable: true,
       filterPlaceholder: 'Familiya...',
       getFilterValue: (record: StudentSummary) => record.lastName ?? '',
@@ -510,7 +513,7 @@ const Students = () => {
             <Input
               value={draft.lastName}
               onChange={(e) => updateFieldDraft(record, 'lastName', e.target.value)}
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-[140px] text-xs"
             />
           </div>
         );
@@ -519,7 +522,7 @@ const Students = () => {
     {
       title: 'Otasining ismi',
       key: 'middleName',
-      width: 130,
+      width: 170,
       filterable: true,
       filterPlaceholder: 'Ota ismi...',
       getFilterValue: (record: StudentSummary) => record.middleName ?? '',
@@ -535,7 +538,7 @@ const Students = () => {
             <Input
               value={draft.middleName}
               onChange={(e) => updateFieldDraft(record, 'middleName', e.target.value)}
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-[150px] text-xs"
             />
           </div>
         );
@@ -544,7 +547,7 @@ const Students = () => {
     {
       title: "Bo‘lim",
       key: 'division',
-      width: 140,
+      width: 200,
       filterable: true,
       filterPlaceholder: "Bo‘lim...",
       getFilterValue: (record: StudentSummary) => record.division ?? '',
@@ -560,7 +563,7 @@ const Students = () => {
             <Input
               value={draft.division}
               onChange={(e) => updateFieldDraft(record, 'division', e.target.value)}
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-[180px] text-xs"
             />
           </div>
         );
@@ -569,7 +572,7 @@ const Students = () => {
     {
       title: 'Lavozim',
       key: 'post',
-      width: 140,
+      width: 200,
       filterable: true,
       filterPlaceholder: 'Lavozim...',
       getFilterValue: (record: StudentSummary) => record.post ?? '',
@@ -583,7 +586,7 @@ const Students = () => {
             <Input
               value={draft.post}
               onChange={(e) => updateFieldDraft(record, 'post', e.target.value)}
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-[180px] text-xs"
             />
           </div>
         );
@@ -592,7 +595,7 @@ const Students = () => {
     {
       title: 'Saqlash',
       key: 'saveFields',
-      width: 96,
+      width: 110,
       filterable: false,
       render: (_: unknown, record: StudentSummary) => {
         if (!canEditFields) return null;
@@ -618,13 +621,16 @@ const Students = () => {
     {
       title: t(T.email),
       key: 'email',
+      width: 220,
       filterable: true,
       filterPlaceholder: 'Email...',
       dataIndex: 'email',
       render: (_: unknown, record: StudentSummary) => (
-        <span className="text-muted-foreground flex items-center gap-1">
-          <Mail size={12} />
-          <HighlightText text={record.email} />
+        <span className="text-muted-foreground flex min-w-0 items-center gap-1" title={record.email}>
+          <Mail size={12} className="shrink-0" />
+          <span className="truncate">
+            <HighlightText text={record.email} />
+          </span>
         </span>
       ),
     },
@@ -655,6 +661,7 @@ const Students = () => {
     {
       title: t(T.level),
       key: 'level',
+      width: 150,
       filterable: true,
       filterPlaceholder: 'Daraja...',
       getFilterValue: (record: StudentSummary) =>
@@ -666,12 +673,20 @@ const Students = () => {
     {
       title: t(T.org),
       key: 'org',
+      width: 240,
       filterable: true,
       filterPlaceholder: 'Tashkilot...',
       getFilterValue: (record: StudentSummary) =>
         record.organizations.map((o) => o.name).join(' '),
-      render: (_: unknown, record: StudentSummary) =>
-        record.organizations.map((o) => <Tag key={o.id}>{o.name}</Tag>),
+      render: (_: unknown, record: StudentSummary) => {
+        const text =
+          record.organizations.map((o) => o.name).join(', ') || '—';
+        return (
+          <span className="line-clamp-2 break-words" title={text}>
+            {text}
+          </span>
+        );
+      },
     },
     {
       title: t({
@@ -833,6 +848,7 @@ const Students = () => {
                 });
               },
             }}
+            scroll={{ x: 'max-content' }}
             size="middle"
           />
         </ContentCard>
