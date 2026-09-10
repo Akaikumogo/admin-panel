@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
+  Input,
   Segmented,
   Select,
   Spin,
@@ -79,6 +80,45 @@ const QP_DEFAULTS = {
   view: undefined,
 } as const;
 
+
+type FieldDraft = {
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  division: string;
+  post: string;
+};
+
+function fieldsFromStudent(s: StudentSummary): FieldDraft {
+  return {
+    firstName: s.firstName ?? '',
+    lastName: s.lastName ?? '',
+    middleName: s.middleName ?? '',
+    division: s.division ?? '',
+    post: s.post ?? '',
+  };
+}
+
+function fieldsEqual(a: FieldDraft, b: FieldDraft) {
+  return (
+    a.firstName === b.firstName &&
+    a.lastName === b.lastName &&
+    a.middleName === b.middleName &&
+    a.division === b.division &&
+    a.post === b.post
+  );
+}
+
+function fieldsMissing(d: FieldDraft) {
+  const empty: string[] = [];
+  if (!d.firstName.trim()) empty.push('Ism');
+  if (!d.lastName.trim()) empty.push('Familiya');
+  if (!d.middleName.trim()) empty.push('Otasining ismi');
+  if (!d.division.trim()) empty.push("Bo‘lim");
+  if (!d.post.trim()) empty.push('Lavozim');
+  return empty;
+}
+
 const Students = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -92,6 +132,8 @@ const Students = () => {
   } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [fieldDrafts, setFieldDrafts] = useState<Record<string, FieldDraft>>({});
+  const [savingFieldsId, setSavingFieldsId] = useState<string | null>(null);
   const [me, setMe] = useState<UserProfile | null>(() => {
     try {
       const raw = localStorage.getItem('user');
@@ -106,6 +148,9 @@ const Students = () => {
   /** Xodim hisobot OFF/ON — barcha moderator + superadmin */
   const canToggleReport =
     isSuperAdmin() || readCachedUserRole() === 'MODERATOR';
+  /** Energo display field edits — same gate as StudentDetail / StudentFieldsEditor */
+  const canEditFields =
+    me?.role === 'MODERATOR' || me?.role === 'SUPERADMIN';
 
   const columnSearch = useMemo(
     () =>
@@ -194,6 +239,7 @@ const Students = () => {
   // Collapse expand when page/filters change so stale panels don't linger
   useEffect(() => {
     setExpandedUserId(null);
+    setFieldDrafts({});
   }, [currentPage, pageSize, columnSearch, qp.orgId, qp.levelId]);
 
   const applyEmployeeActive = async (userId: string, next: boolean) => {
@@ -247,6 +293,66 @@ const Students = () => {
     const { id } = pendingOff;
     setPendingOff(null);
     void applyEmployeeActive(id, false);
+  };
+
+  const getFieldDraft = (record: StudentSummary): FieldDraft =>
+    fieldDrafts[record.id] ?? fieldsFromStudent(record);
+
+  const updateFieldDraft = (
+    record: StudentSummary,
+    key: keyof FieldDraft,
+    value: string,
+  ) => {
+    setFieldDrafts((prev) => ({
+      ...prev,
+      [record.id]: {
+        ...(prev[record.id] ?? fieldsFromStudent(record)),
+        [key]: value,
+      },
+    }));
+  };
+
+  const saveFieldDraft = async (record: StudentSummary) => {
+    const draft = getFieldDraft(record);
+    const missing = fieldsMissing(draft);
+    if (missing.length) {
+      message.error(`Bo‘sh maydon: ${missing.join(', ')}`);
+      return;
+    }
+    if (fieldsEqual(draft, fieldsFromStudent(record))) return;
+    setSavingFieldsId(record.id);
+    try {
+      await apiService.patchEmployeeFields(record.id, {
+        firstName: draft.firstName.trim(),
+        lastName: draft.lastName.trim(),
+        middleName: draft.middleName.trim(),
+        division: draft.division.trim(),
+        post: draft.post.trim(),
+      });
+      setFieldDrafts((prev) => {
+        const next = { ...prev };
+        delete next[record.id];
+        return next;
+      });
+      message.success(
+        t({
+          uz: 'Saqlandi',
+          en: 'Saved',
+          ru: 'Сохранено',
+        }),
+      );
+      void refetch();
+    } catch {
+      message.error(
+        t({
+          uz: 'Saqlashda xato',
+          en: 'Could not save',
+          ru: 'Не удалось сохранить',
+        }),
+      );
+    } finally {
+      setSavingFieldsId(null);
+    }
   };
 
   const handleColumnFiltersChange = (filters: Record<string, string>) => {
@@ -359,6 +465,155 @@ const Students = () => {
           </div>
         </div>
       ),
+    },
+    {
+      title: 'Ism',
+      key: 'firstName',
+      width: 120,
+      filterable: true,
+      filterPlaceholder: 'Ism...',
+      getFilterValue: (record: StudentSummary) => record.firstName ?? '',
+      render: (_: unknown, record: StudentSummary) => {
+        if (!canEditFields) {
+          return (
+            <span className="text-sm">{record.firstName || '—'}</span>
+          );
+        }
+        const draft = getFieldDraft(record);
+        return (
+          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+            <Input
+              value={draft.firstName}
+              onChange={(e) => updateFieldDraft(record, 'firstName', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Familiya',
+      key: 'lastName',
+      width: 120,
+      filterable: true,
+      filterPlaceholder: 'Familiya...',
+      getFilterValue: (record: StudentSummary) => record.lastName ?? '',
+      render: (_: unknown, record: StudentSummary) => {
+        if (!canEditFields) {
+          return (
+            <span className="text-sm">{record.lastName || '—'}</span>
+          );
+        }
+        const draft = getFieldDraft(record);
+        return (
+          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+            <Input
+              value={draft.lastName}
+              onChange={(e) => updateFieldDraft(record, 'lastName', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Otasining ismi',
+      key: 'middleName',
+      width: 130,
+      filterable: true,
+      filterPlaceholder: 'Ota ismi...',
+      getFilterValue: (record: StudentSummary) => record.middleName ?? '',
+      render: (_: unknown, record: StudentSummary) => {
+        if (!canEditFields) {
+          return (
+            <span className="text-sm">{record.middleName || '—'}</span>
+          );
+        }
+        const draft = getFieldDraft(record);
+        return (
+          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+            <Input
+              value={draft.middleName}
+              onChange={(e) => updateFieldDraft(record, 'middleName', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: "Bo‘lim",
+      key: 'division',
+      width: 140,
+      filterable: true,
+      filterPlaceholder: "Bo‘lim...",
+      getFilterValue: (record: StudentSummary) => record.division ?? '',
+      render: (_: unknown, record: StudentSummary) => {
+        if (!canEditFields) {
+          return (
+            <span className="text-sm">{record.division || '—'}</span>
+          );
+        }
+        const draft = getFieldDraft(record);
+        return (
+          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+            <Input
+              value={draft.division}
+              onChange={(e) => updateFieldDraft(record, 'division', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Lavozim',
+      key: 'post',
+      width: 140,
+      filterable: true,
+      filterPlaceholder: 'Lavozim...',
+      getFilterValue: (record: StudentSummary) => record.post ?? '',
+      render: (_: unknown, record: StudentSummary) => {
+        if (!canEditFields) {
+          return <span className="text-sm">{record.post || '—'}</span>;
+        }
+        const draft = getFieldDraft(record);
+        return (
+          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+            <Input
+              value={draft.post}
+              onChange={(e) => updateFieldDraft(record, 'post', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Saqlash',
+      key: 'saveFields',
+      width: 96,
+      filterable: false,
+      render: (_: unknown, record: StudentSummary) => {
+        if (!canEditFields) return null;
+        const draft = getFieldDraft(record);
+        const dirty = !fieldsEqual(draft, fieldsFromStudent(record));
+        const missing = fieldsMissing(draft);
+        const saving = savingFieldsId === record.id;
+        return (
+          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="primary"
+              size="small"
+              loading={saving}
+              disabled={!dirty || missing.length > 0 || saving}
+              onClick={() => void saveFieldDraft(record)}
+            >
+              Saqlash
+            </Button>
+          </div>
+        );
+      },
     },
     {
       title: t(T.email),
@@ -555,13 +810,7 @@ const Students = () => {
             onColumnFiltersChange={handleColumnFiltersChange}
             expandedRowKey={expandedUserId}
             expandedRowRender={(record) => (
-              <EmployeeListExpandPanel
-                summary={record}
-                me={me}
-                onFieldsSaved={() => {
-                  void refetch();
-                }}
-              />
+              <EmployeeListExpandPanel summary={record} me={me} />
             )}
             onRow={(record) => {
               const active =
