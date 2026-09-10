@@ -77,6 +77,8 @@ export type DataTableProps<T extends Record<string, unknown>> = {
   expandedRowKey?: string | null;
   /** Rendered in a full-width row immediately below the expanded data row */
   expandedRowRender?: (record: T) => React.ReactNode;
+  /** Flat: no outer/cell borders; subtle row separators ok */
+  variant?: 'default' | 'flat';
 };
 
 function getRowKey<T extends Record<string, unknown>>(
@@ -214,7 +216,7 @@ export function DataTable<T extends Record<string, unknown>>({
   dataSource = [],
   rowKey = 'key',
   loading,
-  pagination = { pageSize: 20, showSizeChanger: true },
+  pagination = { pageSize: 10, showSizeChanger: true },
   size = 'middle',
   scroll,
   onRow,
@@ -224,12 +226,74 @@ export function DataTable<T extends Record<string, unknown>>({
   onColumnFiltersChange,
   expandedRowKey,
   expandedRowRender,
+  variant = 'default',
 }: DataTableProps<T>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [internalFilters, setInternalFilters] = React.useState<Record<string, string>>({});
   const columnFilters = controlledFilters ?? internalFilters;
   const [draftFilters, setDraftFilters] = React.useState<Record<string, string>>(columnFilters);
   const filterDebounceRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const dragRef = React.useRef<{ active: boolean; moved: boolean; startX: number; scrollLeft: number }>({
+    active: false,
+    moved: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
+  const [isDragging, setIsDragging] = React.useState(false);
+  const isFlat = variant === 'flat';
+
+  const isDragInteractiveTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(
+      target.closest(
+        'button, a, input, label, textarea, select, option, [role="button"], [role="checkbox"], [role="switch"], [contenteditable="true"], [data-stop-row-click], [data-no-drag-scroll]',
+      ),
+    );
+  };
+
+  const onScrollPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    if (isDragInteractiveTarget(e.target)) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    dragRef.current = {
+      active: true,
+      moved: false,
+      startX: e.clientX,
+      scrollLeft: el.scrollLeft,
+    };
+    setIsDragging(true);
+    el.setPointerCapture(e.pointerId);
+  };
+
+  const onScrollPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const dx = e.clientX - dragRef.current.startX;
+    if (Math.abs(dx) > 3) dragRef.current.moved = true;
+    el.scrollLeft = dragRef.current.scrollLeft - dx;
+  };
+
+  const endScrollDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    setIsDragging(false);
+    try {
+      scrollContainerRef.current?.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+  };
+
+  const onScrollClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragRef.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      dragRef.current.moved = false;
+    }
+  };
 
   React.useEffect(() => {
     setDraftFilters(columnFilters);
@@ -305,8 +369,8 @@ export function DataTable<T extends Record<string, unknown>>({
     : rows;
   const totalPages = Math.max(1, Math.ceil(recordTotal / pageSize));
   const pageSizeOptions = pagination !== false
-    ? (pagination.pageSizeOptions ?? [20, 50, 100])
-    : [20, 50, 100];
+    ? (pagination.pageSizeOptions ?? [10, 20, 50, 100])
+    : [10, 20, 50, 100];
   const showPager = paginated;
 
   const goToPage = (nextPage: number) => {
@@ -400,9 +464,15 @@ export function DataTable<T extends Record<string, unknown>>({
   const stickyCellClass = (fixed?: 'left' | 'right', isHeader?: boolean) =>
     cn(
       fixed === 'left' &&
-        'sticky border-r border-border shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.45)] overflow-hidden',
+        cn(
+          'sticky overflow-hidden shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.45)]',
+          !isFlat && 'border-r border-border',
+        ),
       fixed === 'right' &&
-        'sticky border-l border-border shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)] overflow-hidden',
+        cn(
+          'sticky overflow-hidden shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)]',
+          !isFlat && 'border-l border-border',
+        ),
       fixed === 'left' &&
         (isHeader ? 'bg-muted dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
       fixed === 'right' &&
@@ -443,7 +513,8 @@ export function DataTable<T extends Record<string, unknown>>({
   return (
     <div
       className={cn(
-        'enterprise-table relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card dark:bg-[#0c0e14]',
+        'enterprise-table relative w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-card dark:bg-[#0c0e14]',
+        isFlat ? 'border-0 shadow-none' : 'border border-border',
         className,
       )}
     >
@@ -453,10 +524,20 @@ export function DataTable<T extends Record<string, unknown>>({
         </div>
       ) : null}
       <div
-        className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto overscroll-x-contain"
+        ref={scrollContainerRef}
+        className={cn(
+          'w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto overscroll-x-contain',
+          '[&_button]:cursor-pointer [&_a]:cursor-pointer [&_input]:cursor-text [&_textarea]:cursor-text [&_select]:cursor-pointer [&_[role=switch]]:cursor-pointer',
+          isDragging ? 'cursor-grabbing select-none' : 'cursor-grab',
+        )}
         style={{
           maxHeight: scroll?.y,
         }}
+        onPointerDown={onScrollPointerDown}
+        onPointerMove={onScrollPointerMove}
+        onPointerUp={endScrollDrag}
+        onPointerCancel={endScrollDrag}
+        onClickCapture={onScrollClickCapture}
       >
         <UITable
           className={cn(
@@ -474,7 +555,7 @@ export function DataTable<T extends Record<string, unknown>>({
           <TableHeader className="sticky top-0 z-[45] bg-muted dark:bg-[#111318]">
             {groupedHeaders ? (
               <>
-                <TableRow className="border-border hover:bg-transparent">
+                <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'hover:bg-transparent')}>
                   {columns.map((col) => {
                     const colId = getColumnId(col);
                     if (col.children?.length) {
@@ -500,7 +581,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     );
                   })}
                 </TableRow>
-                <TableRow className="border-border hover:bg-transparent">
+                <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'hover:bg-transparent')}>
                   {columns.flatMap((col) => {
                     if (!col.children?.length) return [];
                     return col.children.map((child) => {
@@ -512,7 +593,7 @@ export function DataTable<T extends Record<string, unknown>>({
               </>
             ) : (
               table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
+                <TableRow key={headerGroup.id} className={cn(isFlat ? 'border-border/40' : 'border-border', 'hover:bg-transparent')}>
                   {headerGroup.headers.map((header) => {
                     const col = findLeafColumn(columns, header.column.id);
                     const meta = header.column.columnDef.meta as {
@@ -561,7 +642,7 @@ export function DataTable<T extends Record<string, unknown>>({
               ))
             )}
             {hasColumnFilters && !groupedHeaders ? (
-              <TableRow className="border-border bg-muted/30 dark:bg-[#0a0c10] hover:bg-muted/30 dark:hover:bg-[#0a0c10]">
+              <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'bg-muted/30 dark:bg-[#0a0c10] hover:bg-muted/30 dark:hover:bg-[#0a0c10]')}>
                 {table.getHeaderGroups()[0]?.headers.map((header) => {
                   const col = findLeafColumn(columns, header.column.id);
                   const meta = header.column.columnDef.meta as {
@@ -632,7 +713,8 @@ export function DataTable<T extends Record<string, unknown>>({
                       }}
                       style={rowProps.style}
                       className={cn(
-                        'border-border dark:border-slate-800 dark:hover:bg-[#151820]',
+                        isFlat ? 'border-border/30 dark:border-slate-800/60' : 'border-border dark:border-slate-800',
+                        'dark:hover:bg-[#151820]',
                         row.index % 2 === 1 && 'bg-muted/20 dark:bg-white/[0.02]',
                         'hover:bg-muted/45 dark:hover:bg-[#151820]',
                         rowProps.onClick && 'cursor-pointer',
@@ -670,7 +752,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     {isExpanded ? (
                       <TableRow
                         key={`${key}-expanded`}
-                        className="border-border dark:border-slate-800 bg-muted/20 dark:bg-[#0a0c10] hover:bg-muted/20 dark:hover:bg-[#0a0c10]"
+                        className={cn(isFlat ? 'border-border/30 dark:border-slate-800/60' : 'border-border dark:border-slate-800', 'bg-muted/20 dark:bg-[#0a0c10] hover:bg-muted/20 dark:hover:bg-[#0a0c10]')}
                       >
                         <TableCell
                           colSpan={leafColumns.length}
@@ -696,7 +778,7 @@ export function DataTable<T extends Record<string, unknown>>({
         </UITable>
       </div>
       {showPager ? (
-        <div className="flex flex-col gap-3 border-t border-border dark:border-slate-800 bg-muted/20 dark:bg-[#111318] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className={cn('flex flex-col gap-3 bg-muted/20 dark:bg-[#111318] px-4 py-3 sm:flex-row sm:items-center sm:justify-between', isFlat ? 'border-t border-border/30 dark:border-slate-800/50' : 'border-t border-border dark:border-slate-800')}>
           <span className="text-sm text-muted-foreground">
             {recordTotal.toLocaleString('uz-UZ')} ta yozuv
             {Object.values(columnFilters).some((v) => v.trim()) ? ' (filtrlangan)' : ''}
