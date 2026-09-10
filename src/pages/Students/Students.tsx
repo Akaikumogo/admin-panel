@@ -445,26 +445,26 @@ const Students = () => {
       getFilterValue: (record: StudentSummary) =>
         [record.personnelNumber ?? '', formatPersonName(record)].filter(Boolean).join(' '),
       render: (_: unknown, record: StudentSummary) => (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <EmployeeAvatarUpload
             userId={record.id}
             firstName={record.firstName}
             lastName={record.lastName}
             avatarUrl={record.avatarUrl}
-            size={32}
+            size={28}
             onUploaded={() => refetch()}
           />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1">
-              <Tag>{record.personnelNumber || '—'}</Tag>
-              {record.role === 'MODERATOR' ? (
-                <Tag color="blue">Moderator</Tag>
-              ) : null}
-            </div>
-            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
-              {'⚡'.repeat(record.badge?.bolts ?? 1)}{' '}
-              {record.badge?.label ?? 'Yangi ishchi'}
-            </div>
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+            <Tag className="max-w-[110px] truncate">{record.personnelNumber || '—'}</Tag>
+            {record.role === 'MODERATOR' ? (
+              <Tag color="blue" className="shrink-0">Moderator</Tag>
+            ) : null}
+            <span
+              className="min-w-0 truncate text-[10px] text-amber-600 dark:text-amber-400"
+              title={record.badge?.label ?? 'Yangi ishchi'}
+            >
+              {'⚡'.repeat(record.badge?.bolts ?? 1)} {record.badge?.label ?? 'Yangi ishchi'}
+            </span>
           </div>
         </div>
       ),
@@ -472,7 +472,7 @@ const Students = () => {
     {
       title: 'Ism',
       key: 'firstName',
-      width: 150,
+      width: 180,
       filterable: true,
       filterPlaceholder: 'Ism...',
       getFilterValue: (record: StudentSummary) => record.firstName ?? '',
@@ -488,7 +488,7 @@ const Students = () => {
             <Input
               value={draft.firstName}
               onChange={(e) => updateFieldDraft(record, 'firstName', e.target.value)}
-              className="h-8 w-full min-w-[140px] text-xs"
+              className="h-8 w-full text-xs"
             />
           </div>
         );
@@ -497,7 +497,7 @@ const Students = () => {
     {
       title: 'Familiya',
       key: 'lastName',
-      width: 150,
+      width: 180,
       filterable: true,
       filterPlaceholder: 'Familiya...',
       getFilterValue: (record: StudentSummary) => record.lastName ?? '',
@@ -513,7 +513,7 @@ const Students = () => {
             <Input
               value={draft.lastName}
               onChange={(e) => updateFieldDraft(record, 'lastName', e.target.value)}
-              className="h-8 w-full min-w-[140px] text-xs"
+              className="h-8 w-full text-xs"
             />
           </div>
         );
@@ -522,7 +522,7 @@ const Students = () => {
     {
       title: 'Otasining ismi',
       key: 'middleName',
-      width: 170,
+      width: 200,
       filterable: true,
       filterPlaceholder: 'Ota ismi...',
       getFilterValue: (record: StudentSummary) => record.middleName ?? '',
@@ -538,7 +538,7 @@ const Students = () => {
             <Input
               value={draft.middleName}
               onChange={(e) => updateFieldDraft(record, 'middleName', e.target.value)}
-              className="h-8 w-full min-w-[150px] text-xs"
+              className="h-8 w-full text-xs"
             />
           </div>
         );
@@ -547,7 +547,7 @@ const Students = () => {
     {
       title: "Bo‘lim",
       key: 'division',
-      width: 200,
+      width: 240,
       filterable: true,
       filterPlaceholder: "Bo‘lim...",
       getFilterValue: (record: StudentSummary) => record.division ?? '',
@@ -563,7 +563,7 @@ const Students = () => {
             <Input
               value={draft.division}
               onChange={(e) => updateFieldDraft(record, 'division', e.target.value)}
-              className="h-8 w-full min-w-[180px] text-xs"
+              className="h-8 w-full text-xs"
             />
           </div>
         );
@@ -572,7 +572,7 @@ const Students = () => {
     {
       title: 'Lavozim',
       key: 'post',
-      width: 200,
+      width: 240,
       filterable: true,
       filterPlaceholder: 'Lavozim...',
       getFilterValue: (record: StudentSummary) => record.post ?? '',
@@ -586,34 +586,8 @@ const Students = () => {
             <Input
               value={draft.post}
               onChange={(e) => updateFieldDraft(record, 'post', e.target.value)}
-              className="h-8 w-full min-w-[180px] text-xs"
+              className="h-8 w-full text-xs"
             />
-          </div>
-        );
-      },
-    },
-    {
-      title: 'Saqlash',
-      key: 'saveFields',
-      width: 110,
-      filterable: false,
-      render: (_: unknown, record: StudentSummary) => {
-        if (!canEditFields) return null;
-        const draft = getFieldDraft(record);
-        const dirty = !fieldsEqual(draft, fieldsFromStudent(record));
-        const missing = fieldsMissing(draft);
-        const saving = savingFieldsId === record.id;
-        return (
-          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
-            <Button
-              type="primary"
-              size="small"
-              loading={saving}
-              disabled={!dirty || missing.length > 0 || saving}
-              onClick={() => void saveFieldDraft(record)}
-            >
-              Saqlash
-            </Button>
           </div>
         );
       },
@@ -621,12 +595,13 @@ const Students = () => {
     {
       title: t(T.email),
       key: 'email',
-      width: 220,
+      width: 240,
+      ellipsis: true,
       filterable: true,
       filterPlaceholder: 'Email...',
       dataIndex: 'email',
       render: (_: unknown, record: StudentSummary) => (
-        <span className="text-muted-foreground flex min-w-0 items-center gap-1" title={record.email}>
+        <span className="text-muted-foreground flex min-w-0 items-center gap-1 overflow-hidden" title={record.email}>
           <Mail size={12} className="shrink-0" />
           <span className="truncate">
             <HighlightText text={record.email} />
@@ -661,30 +636,61 @@ const Students = () => {
     {
       title: t(T.level),
       key: 'level',
-      width: 150,
+      width: 160,
+      ellipsis: true,
       filterable: true,
       filterPlaceholder: 'Daraja...',
       getFilterValue: (record: StudentSummary) =>
         record.currentLevelTitle ?? '',
       render: (_: unknown, record: StudentSummary) => (
-        <Tag color="default">{record.currentLevelTitle ?? '—'}</Tag>
+        <Tag color="default" className="max-w-full truncate" title={record.currentLevelTitle ?? '—'}>
+          {record.currentLevelTitle ?? '—'}
+        </Tag>
       ),
     },
     {
       title: t(T.org),
       key: 'org',
-      width: 240,
+      width: 280,
+      ellipsis: true,
       filterable: true,
       filterPlaceholder: 'Tashkilot...',
       getFilterValue: (record: StudentSummary) =>
         record.organizations.map((o) => o.name).join(' '),
       render: (_: unknown, record: StudentSummary) => {
-        const text =
+        const orgText =
           record.organizations.map((o) => o.name).join(', ') || '—';
         return (
-          <span className="line-clamp-2 break-words" title={text}>
-            {text}
+          <span className="block max-w-full truncate whitespace-nowrap" title={orgText}>
+            {orgText}
           </span>
+        );
+      },
+    },
+    {
+      title: 'Saqlash',
+      key: 'saveFields',
+      width: 110,
+      fixed: 'right' as const,
+      filterable: false,
+      render: (_: unknown, record: StudentSummary) => {
+        if (!canEditFields) return null;
+        const draft = getFieldDraft(record);
+        const dirty = !fieldsEqual(draft, fieldsFromStudent(record));
+        const missing = fieldsMissing(draft);
+        const saving = savingFieldsId === record.id;
+        return (
+          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="primary"
+              size="small"
+              loading={saving}
+              disabled={!dirty || missing.length > 0 || saving}
+              onClick={() => void saveFieldDraft(record)}
+            >
+              Saqlash
+            </Button>
+          </div>
         );
       },
     },
@@ -696,11 +702,13 @@ const Students = () => {
       }),
       key: 'reportActive',
       width: 100,
+      fixed: 'right' as const,
       filterable: false,
       render: (_: unknown, record: StudentSummary) => {
         const checked = empActive.get(record.id) ?? record.reportActive !== false;
         return (
           <div
+            data-stop-row-click
             className="flex justify-end"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
@@ -848,8 +856,8 @@ const Students = () => {
                 });
               },
             }}
-            scroll={{ x: 'max-content' }}
-            size="middle"
+            scroll={{ x: 2500 }}
+            size="small"
           />
         </ContentCard>
       )}

@@ -346,7 +346,7 @@ export function DataTable<T extends Record<string, unknown>>({
     else if (pagination !== false) pagination.onChange?.(1, pageSize);
   };
 
-  const cellPadding = size === 'small' ? 'py-2 px-2' : size === 'large' ? 'py-4 px-4' : 'py-3 px-3';
+  const cellPadding = size === 'small' ? 'py-1.5 px-2' : size === 'large' ? 'py-3 px-3' : 'py-1.5 px-2.5';
   const hasColumnFilters = leafColumns.some(isColumnFilterable);
 
   const renderHeaderCell = (
@@ -435,7 +435,9 @@ export function DataTable<T extends Record<string, unknown>>({
         zIndex: isHeader ? 50 : (rightZ.get(colId) ?? 30),
       };
     }
-    return width != null ? { width, minWidth: width } : undefined;
+    return width != null
+      ? { width, minWidth: width, maxWidth: width }
+      : undefined;
   };
 
   return (
@@ -458,12 +460,12 @@ export function DataTable<T extends Record<string, unknown>>({
       >
         <UITable
           className={cn(
-            'w-full',
-            scroll?.x ? 'table-auto' : 'min-w-full table-fixed',
+            'w-full border-separate border-spacing-0',
+            'min-w-full table-fixed',
           )}
           style={
             typeof scroll?.x === 'number'
-              ? { minWidth: scroll.x }
+              ? { minWidth: scroll.x, width: scroll.x }
               : scroll?.x
                 ? { minWidth: 'max-content' }
                 : undefined
@@ -651,10 +653,11 @@ export function DataTable<T extends Record<string, unknown>>({
                             key={cell.id}
                             className={cn(
                               cellPadding,
-                              'dark:text-slate-200',
+                              'align-middle dark:text-slate-200',
+                              'whitespace-nowrap overflow-hidden',
                               meta?.align === 'center' && 'text-center',
                               meta?.align === 'right' && 'text-right',
-                              meta?.ellipsis && 'truncate',
+                              meta?.ellipsis && 'truncate text-ellipsis',
                               stickyCellClass(fixed, false),
                             )}
                             style={stickyStyle(cell.column.id, fixed, meta?.width, false)}
