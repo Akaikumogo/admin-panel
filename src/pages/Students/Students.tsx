@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  ChevronDown,
+  ChevronRight,
   Download,
   GraduationCap,
   Mail,
@@ -37,10 +39,11 @@ import { FilterBar, ContentCard } from '@/components/FilterBar';
 import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
 import { downloadCsv } from '@/lib/csv';
 import apiService from '@/services/api';
-import type { StudentSummary, Level, Organization } from '@/services/api';
+import type { StudentSummary, Level, Organization, UserProfile } from '@/services/api';
 import { can } from '@/utils/can';
 import { isSuperAdmin, readCachedUserRole } from '@/utils/isSuperAdmin';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
+import { EmployeeSafetySection } from './EmployeeSafetySection';
 import { cn } from '@/lib/utils';
 import { formatPersonName } from '@/lib/person-name';
 
@@ -88,6 +91,15 @@ const Students = () => {
     title: string;
   } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [me, setMe] = useState<UserProfile | null>(() => {
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? (JSON.parse(raw) as UserProfile) : null;
+    } catch {
+      return null;
+    }
+  });
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
   const pageSize = qp.limit ? parseInt(qp.limit, 10) : 20;
   const viewMode = qp.view === 'tree' ? 'tree' : 'flat';
@@ -171,6 +183,18 @@ const Students = () => {
     for (const s of students) m.set(s.id, s.reportActive !== false);
     setEmpActive(m);
   }, [students]);
+
+  useEffect(() => {
+    apiService
+      .me()
+      .then(setMe)
+      .catch(() => undefined);
+  }, []);
+
+  // Collapse expand when page/filters change so stale panels don't linger
+  useEffect(() => {
+    setExpandedUserId(null);
+  }, [currentPage, pageSize, columnSearch, qp.orgId, qp.levelId]);
 
   const applyEmployeeActive = async (userId: string, next: boolean) => {
     setBusyId(userId);
@@ -267,6 +291,31 @@ const Students = () => {
   };
 
   const columns = [
+    {
+      title: '',
+      key: 'expand',
+      width: 44,
+      filterable: false,
+      align: 'center' as const,
+      render: (_: unknown, record: StudentSummary) => {
+        const open = expandedUserId === record.id;
+        return (
+          <button
+            type="button"
+            data-stop-row-click
+            aria-label={open ? 'Collapse safety' : 'Expand safety'}
+            aria-expanded={open}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpandedUserId((prev) => (prev === record.id ? null : record.id));
+            }}
+          >
+            {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+        );
+      },
+    },
     {
       title: '№',
       key: 'rowNumber',
@@ -515,6 +564,10 @@ const Students = () => {
             emptyText={t(T.noData)}
             columnFilters={columnFilters}
             onColumnFiltersChange={handleColumnFiltersChange}
+            expandedRowKey={expandedUserId}
+            expandedRowRender={(record) => (
+              <EmployeeSafetySection userId={record.id} me={me} />
+            )}
             onRow={(record) => {
               const active =
                 empActive.get(record.id) ?? record.reportActive !== false;
