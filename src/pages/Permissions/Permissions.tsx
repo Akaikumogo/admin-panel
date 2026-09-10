@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Avatar,
   Button,
@@ -137,23 +137,6 @@ const PermissionsPage = () => {
   const [permLoading, setPermLoading] = useState(false);
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(() => new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
-  const tableWrapRef = useRef<HTMLDivElement>(null);
-  const [tableScrollY, setTableScrollY] = useState(480);
-
-  useLayoutEffect(() => {
-    const el = tableWrapRef.current;
-    if (!el) return;
-
-    const updateHeight = () => {
-      const next = el.clientHeight - 108;
-      setTableScrollY(Math.max(280, next));
-    };
-
-    updateHeight();
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [initialLoading, moderators.length]);
 
   const handleSearchChange = (value: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -401,7 +384,7 @@ const PermissionsPage = () => {
   ]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4 p-6">
       <div className="flex-shrink-0">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           {t(T.title)}
@@ -447,10 +430,7 @@ const PermissionsPage = () => {
         </span>
       </div>
 
-      <div
-        ref={tableWrapRef}
-        className="min-h-0 flex-1 rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-card"
-      >
+      <div className="rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-card">
         {initialLoading ? (
           <div className="flex h-48 items-center justify-center">
             <Spin />
@@ -466,7 +446,7 @@ const PermissionsPage = () => {
             loading={loading}
             dataSource={moderators}
             columns={columns}
-            scroll={{ x: scrollX, y: tableScrollY }}
+            scroll={{ x: scrollX }}
             pagination={{
               current: currentPage,
               pageSize: PAGE_SIZE,
