@@ -73,6 +73,10 @@ export type DataTableProps<T extends Record<string, unknown>> = {
   /** Ustun filterlari (controlled) */
   columnFilters?: Record<string, string>;
   onColumnFiltersChange?: (filters: Record<string, string>) => void;
+  /** Controlled expand: only the row whose key matches is expanded */
+  expandedRowKey?: string | null;
+  /** Rendered in a full-width row immediately below the expanded data row */
+  expandedRowRender?: (record: T) => React.ReactNode;
 };
 
 function getRowKey<T extends Record<string, unknown>>(
@@ -95,7 +99,7 @@ function isColumnFilterable<T>(col: ColumnType<T>): boolean {
   if (col.filterable === false) return false;
   if (col.filterable === true) return true;
   const id = getColumnId(col);
-  if (id === 'actions' || id === 'rowNumber' || id === '№') return false;
+  if (id === 'actions' || id === 'rowNumber' || id === '№' || id === 'expand') return false;
   return Boolean(col.dataIndex || col.getFilterValue);
 }
 
@@ -218,6 +222,8 @@ export function DataTable<T extends Record<string, unknown>>({
   emptyText = 'Ma\'lumot yo\'q',
   columnFilters: controlledFilters,
   onColumnFiltersChange,
+  expandedRowKey,
+  expandedRowRender,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [internalFilters, setInternalFilters] = React.useState<Record<string, string>>({});
@@ -603,55 +609,77 @@ export function DataTable<T extends Record<string, unknown>>({
               paginatedRows.map((row) => {
                 const record = row.original;
                 const rowProps = onRow?.(record) ?? {};
+                const key = getRowKey(record, rowKey, row.index);
+                const isExpanded =
+                  expandedRowRender != null &&
+                  expandedRowKey != null &&
+                  expandedRowKey === key;
                 return (
-                  <TableRow
-                    key={getRowKey(record, rowKey, row.index)}
-                    onClick={(e) => {
-                      const el = e.target as HTMLElement | null;
-                      if (
-                        el?.closest(
-                          'button, a, input, label, textarea, select, [data-stop-row-click]',
-                        )
-                      ) {
-                        return;
-                      }
-                      rowProps.onClick?.(e);
-                    }}
-                    style={rowProps.style}
-                    className={cn(
-                      'border-border dark:border-slate-800 dark:hover:bg-[#151820]',
-                      row.index % 2 === 1 && 'bg-muted/20 dark:bg-white/[0.02]',
-                      'hover:bg-muted/45 dark:hover:bg-[#151820]',
-                      rowProps.onClick && 'cursor-pointer',
-                    )}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const col = findLeafColumn(columns, cell.column.id);
-                      const meta = cell.column.columnDef.meta as {
-                        align?: string;
-                        ellipsis?: boolean;
-                        width?: number | string;
-                        fixed?: 'left' | 'right';
-                      } | undefined;
-                      const fixed = col?.fixed ?? meta?.fixed;
-                      return (
+                  <React.Fragment key={key}>
+                    <TableRow
+                      onClick={(e) => {
+                        const el = e.target as HTMLElement | null;
+                        if (
+                          el?.closest(
+                            'button, a, input, label, textarea, select, [data-stop-row-click]',
+                          )
+                        ) {
+                          return;
+                        }
+                        rowProps.onClick?.(e);
+                      }}
+                      style={rowProps.style}
+                      className={cn(
+                        'border-border dark:border-slate-800 dark:hover:bg-[#151820]',
+                        row.index % 2 === 1 && 'bg-muted/20 dark:bg-white/[0.02]',
+                        'hover:bg-muted/45 dark:hover:bg-[#151820]',
+                        rowProps.onClick && 'cursor-pointer',
+                        isExpanded && 'bg-muted/30 dark:bg-[#151820]',
+                      )}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const col = findLeafColumn(columns, cell.column.id);
+                        const meta = cell.column.columnDef.meta as {
+                          align?: string;
+                          ellipsis?: boolean;
+                          width?: number | string;
+                          fixed?: 'left' | 'right';
+                        } | undefined;
+                        const fixed = col?.fixed ?? meta?.fixed;
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            className={cn(
+                              cellPadding,
+                              'dark:text-slate-200',
+                              meta?.align === 'center' && 'text-center',
+                              meta?.align === 'right' && 'text-right',
+                              meta?.ellipsis && 'truncate',
+                              stickyCellClass(fixed, false),
+                            )}
+                            style={stickyStyle(cell.column.id, fixed, meta?.width, false)}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                    {isExpanded ? (
+                      <TableRow
+                        key={`${key}-expanded`}
+                        className="border-border dark:border-slate-800 bg-muted/20 dark:bg-[#0a0c10] hover:bg-muted/20 dark:hover:bg-[#0a0c10]"
+                      >
                         <TableCell
-                          key={cell.id}
-                          className={cn(
-                            cellPadding,
-                            'dark:text-slate-200',
-                            meta?.align === 'center' && 'text-center',
-                            meta?.align === 'right' && 'text-right',
-                            meta?.ellipsis && 'truncate',
-                            stickyCellClass(fixed, false),
-                          )}
-                          style={stickyStyle(cell.column.id, fixed, meta?.width, false)}
+                          colSpan={leafColumns.length}
+                          className={cn(cellPadding, 'dark:text-slate-200')}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <div className="min-w-0 overflow-x-auto py-2" data-stop-row-click>
+                            {expandedRowRender(record)}
+                          </div>
                         </TableCell>
-                      );
-                    })}
-                  </TableRow>
+                      </TableRow>
+                    ) : null}
+                  </React.Fragment>
                 );
               })
             ) : (
