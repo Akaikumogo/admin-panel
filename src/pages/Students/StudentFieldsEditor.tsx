@@ -1,18 +1,41 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Input } from '@/components/ui';
 import apiService from '@/services/api';
-import type { StudentDetail } from '@/services/api';
+import { cn } from '@/lib/utils';
+
+/** Minimal shape for Energo ID display field edits (list or detail). */
+export type EmployeeFieldsEditable = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string | null;
+  division?: string | null;
+  post?: string | null;
+  firstName1c?: string | null;
+  lastName1c?: string | null;
+  middleName1c?: string | null;
+  division1c?: string | null;
+  post1c?: string | null;
+};
 
 type Props = {
-  student: StudentDetail;
+  student: EmployeeFieldsEditable;
   onSaved: () => void;
+  /** Compact grid layout for list expand panel */
+  compact?: boolean;
+  className?: string;
 };
 
 function required(value: string) {
   return value.trim().length > 0;
 }
 
-export function StudentFieldsEditor({ student, onSaved }: Props) {
+export function StudentFieldsEditor({
+  student,
+  onSaved,
+  compact = false,
+  className,
+}: Props) {
   const [firstName, setFirstName] = useState(student.firstName);
   const [lastName, setLastName] = useState(student.lastName);
   const [middleName, setMiddleName] = useState(student.middleName ?? '');
@@ -48,6 +71,7 @@ export function StudentFieldsEditor({ student, onSaved }: Props) {
     setSaving(true);
     setError(null);
     try {
+      // Display / field-overrides only — does not overwrite *1c source fields
       await apiService.patchEmployeeFields(student.id, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -64,46 +88,61 @@ export function StudentFieldsEditor({ student, onSaved }: Props) {
   };
 
   return (
-    <div className="mt-4 space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+    <div
+      className={cn(
+        'space-y-3 rounded-lg border border-border bg-muted/20 p-4',
+        !compact && 'mt-4',
+        className,
+      )}
+      data-stop-row-click
+    >
       <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
         Ma’lumotlarni tahrirlash (Energo ID)
       </div>
-      <Field
-        label="Ism"
-        value={firstName}
-        onChange={setFirstName}
-        fallback={student.firstName1c}
-        invalid={!required(firstName)}
-      />
-      <Field
-        label="Familiya"
-        value={lastName}
-        onChange={setLastName}
-        fallback={student.lastName1c}
-        invalid={!required(lastName)}
-      />
-      <Field
-        label="Otasining ismi"
-        value={middleName}
-        onChange={setMiddleName}
-        fallback={student.middleName1c}
-        invalid={!required(middleName)}
-      />
-      <Field
-        label="Bo‘lim"
-        value={division}
-        onChange={setDivision}
-        fallback={student.division1c}
-        invalid={!required(division)}
-      />
-      <Field
-        label="Lavozim"
-        value={post}
-        onChange={setPost}
-        fallback={student.post1c}
-        hint="post1c bir xil bo‘lib, display har xil bo‘lishi mumkin"
-        invalid={!required(post)}
-      />
+      <div
+        className={cn(
+          compact
+            ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'
+            : 'space-y-3',
+        )}
+      >
+        <Field
+          label="Ism"
+          value={firstName}
+          onChange={setFirstName}
+          fallback={student.firstName1c}
+          invalid={!required(firstName)}
+        />
+        <Field
+          label="Familiya"
+          value={lastName}
+          onChange={setLastName}
+          fallback={student.lastName1c}
+          invalid={!required(lastName)}
+        />
+        <Field
+          label="Otasining ismi"
+          value={middleName}
+          onChange={setMiddleName}
+          fallback={student.middleName1c}
+          invalid={!required(middleName)}
+        />
+        <Field
+          label="Bo‘lim"
+          value={division}
+          onChange={setDivision}
+          fallback={student.division1c}
+          invalid={!required(division)}
+        />
+        <Field
+          label="Lavozim"
+          value={post}
+          onChange={setPost}
+          fallback={student.post1c}
+          hint="post1c bir xil bo‘lib, display har xil bo‘lishi mumkin"
+          invalid={!required(post)}
+        />
+      </div>
       {error ? <div className="text-xs text-red-600">{error}</div> : null}
       {missing.length > 0 ? (
         <div className="text-xs text-red-600">
