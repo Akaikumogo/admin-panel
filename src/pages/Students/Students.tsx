@@ -143,7 +143,7 @@ const Students = () => {
     }
   });
   const currentPage = qp.page ? parseInt(qp.page, 10) : 1;
-  const pageSize = qp.limit ? parseInt(qp.limit, 10) : 20;
+  const pageSize = qp.limit ? parseInt(qp.limit, 10) : 10;
   const viewMode = qp.view === 'tree' ? 'tree' : 'flat';
   /** Xodim hisobot OFF/ON — barcha moderator + superadmin */
   const canToggleReport =
@@ -828,6 +828,7 @@ const Students = () => {
             columns={columns}
             rowKey="id"
             loading={false}
+            variant="flat"
             emptyText={t(T.noData)}
             columnFilters={columnFilters}
             onColumnFiltersChange={handleColumnFiltersChange}
@@ -848,11 +849,12 @@ const Students = () => {
               pageSize,
               total,
               showSizeChanger: true,
+              pageSizeOptions: [10, 20, 50, 100],
               hideOnSinglePage: false,
               onChange: (pg, size) => {
                 setParams({
                   page: pg > 1 ? String(pg) : undefined,
-                  limit: size && size !== 20 ? String(size) : undefined,
+                  limit: size && size !== 10 ? String(size) : undefined,
                 });
               },
             }}
