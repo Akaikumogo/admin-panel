@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -120,6 +120,64 @@ function fieldsMissing(d: FieldDraft) {
   return empty;
 }
 
+
+type EmployeeFieldKey = keyof FieldDraft;
+
+/** Stable cell input — keeps focus while parent drafts update via ref/context pattern. */
+function EmployeeFieldInput({
+  canEdit,
+  displayValue,
+  value,
+  onChange,
+}: {
+  canEdit: boolean;
+  displayValue: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  if (!canEdit) {
+    return <span className="text-sm">{displayValue || '—'}</span>;
+  }
+  return (
+    <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8 w-full text-xs"
+      />
+    </div>
+  );
+}
+
+function EmployeeSaveFieldsCell({
+  canEdit,
+  dirty,
+  missing,
+  saving,
+  onSave,
+}: {
+  canEdit: boolean;
+  dirty: boolean;
+  missing: string[];
+  saving: boolean;
+  onSave: () => void;
+}) {
+  if (!canEdit) return null;
+  return (
+    <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
+      <Button
+        type="primary"
+        size="small"
+        loading={saving}
+        disabled={!dirty || missing.length > 0 || saving}
+        onClick={onSave}
+      >
+        Saqlash
+      </Button>
+    </div>
+  );
+}
+
 const Students = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -135,6 +193,35 @@ const Students = () => {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, FieldDraft>>({});
   const [savingFieldsId, setSavingFieldsId] = useState<string | null>(null);
+  /** Keep drafts off columns deps — DataTable remounts cells when column defs change. */
+  const fieldDraftsRef = useRef(fieldDrafts);
+  fieldDraftsRef.current = fieldDrafts;
+  const savingFieldsIdRef = useRef(savingFieldsId);
+  savingFieldsIdRef.current = savingFieldsId;
+  /** Mutable API for column renders — keeps column defs identity stable across drafts. */
+  const columnsApiRef = useRef<{
+    expandedUserId: string | null;
+    empActive: Map<string, boolean>;
+    busyId: string | null;
+    canEditFields: boolean;
+    canToggleReport: boolean;
+    currentPage: number;
+    pageSize: number;
+    t: (dict: Partial<Record<'uz' | 'ru' | 'en', string>>) => string;
+    navigate: (to: string) => void;
+    refetch: () => void | Promise<unknown>;
+    getFieldDraft: (record: StudentSummary) => FieldDraft;
+    updateFieldDraft: (
+      record: StudentSummary,
+      key: EmployeeFieldKey,
+      value: string,
+    ) => void;
+    saveFieldDraft: (record: StudentSummary) => Promise<void>;
+    handleEmployeeSwitch: (record: StudentSummary, next: boolean) => void;
+    setExpandedUserId: (
+      u: string | null | ((prev: string | null) => string | null),
+    ) => void;
+  }>(null!);
   const [me, setMe] = useState<UserProfile | null>(() => {
     try {
       const raw = localStorage.getItem('user');
@@ -296,65 +383,68 @@ const Students = () => {
     void applyEmployeeActive(id, false);
   };
 
-  const getFieldDraft = (record: StudentSummary): FieldDraft =>
-    fieldDrafts[record.id] ?? fieldsFromStudent(record);
+  const getFieldDraft = useCallback((record: StudentSummary): FieldDraft => {
+    return fieldDraftsRef.current[record.id] ?? fieldsFromStudent(record);
+  }, []);
 
-  const updateFieldDraft = (
-    record: StudentSummary,
-    key: keyof FieldDraft,
-    value: string,
-  ) => {
-    setFieldDrafts((prev) => ({
-      ...prev,
-      [record.id]: {
-        ...(prev[record.id] ?? fieldsFromStudent(record)),
-        [key]: value,
-      },
-    }));
-  };
+  const updateFieldDraft = useCallback(
+    (record: StudentSummary, key: EmployeeFieldKey, value: string) => {
+      setFieldDrafts((prev) => ({
+        ...prev,
+        [record.id]: {
+          ...(prev[record.id] ?? fieldsFromStudent(record)),
+          [key]: value,
+        },
+      }));
+    },
+    [],
+  );
 
-  const saveFieldDraft = async (record: StudentSummary) => {
-    const draft = getFieldDraft(record);
-    const missing = fieldsMissing(draft);
-    if (missing.length) {
-      message.error(`Bo‘sh maydon: ${missing.join(', ')}`);
-      return;
-    }
-    if (fieldsEqual(draft, fieldsFromStudent(record))) return;
-    setSavingFieldsId(record.id);
-    try {
-      await apiService.patchEmployeeFields(record.id, {
-        firstName: draft.firstName.trim(),
-        lastName: draft.lastName.trim(),
-        middleName: draft.middleName.trim(),
-        division: draft.division.trim(),
-        post: draft.post.trim(),
-      });
-      setFieldDrafts((prev) => {
-        const next = { ...prev };
-        delete next[record.id];
-        return next;
-      });
-      message.success(
-        t({
-          uz: 'Saqlandi',
-          en: 'Saved',
-          ru: 'Сохранено',
-        }),
-      );
-      void refetch();
-    } catch {
-      message.error(
-        t({
-          uz: 'Saqlashda xato',
-          en: 'Could not save',
-          ru: 'Не удалось сохранить',
-        }),
-      );
-    } finally {
-      setSavingFieldsId(null);
-    }
-  };
+  const saveFieldDraft = useCallback(
+    async (record: StudentSummary) => {
+      const draft = fieldDraftsRef.current[record.id] ?? fieldsFromStudent(record);
+      const missing = fieldsMissing(draft);
+      if (missing.length) {
+        message.error(`Bo‘sh maydon: ${missing.join(', ')}`);
+        return;
+      }
+      if (fieldsEqual(draft, fieldsFromStudent(record))) return;
+      setSavingFieldsId(record.id);
+      try {
+        await apiService.patchEmployeeFields(record.id, {
+          firstName: draft.firstName.trim(),
+          lastName: draft.lastName.trim(),
+          middleName: draft.middleName.trim(),
+          division: draft.division.trim(),
+          post: draft.post.trim(),
+        });
+        setFieldDrafts((prev) => {
+          const next = { ...prev };
+          delete next[record.id];
+          return next;
+        });
+        message.success(
+          t({
+            uz: 'Saqlandi',
+            en: 'Saved',
+            ru: 'Сохранено',
+          }),
+        );
+        void refetch();
+      } catch {
+        message.error(
+          t({
+            uz: 'Saqlashda xato',
+            en: 'Could not save',
+            ru: 'Не удалось сохранить',
+          }),
+        );
+      } finally {
+        setSavingFieldsId(null);
+      }
+    },
+    [t, refetch],
+  );
 
   const handleColumnFiltersChange = (filters: Record<string, string>) => {
     setColumnFilters(filters);
@@ -397,7 +487,27 @@ const Students = () => {
     }
   };
 
-  const columns = [
+
+  columnsApiRef.current = {
+    expandedUserId,
+    empActive,
+    busyId,
+    canEditFields,
+    canToggleReport,
+    currentPage,
+    pageSize,
+    t,
+    navigate,
+    refetch,
+    getFieldDraft,
+    updateFieldDraft,
+    saveFieldDraft,
+    handleEmployeeSwitch,
+    setExpandedUserId,
+  };
+
+  const columns = useMemo(
+    () => [
     {
       title: '',
       key: 'expand',
@@ -406,7 +516,8 @@ const Students = () => {
       filterable: false,
       align: 'center' as const,
       render: (_: unknown, record: StudentSummary) => {
-        const open = expandedUserId === record.id;
+        const api = columnsApiRef.current;
+        const open = api.expandedUserId === record.id;
         return (
           <button
             type="button"
@@ -416,7 +527,7 @@ const Students = () => {
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
-              setExpandedUserId((prev) => (prev === record.id ? null : record.id));
+              api.setExpandedUserId((prev) => (prev === record.id ? null : record.id));
             }}
           >
             {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -430,11 +541,14 @@ const Students = () => {
       width: 56,
       fixed: 'left' as const,
       filterable: false,
-      render: (_: unknown, __: StudentSummary, index: number) => (
-        <span className="text-sm font-medium text-muted-foreground">
-          {(currentPage - 1) * pageSize + index + 1}
-        </span>
-      ),
+      render: (_: unknown, __: StudentSummary, index: number) => {
+        const api = columnsApiRef.current;
+        return (
+          <span className="text-sm font-medium text-muted-foreground">
+            {(api.currentPage - 1) * api.pageSize + index + 1}
+          </span>
+        );
+      },
     },
     {
       title: 'Tabel',
@@ -453,7 +567,7 @@ const Students = () => {
             lastName={record.lastName}
             avatarUrl={record.avatarUrl}
             size={28}
-            onUploaded={() => refetch()}
+            onUploaded={() => void columnsApiRef.current.refetch()}
           />
           <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
             <Tag className="max-w-[110px] truncate">{record.personnelNumber || '—'}</Tag>
@@ -478,20 +592,15 @@ const Students = () => {
       filterPlaceholder: 'Ism...',
       getFilterValue: (record: StudentSummary) => record.firstName ?? '',
       render: (_: unknown, record: StudentSummary) => {
-        if (!canEditFields) {
-          return (
-            <span className="text-sm">{record.firstName || '—'}</span>
-          );
-        }
-        const draft = getFieldDraft(record);
+        const api = columnsApiRef.current;
+        const draft = api.getFieldDraft(record);
         return (
-          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
-            <Input
-              value={draft.firstName}
-              onChange={(e) => updateFieldDraft(record, 'firstName', e.target.value)}
-              className="h-8 w-full text-xs"
-            />
-          </div>
+          <EmployeeFieldInput
+            canEdit={api.canEditFields}
+            displayValue={record.firstName ?? ''}
+            value={draft.firstName}
+            onChange={(v) => api.updateFieldDraft(record, 'firstName', v)}
+          />
         );
       },
     },
@@ -503,20 +612,15 @@ const Students = () => {
       filterPlaceholder: 'Familiya...',
       getFilterValue: (record: StudentSummary) => record.lastName ?? '',
       render: (_: unknown, record: StudentSummary) => {
-        if (!canEditFields) {
-          return (
-            <span className="text-sm">{record.lastName || '—'}</span>
-          );
-        }
-        const draft = getFieldDraft(record);
+        const api = columnsApiRef.current;
+        const draft = api.getFieldDraft(record);
         return (
-          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
-            <Input
-              value={draft.lastName}
-              onChange={(e) => updateFieldDraft(record, 'lastName', e.target.value)}
-              className="h-8 w-full text-xs"
-            />
-          </div>
+          <EmployeeFieldInput
+            canEdit={api.canEditFields}
+            displayValue={record.lastName ?? ''}
+            value={draft.lastName}
+            onChange={(v) => api.updateFieldDraft(record, 'lastName', v)}
+          />
         );
       },
     },
@@ -528,20 +632,15 @@ const Students = () => {
       filterPlaceholder: 'Ota ismi...',
       getFilterValue: (record: StudentSummary) => record.middleName ?? '',
       render: (_: unknown, record: StudentSummary) => {
-        if (!canEditFields) {
-          return (
-            <span className="text-sm">{record.middleName || '—'}</span>
-          );
-        }
-        const draft = getFieldDraft(record);
+        const api = columnsApiRef.current;
+        const draft = api.getFieldDraft(record);
         return (
-          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
-            <Input
-              value={draft.middleName}
-              onChange={(e) => updateFieldDraft(record, 'middleName', e.target.value)}
-              className="h-8 w-full text-xs"
-            />
-          </div>
+          <EmployeeFieldInput
+            canEdit={api.canEditFields}
+            displayValue={record.middleName ?? ''}
+            value={draft.middleName}
+            onChange={(v) => api.updateFieldDraft(record, 'middleName', v)}
+          />
         );
       },
     },
@@ -553,20 +652,15 @@ const Students = () => {
       filterPlaceholder: "Bo‘lim...",
       getFilterValue: (record: StudentSummary) => record.division ?? '',
       render: (_: unknown, record: StudentSummary) => {
-        if (!canEditFields) {
-          return (
-            <span className="text-sm">{record.division || '—'}</span>
-          );
-        }
-        const draft = getFieldDraft(record);
+        const api = columnsApiRef.current;
+        const draft = api.getFieldDraft(record);
         return (
-          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
-            <Input
-              value={draft.division}
-              onChange={(e) => updateFieldDraft(record, 'division', e.target.value)}
-              className="h-8 w-full text-xs"
-            />
-          </div>
+          <EmployeeFieldInput
+            canEdit={api.canEditFields}
+            displayValue={record.division ?? ''}
+            value={draft.division}
+            onChange={(v) => api.updateFieldDraft(record, 'division', v)}
+          />
         );
       },
     },
@@ -578,23 +672,20 @@ const Students = () => {
       filterPlaceholder: 'Lavozim...',
       getFilterValue: (record: StudentSummary) => record.post ?? '',
       render: (_: unknown, record: StudentSummary) => {
-        if (!canEditFields) {
-          return <span className="text-sm">{record.post || '—'}</span>;
-        }
-        const draft = getFieldDraft(record);
+        const api = columnsApiRef.current;
+        const draft = api.getFieldDraft(record);
         return (
-          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
-            <Input
-              value={draft.post}
-              onChange={(e) => updateFieldDraft(record, 'post', e.target.value)}
-              className="h-8 w-full text-xs"
-            />
-          </div>
+          <EmployeeFieldInput
+            canEdit={api.canEditFields}
+            displayValue={record.post ?? ''}
+            value={draft.post}
+            onChange={(v) => api.updateFieldDraft(record, 'post', v)}
+          />
         );
       },
     },
     {
-      title: t(T.email),
+      title: columnsApiRef.current.t(T.email),
       key: 'email',
       width: 240,
       ellipsis: true,
@@ -611,7 +702,7 @@ const Students = () => {
       ),
     },
     {
-      title: t(T.xp),
+      title: columnsApiRef.current.t(T.xp),
       key: 'xp',
       width: 100,
       filterable: true,
@@ -624,7 +715,7 @@ const Students = () => {
       ),
     },
     {
-      title: t(T.completed),
+      title: columnsApiRef.current.t(T.completed),
       key: 'completed',
       width: 120,
       filterable: false,
@@ -635,7 +726,7 @@ const Students = () => {
       ),
     },
     {
-      title: t(T.level),
+      title: columnsApiRef.current.t(T.level),
       key: 'level',
       width: 160,
       ellipsis: true,
@@ -650,7 +741,7 @@ const Students = () => {
       ),
     },
     {
-      title: t(T.org),
+      title: columnsApiRef.current.t(T.org),
       key: 'org',
       width: 280,
       ellipsis: true,
@@ -675,30 +766,33 @@ const Students = () => {
       fixed: 'right' as const,
       filterable: false,
       align: 'center' as const,
-      render: (_: unknown, record: StudentSummary) => (
-        <div
-          data-stop-row-click
-          className="flex justify-center"
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <Button
-            size="small"
-            icon={<Eye size={14} />}
-            title={t({
-              uz: "Ko'rish",
-              en: 'View',
-              ru: 'Просмотр',
-            })}
-            aria-label={t({
-              uz: "Ko'rish",
-              en: 'View',
-              ru: 'Просмотр',
-            })}
-            onClick={() => navigate(`/dashboard/employees/${record.id}`)}
-          />
-        </div>
-      ),
+      render: (_: unknown, record: StudentSummary) => {
+        const api = columnsApiRef.current;
+        return (
+          <div
+            data-stop-row-click
+            className="flex justify-center"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <Button
+              size="small"
+              icon={<Eye size={14} />}
+              title={api.t({
+                uz: "Ko'rish",
+                en: 'View',
+                ru: 'Просмотр',
+              })}
+              aria-label={api.t({
+                uz: "Ko'rish",
+                en: 'View',
+                ru: 'Просмотр',
+              })}
+              onClick={() => api.navigate(`/dashboard/employees/${record.id}`)}
+            />
+          </div>
+        );
+      },
     },
     {
       title: 'Saqlash',
@@ -707,28 +801,24 @@ const Students = () => {
       fixed: 'right' as const,
       filterable: false,
       render: (_: unknown, record: StudentSummary) => {
-        if (!canEditFields) return null;
-        const draft = getFieldDraft(record);
+        const api = columnsApiRef.current;
+        const draft = api.getFieldDraft(record);
         const dirty = !fieldsEqual(draft, fieldsFromStudent(record));
         const missing = fieldsMissing(draft);
-        const saving = savingFieldsId === record.id;
+        const saving = savingFieldsIdRef.current === record.id;
         return (
-          <div data-stop-row-click onClick={(e) => e.stopPropagation()}>
-            <Button
-              type="primary"
-              size="small"
-              loading={saving}
-              disabled={!dirty || missing.length > 0 || saving}
-              onClick={() => void saveFieldDraft(record)}
-            >
-              Saqlash
-            </Button>
-          </div>
+          <EmployeeSaveFieldsCell
+            canEdit={api.canEditFields}
+            dirty={dirty}
+            missing={missing}
+            saving={saving}
+            onSave={() => void api.saveFieldDraft(record)}
+          />
         );
       },
     },
     {
-      title: t({
+      title: columnsApiRef.current.t({
         uz: 'Hisobot',
         en: 'Report',
         ru: 'Отчёт',
@@ -738,7 +828,8 @@ const Students = () => {
       fixed: 'right' as const,
       filterable: false,
       render: (_: unknown, record: StudentSummary) => {
-        const checked = empActive.get(record.id) ?? record.reportActive !== false;
+        const api = columnsApiRef.current;
+        const checked = api.empActive.get(record.id) ?? record.reportActive !== false;
         return (
           <div
             data-stop-row-click
@@ -754,14 +845,19 @@ const Students = () => {
             <Switch
               size="small"
               checked={checked}
-              disabled={!canToggleReport || busyId === record.id}
-              onCheckedChange={(next) => handleEmployeeSwitch(record, next)}
+              disabled={!api.canToggleReport || api.busyId === record.id}
+              onCheckedChange={(next) => api.handleEmployeeSwitch(record, next)}
             />
           </div>
         );
       },
     },
-  ];
+  ],
+    // Only lang/t — column renders read drafts/UI via columnsApiRef.
+    // Do NOT depend on fieldDrafts (recreates ColumnDefs → input remount → focus loss).
+    [t],
+  );
+
 
   const showTree = viewMode === 'tree';
   const busy = showTree ? treeLoading : initialLoading;
