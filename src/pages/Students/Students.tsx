@@ -43,7 +43,7 @@ import type { StudentSummary, Level, Organization, UserProfile } from '@/service
 import { can } from '@/utils/can';
 import { isSuperAdmin, readCachedUserRole } from '@/utils/isSuperAdmin';
 import { EmployeesHierarchy } from './EmployeesHierarchy';
-import { EmployeeSafetySection } from './EmployeeSafetySection';
+import { EmployeeListExpandPanel } from './EmployeeListExpandPanel';
 import { cn } from '@/lib/utils';
 import { formatPersonName } from '@/lib/person-name';
 
@@ -330,40 +330,29 @@ const Students = () => {
     {
       title: 'Tabel',
       key: 'personnelNumber',
-      width: 120,
+      width: 200,
       filterable: true,
-      filterPlaceholder: 'Tabel...',
-      getFilterValue: (record: StudentSummary) => record.personnelNumber ?? '',
+      filterPlaceholder: 'Tabel / ism...',
+      getFilterValue: (record: StudentSummary) =>
+        [record.personnelNumber ?? '', formatPersonName(record)].filter(Boolean).join(' '),
       render: (_: unknown, record: StudentSummary) => (
-        <Tag>{record.personnelNumber || '—'}</Tag>
-      ),
-    },
-    {
-      title: t(T.name),
-      key: 'name',
-      filterable: true,
-      filterPlaceholder: 'Ism...',
-      getFilterValue: (record: StudentSummary) => formatPersonName(record),
-      render: (_: unknown, record: StudentSummary) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <EmployeeAvatarUpload
             userId={record.id}
             firstName={record.firstName}
             lastName={record.lastName}
             avatarUrl={record.avatarUrl}
-            size={36}
+            size={32}
             onUploaded={() => refetch()}
           />
-          <div>
-            <p className="font-medium text-foreground">
-              <HighlightText text={formatPersonName(record)} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1">
+              <Tag>{record.personnelNumber || '—'}</Tag>
               {record.role === 'MODERATOR' ? (
-                <Tag className="ml-2" color="blue">
-                  Moderator
-                </Tag>
+                <Tag color="blue">Moderator</Tag>
               ) : null}
-            </p>
-            <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+            </div>
+            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
               {'⚡'.repeat(record.badge?.bolts ?? 1)}{' '}
               {record.badge?.label ?? 'Yangi ishchi'}
             </div>
@@ -566,7 +555,13 @@ const Students = () => {
             onColumnFiltersChange={handleColumnFiltersChange}
             expandedRowKey={expandedUserId}
             expandedRowRender={(record) => (
-              <EmployeeSafetySection userId={record.id} me={me} />
+              <EmployeeListExpandPanel
+                summary={record}
+                me={me}
+                onFieldsSaved={() => {
+                  void refetch();
+                }}
+              />
             )}
             onRow={(record) => {
               const active =
