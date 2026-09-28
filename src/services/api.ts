@@ -648,6 +648,22 @@ export type PlanCalendarMonth = {
   days: PlanCalendarDay[];
 };
 
+export type PlanCalendarYear = {
+  year: string;
+  defaultGoal: number;
+  calendarStart: string;
+  workingDays: number;
+  totalGoal: number;
+  daysOff: number;
+  holidays: { date: string; name: string; isDayOff: boolean }[];
+  months: {
+    month: string;
+    workingDays: number;
+    totalGoal: number;
+    days: PlanCalendarDay[];
+  }[];
+};
+
 export type UserPlanDay = {
   date: string;
   isWeekend: boolean;
@@ -2363,6 +2379,14 @@ class ApiService {
     const response = await this.api.get<PlanCalendarMonth>(
       '/admin/plan-calendar',
       { params: { month } }
+    );
+    return response.data;
+  }
+
+  async getPlanCalendarYear(year?: string): Promise<PlanCalendarYear> {
+    const response = await this.api.get<PlanCalendarYear>(
+      '/admin/plan-calendar/year',
+      { params: { year } }
     );
     return response.data;
   }

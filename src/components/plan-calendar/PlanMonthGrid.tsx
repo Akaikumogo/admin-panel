@@ -23,7 +23,7 @@ const WEEKDAYS = [
   { uz: 'Ya', en: 'Su', ru: 'Вс' },
 ];
 
-function cellTone(day: PlanGridDay, defaultGoal: number): string {
+export function cellTone(day: PlanGridDay, defaultGoal: number): string {
   if (!day.calendarApplies) {
     return 'bg-muted/40 text-muted-foreground border-transparent';
   }

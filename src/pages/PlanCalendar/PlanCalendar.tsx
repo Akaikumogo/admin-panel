@@ -6,6 +6,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Segmented,
   Spin,
   Switch,
   Textarea,
@@ -19,6 +20,9 @@ import {
   PlanMonthGrid,
   PlanMonthNav,
 } from '@/components/plan-calendar/PlanMonthGrid';
+import { PlanYearView } from '@/components/plan-calendar/PlanYearView';
+
+type View = 'month' | 'year';
 
 type EditState = {
   day: PlanCalendarDay;
@@ -44,6 +48,8 @@ const PlanCalendarPage = () => {
   );
   const canEdit = perms.canEdit;
   const [month, setMonth] = useState(() => dayjs().format('YYYY-MM'));
+  const [view, setView] = useState<View>('month');
+  const [year, setYear] = useState(() => dayjs().format('YYYY'));
   const [edit, setEdit] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -143,10 +149,31 @@ const PlanCalendarPage = () => {
             </p>
           ) : null}
         </div>
-        <PlanMonthNav month={month} onChange={setMonth} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented<View>
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'month', label: t({ uz: 'Oylik', en: 'Monthly', ru: 'Месяц' }) },
+              { value: 'year', label: t({ uz: 'Yillik', en: 'Yearly', ru: 'Год' }) },
+            ]}
+          />
+          {view === 'month' ? <PlanMonthNav month={month} onChange={setMonth} /> : null}
+        </div>
       </div>
 
-      {data ? (
+      {view === 'year' ? (
+        <PlanYearView
+          year={year}
+          onYearChange={setYear}
+          onOpenMonth={(m) => {
+            setMonth(m);
+            setView('month');
+          }}
+        />
+      ) : null}
+
+      {view === 'month' && data ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Stat
             icon={<Users size={16} />}
@@ -171,7 +198,13 @@ const PlanCalendarPage = () => {
         </div>
       ) : null}
 
-      <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4">
+      <div
+        className={
+          view === 'month'
+            ? 'bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4'
+            : 'hidden'
+        }
+      >
         {initialLoading || !data ? (
           <div className="flex items-center justify-center h-64">
             <Spin size="large" />
