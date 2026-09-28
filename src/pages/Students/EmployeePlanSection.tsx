@@ -33,7 +33,12 @@ export function EmployeePlanSection({
   me: UserProfile | null;
 }) {
   const { t } = useTranslation();
-  const canEdit = me?.role === 'SUPERADMIN' || me?.role === 'MODERATOR';
+  const { data: perms } = useFetch(
+    ['plan-permissions', me?.id],
+    () => apiService.getPlanPermissions(),
+    { canEdit: false },
+  );
+  const canEdit = perms.canEdit;
   const [month, setMonth] = useState(() => dayjs().format('YYYY-MM'));
   const [normDraft, setNormDraft] = useState<number | null | undefined>(undefined);
   const [edit, setEdit] = useState<{ day: UserPlanDay; goal: number | null; note: string } | null>(null);

@@ -38,6 +38,7 @@ const LogsPage = lazy(() => import('./pages/Logs/Logs'));
 const HeartsAnalyticsPage = lazy(() => import('./pages/HeartsAnalytics/HeartsAnalytics'));
 const ReportsPage = lazy(() => import('./pages/Reports/ReportsPage'));
 const PlanCalendarPage = lazy(() => import('./pages/PlanCalendar/PlanCalendar'));
+const CustomPlansPage = lazy(() => import('./pages/CustomPlans/CustomPlans'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const AnomalozPage = lazy(() => import('./pages/Anomaloz/Anomaloz'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
@@ -222,6 +223,10 @@ export const routes: RouteObject[] = [
           {
             path: 'plan-calendar',
             element: withSuspense(PlanCalendarPage),
+          },
+          {
+            path: 'custom-plans',
+            element: withSuspense(CustomPlansPage),
           },
           {
             path: 'analytics',

@@ -637,6 +637,44 @@ export type UserPlanMonth = {
   days: UserPlanDay[];
 };
 
+export type PlanChangeRow = {
+  id: string;
+  kind: 'CALENDAR_DAY' | 'USER_NORM' | 'USER_DAY';
+  action: 'SET' | 'RESET';
+  day: string | null;
+  oldGoal: number | null;
+  newGoal: number | null;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  createdAt: string;
+  actorId: string | null;
+  actorName: string | null;
+  actorRole: string | null;
+  targetUserId: string | null;
+  targetName: string | null;
+  targetOrgName: string | null;
+};
+
+export type PlanChangesResponse = {
+  data: PlanChangeRow[];
+  total: number;
+  page: number;
+  limit: number;
+  actors: Array<{ id: string; name: string }>;
+};
+
+export type CustomPlanRow = {
+  userId: string;
+  fullName: string;
+  orgName: string | null;
+  dailyPlanGoal: number | null;
+  upcomingDays: Array<{ day: string; goal: number }>;
+  lastChangedAt: string | null;
+  lastChangedBy: string | null;
+};
+
+export type CustomPlansResponse = { today: string; users: CustomPlanRow[] };
+
 export type BranchMonthlyProgressEmployee = {
   userId: string;
   fullName: string;
@@ -2258,6 +2296,34 @@ class ApiService {
   }
 
   // ===== Plan kalendari =====
+  async getPlanPermissions(): Promise<{ canEdit: boolean }> {
+    const response = await this.api.get<{ canEdit: boolean }>(
+      '/admin/plan-calendar/permissions'
+    );
+    return response.data;
+  }
+
+  async getPlanChanges(params: {
+    page?: number;
+    limit?: number;
+    kind?: string;
+    actorId?: string;
+    search?: string;
+  }): Promise<PlanChangesResponse> {
+    const response = await this.api.get<PlanChangesResponse>(
+      '/admin/plan-calendar/changes',
+      { params }
+    );
+    return response.data;
+  }
+
+  async getCustomPlans(): Promise<CustomPlansResponse> {
+    const response = await this.api.get<CustomPlansResponse>(
+      '/admin/plan-calendar/custom-plans'
+    );
+    return response.data;
+  }
+
   async getPlanCalendar(month?: string): Promise<PlanCalendarMonth> {
     const response = await this.api.get<PlanCalendarMonth>(
       '/admin/plan-calendar',

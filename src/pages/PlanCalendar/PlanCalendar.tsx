@@ -14,7 +14,6 @@ import {
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, { type PlanCalendarDay } from '@/services/api';
-import { isSuperAdmin } from '@/utils/isSuperAdmin';
 import {
   PlanLegend,
   PlanMonthGrid,
@@ -38,7 +37,12 @@ function errorText(e: unknown, fallback: string): string {
 
 const PlanCalendarPage = () => {
   const { t } = useTranslation();
-  const canEdit = isSuperAdmin();
+  const { data: perms } = useFetch(
+    ['plan-permissions'],
+    () => apiService.getPlanPermissions(),
+    { canEdit: false },
+  );
+  const canEdit = perms.canEdit;
   const [month, setMonth] = useState(() => dayjs().format('YYYY-MM'));
   const [edit, setEdit] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -129,6 +133,15 @@ const PlanCalendarPage = () => {
               ru: 'Дневной план для всех сотрудников с включённым отчётом. Выходные и праздники — 0 автоматически. Нажмите на день, чтобы изменить норму для всех; личная норма — на странице сотрудника.',
             })}
           </p>
+          {!canEdit ? (
+            <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+              {t({
+                uz: 'Faqat ko‘rish: planni markaziy apparat xodimlari o‘zgartiradi.',
+                en: 'View only: plans are changed by head-office staff.',
+                ru: 'Только просмотр: план меняют сотрудники центрального аппарата.',
+              })}
+            </p>
+          ) : null}
         </div>
         <PlanMonthNav month={month} onChange={setMonth} />
       </div>

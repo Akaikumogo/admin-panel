@@ -32,6 +32,7 @@ import {
   BadgeCheck,
   ClipboardCheck,
   CalendarDays,
+  UserCog,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -219,6 +220,11 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/plan-calendar',
         label: { uz: 'Plan kalendari', en: 'Plan calendar', ru: 'Календарь плана' },
         icon: CalendarDays,
+      },
+      {
+        path: '/dashboard/custom-plans',
+        label: { uz: 'Custom plans', en: 'Custom plans', ru: 'Custom plans' },
+        icon: UserCog,
       },
       {
         path: '/dashboard/hearts-analytics',
@@ -511,6 +517,7 @@ const Layout = () => {
           item.path !== '/dashboard/permissions' &&
           item.path !== '/dashboard/exam-analysis' &&
           item.path !== '/dashboard/anomaloz' &&
+          item.path !== '/dashboard/custom-plans' &&
           (hasNesSyncPerm || item.path !== '/dashboard/nes-sync') &&
           (hasTelegramBotPerm || item.path !== '/dashboard/telegram-bot') &&
           (hasAudioPerm || item.path !== '/dashboard/audio-library'),
@@ -548,6 +555,7 @@ const Layout = () => {
       (location.pathname === '/dashboard/telegram-bot' &&
         !hasTelegramBotView) ||
       location.pathname === '/dashboard/anomaloz' ||
+      location.pathname === '/dashboard/custom-plans' ||
       (location.pathname === '/dashboard/nes-sync' && !hasNesSyncView) ||
       location.pathname === '/dashboard/exam-analysis' ||
       (location.pathname === '/dashboard/audio-library' &&
