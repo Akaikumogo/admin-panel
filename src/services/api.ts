@@ -400,6 +400,41 @@ export type TelegramBotMessage = {
   createdAt: string;
 };
 
+export type TelegramNewsHistoryRow = {
+  id: string;
+  mode: 'TEST' | 'ALL';
+  status: 'RUNNING' | 'DONE' | 'FAILED';
+  total: number;
+  sent: number;
+  failed: number;
+  blocked: number;
+  error: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+  startedBy: string | null;
+  testChatName: string | null;
+};
+
+export type TelegramNewsItem = {
+  key: string;
+  title: string;
+  description: string;
+  slides: number;
+  recipients: number;
+  sent: number;
+  blocked: number;
+  failed: number;
+  pending: number;
+  running: boolean;
+  hasSuccessfulTest: boolean;
+  history: TelegramNewsHistoryRow[];
+};
+
+export type TelegramNewsResponse = {
+  recipients: number;
+  items: TelegramNewsItem[];
+};
+
 export type UserProfile = {
   id: string;
   email: string;
@@ -2845,6 +2880,36 @@ class ApiService {
       '/admin/telegram-bot/broadcast-report'
     );
     return response.data as { ok: boolean };
+  }
+
+  async getTelegramNews(): Promise<TelegramNewsResponse> {
+    const response = await this.api.get<TelegramNewsResponse>(
+      '/admin/telegram-news'
+    );
+    return response.data;
+  }
+
+  async getTelegramNewsSlide(key: string, index: number): Promise<Blob> {
+    const response = await this.api.get(
+      `/admin/telegram-news/${encodeURIComponent(key)}/slides/${index}`,
+      { responseType: 'blob' }
+    );
+    return response.data as Blob;
+  }
+
+  async sendTelegramNewsTest(key: string, chatRowId: string) {
+    const response = await this.api.post(
+      `/admin/telegram-news/${encodeURIComponent(key)}/test`,
+      { chatRowId }
+    );
+    return response.data as { ok: boolean };
+  }
+
+  async broadcastTelegramNews(key: string) {
+    const response = await this.api.post(
+      `/admin/telegram-news/${encodeURIComponent(key)}/broadcast`
+    );
+    return response.data as { ok: boolean; total: number };
   }
 
   async exportOAuthEnvBundle() {

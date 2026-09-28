@@ -11,7 +11,9 @@ import {
   Users,
   User,
   Bell,
+  Megaphone,
 } from 'lucide-react';
+import TelegramNewsModal from './TelegramNewsModal';
 import { Button, Input, Switch, Tag, Textarea, message } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
@@ -106,6 +108,7 @@ export default function TelegramBotPage() {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
+  const [newsOpen, setNewsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -341,8 +344,21 @@ export default function TelegramBotPage() {
             <ImageIcon className="mr-1.5 h-4 w-4" />
             {t(T.broadcast)}
           </Button>
+          {isSuperAdmin() && (
+            <Button size="sm" onClick={() => setNewsOpen(true)}>
+              <Megaphone className="mr-1.5 h-4 w-4" />
+              Yangilik tarqatish
+            </Button>
+          )}
         </div>
       </div>
+      {isSuperAdmin() && (
+        <TelegramNewsModal
+          open={newsOpen}
+          onClose={() => setNewsOpen(false)}
+          chats={chats}
+        />
+      )}
       <p className="text-xs text-muted-foreground -mt-2">
         {t(T.webNotifHint)}
         {getBrowserNotificationPermission() === 'denied'
