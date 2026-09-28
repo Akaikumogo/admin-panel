@@ -16,6 +16,7 @@ import type {
 import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
 import { EmployeeCertificateSection } from './EmployeeCertificateSection';
 import { EmployeeSafetySection } from './EmployeeSafetySection';
+import { EmployeePlanSection } from './EmployeePlanSection';
 import { StudentFieldsEditor } from './StudentFieldsEditor';
 import type { UserProfile } from '@/services/api';
 import { formatPersonName } from '@/lib/person-name';
@@ -348,6 +349,8 @@ const StudentDetailPage = () => {
 
       {/* Safety / certification (manual) */}
       <EmployeeSafetySection userId={student.id} me={me} />
+
+      <EmployeePlanSection userId={student.id} me={me} />
 
       {/* Personal plan matrix */}
       <div className="bg-card border border-border rounded-lg p-6 min-w-0 overflow-hidden">

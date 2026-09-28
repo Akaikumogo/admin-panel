@@ -591,6 +591,52 @@ export type BranchDailyPlanResult = {
   }>;
 };
 
+export type PlanCalendarDay = {
+  date: string;
+  isWeekend: boolean;
+  isDayOff: boolean;
+  holidayName: string | null;
+  customGoal: number | null;
+  goal: number;
+  note: string | null;
+  source: 'HOLIDAY' | 'ADMIN' | null;
+  hasOverride: boolean;
+  calendarApplies: boolean;
+};
+
+export type PlanCalendarMonth = {
+  month: string;
+  defaultGoal: number;
+  calendarStart: string;
+  workingDays: number;
+  totalGoal: number;
+  days: PlanCalendarDay[];
+};
+
+export type UserPlanDay = {
+  date: string;
+  isWeekend: boolean;
+  isDayOff: boolean;
+  holidayName: string | null;
+  baseGoal: number;
+  userGoal: number | null;
+  note: string | null;
+  goal: number;
+  calendarApplies: boolean;
+};
+
+export type UserPlanMonth = {
+  userId: string;
+  fullName: string;
+  month: string;
+  defaultGoal: number;
+  dailyPlanGoal: number | null;
+  calendarStart: string;
+  workingDays: number;
+  totalGoal: number;
+  days: UserPlanDay[];
+};
+
 export type BranchMonthlyProgressEmployee = {
   userId: string;
   fullName: string;
@@ -634,6 +680,8 @@ export type MonthlyPlanMatrixEmployee = {
   fullName: string;
   email: string;
   daysCompleted: number;
+  /** Plan > 0 bo'lgan kunlar soni (dam olish kunlari kirmaydi). */
+  plannedDays?: number;
   monthlyPercent: number;
   extraCorrectTotal: number;
   attemptsTotal?: number;
@@ -657,6 +705,8 @@ export type MonthlyPlanMatrix = {
   averageMonthlyPercent: number;
   fullCompletedEmployees: number;
   employees: MonthlyPlanMatrixEmployee[];
+  /** Kun bo'yicha umumiy plan (0 = dam olish / bayram). */
+  dayGoals?: Array<{ date: string; goal: number }>;
 };
 
 export type YearlyPlanMatrixMonthCell = {
@@ -2205,6 +2255,55 @@ class ApiService {
       { params }
     );
     return response.data;
+  }
+
+  // ===== Plan kalendari =====
+  async getPlanCalendar(month?: string): Promise<PlanCalendarMonth> {
+    const response = await this.api.get<PlanCalendarMonth>(
+      '/admin/plan-calendar',
+      { params: { month } }
+    );
+    return response.data;
+  }
+
+  async setPlanCalendarDay(
+    day: string,
+    data: {
+      goal?: number | null;
+      isDayOff?: boolean | null;
+      holidayName?: string | null;
+      note?: string | null;
+    }
+  ): Promise<void> {
+    await this.api.put(`/admin/plan-calendar/days/${day}`, data);
+  }
+
+  async resetPlanCalendarDay(day: string): Promise<void> {
+    await this.api.delete(`/admin/plan-calendar/days/${day}`);
+  }
+
+  async getUserPlan(userId: string, month?: string): Promise<UserPlanMonth> {
+    const response = await this.api.get<UserPlanMonth>(
+      `/admin/plan-calendar/users/${userId}`,
+      { params: { month } }
+    );
+    return response.data;
+  }
+
+  async setUserPlanNorm(userId: string, goal: number | null): Promise<void> {
+    await this.api.patch(`/admin/plan-calendar/users/${userId}/norm`, { goal });
+  }
+
+  async setUserPlanDay(
+    userId: string,
+    day: string,
+    data: { goal: number; note?: string | null }
+  ): Promise<void> {
+    await this.api.put(`/admin/plan-calendar/users/${userId}/days/${day}`, data);
+  }
+
+  async resetUserPlanDay(userId: string, day: string): Promise<void> {
+    await this.api.delete(`/admin/plan-calendar/users/${userId}/days/${day}`);
   }
 
   async getMonthlyPlanMatrix(params: {

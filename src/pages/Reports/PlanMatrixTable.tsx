@@ -333,7 +333,11 @@ function PlanMatrixTableBase({
       if (!dayKeys.length && highlightDate) dayKeys = [highlightDate];
     }
 
+    const dayGoalMap = new Map(
+      (mData.dayGoals ?? []).map((g) => [g.date, g.goal]),
+    );
     const dayCols = dayKeys.map((d) => {
+      const dayGoal = dayGoalMap.get(d) ?? goal;
       const title =
         period === 'daily'
           ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`
@@ -347,7 +351,9 @@ function PlanMatrixTableBase({
         onHeaderCell: () =>
           highlightDate && d === highlightDate
             ? { className: 'bg-sky-50 dark:bg-sky-950/30' }
-            : {},
+            : dayGoal === 0
+              ? { className: 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-300' }
+              : {},
         render: (_: unknown, row: MonthlyPlanMatrixEmployee) => {
           const found = dayCellMaps
             ?.get(`${row.orgId ?? ''}:${row.userId}`)
@@ -361,7 +367,7 @@ function PlanMatrixTableBase({
             attempts: 0,
             wrong: 0,
             completed: false,
-            label: `0/${goal}`,
+            label: dayGoal > 0 ? `0/${dayGoal}` : '—',
           };
           const tip = t({
             uz: `Sana: ${cell.date}\nReja: ${cell.label}\nUrinish: ${cell.attempts ?? 0} · Xato: ${cell.wrong ?? 0} · Plandan tashqari: ${cell.extraCorrect ?? Math.max(0, cell.rawCorrect - goal)}`,
@@ -398,9 +404,9 @@ function PlanMatrixTableBase({
         width: 110,
         fixed: 'right' as const,
         filterable: false as const,
-        render: (v: number) => (
+        render: (v: number, row: MonthlyPlanMatrixEmployee) => (
           <span className="font-semibold tabular-nums">
-            {v}/{daysInMonth}
+            {v}/{row.plannedDays ?? daysInMonth}
           </span>
         ),
       },

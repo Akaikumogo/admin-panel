@@ -31,6 +31,7 @@ import {
   Bell,
   BadgeCheck,
   ClipboardCheck,
+  CalendarDays,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -213,6 +214,11 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/reports',
         label: { uz: 'Hisobotlar', en: 'Reports', ru: 'Отчёты' },
         icon: FileSpreadsheet,
+      },
+      {
+        path: '/dashboard/plan-calendar',
+        label: { uz: 'Plan kalendari', en: 'Plan calendar', ru: 'Календарь плана' },
+        icon: CalendarDays,
       },
       {
         path: '/dashboard/hearts-analytics',
