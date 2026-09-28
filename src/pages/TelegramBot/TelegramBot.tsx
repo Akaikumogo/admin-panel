@@ -12,8 +12,9 @@ import {
   User,
   Bell,
   Megaphone,
+  Newspaper,
 } from 'lucide-react';
-import TelegramNewsModal from './TelegramNewsModal';
+import NewsPickerModal from './NewsPickerModal';
 import { Button, Input, Switch, Tag, Textarea, message } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
@@ -108,7 +109,7 @@ export default function TelegramBotPage() {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
-  const [newsOpen, setNewsOpen] = useState(false);
+  const [newsPickerOpen, setNewsPickerOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -345,18 +346,23 @@ export default function TelegramBotPage() {
             {t(T.broadcast)}
           </Button>
           {isSuperAdmin() && (
-            <Button size="sm" onClick={() => setNewsOpen(true)}>
+            <Button size="sm" onClick={() => navigate('/dashboard/telegram-news')}>
               <Megaphone className="mr-1.5 h-4 w-4" />
-              Yangilik tarqatish
+              Telegram News
             </Button>
           )}
         </div>
       </div>
       {isSuperAdmin() && (
-        <TelegramNewsModal
-          open={newsOpen}
-          onClose={() => setNewsOpen(false)}
-          chats={chats}
+        <NewsPickerModal
+          open={newsPickerOpen}
+          chatRowId={selectedId}
+          chatName={selectedChat?.displayName ?? 'chat'}
+          onClose={() => setNewsPickerOpen(false)}
+          onSent={async () => {
+            if (selectedId) await loadMessages(selectedId);
+            await loadChats();
+          }}
         />
       )}
       <p className="text-xs text-muted-foreground -mt-2">
@@ -649,14 +655,25 @@ export default function TelegramBotPage() {
                     }}
                     className="min-h-[44px] flex-1 resize-none"
                   />
-                  <Button
-                    disabled={sending || !reply.trim()}
-                    onClick={() => void onSendReply()}
-                    className="self-end"
-                  >
-                    <Send className="mr-1.5 h-4 w-4" />
-                    {t(T.send)}
-                  </Button>
+                  <div className="flex flex-col gap-1.5 self-end">
+                    <Button
+                      disabled={sending || !reply.trim()}
+                      onClick={() => void onSendReply()}
+                    >
+                      <Send className="mr-1.5 h-4 w-4" />
+                      {t(T.send)}
+                    </Button>
+                    {isSuperAdmin() && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNewsPickerOpen(true)}
+                      >
+                        <Newspaper className="mr-1.5 h-4 w-4" />
+                        News
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </>

@@ -33,6 +33,7 @@ import {
   ClipboardCheck,
   CalendarDays,
   UserCog,
+  Megaphone,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -136,6 +137,11 @@ const navGroups: NavGroup[] = [
         icon: ScrollText,
       },
       telegramBotNavItem,
+      {
+        path: '/dashboard/telegram-news',
+        label: { uz: 'Telegram News', en: 'Telegram News', ru: 'Telegram News' },
+        icon: Megaphone,
+      },
     ],
   },
   {
@@ -518,6 +524,7 @@ const Layout = () => {
           item.path !== '/dashboard/exam-analysis' &&
           item.path !== '/dashboard/anomaloz' &&
           item.path !== '/dashboard/custom-plans' &&
+          item.path !== '/dashboard/telegram-news' &&
           (hasNesSyncPerm || item.path !== '/dashboard/nes-sync') &&
           (hasTelegramBotPerm || item.path !== '/dashboard/telegram-bot') &&
           (hasAudioPerm || item.path !== '/dashboard/audio-library'),
@@ -556,6 +563,7 @@ const Layout = () => {
         !hasTelegramBotView) ||
       location.pathname === '/dashboard/anomaloz' ||
       location.pathname === '/dashboard/custom-plans' ||
+      location.pathname === '/dashboard/telegram-news' ||
       (location.pathname === '/dashboard/nes-sync' && !hasNesSyncView) ||
       location.pathname === '/dashboard/exam-analysis' ||
       (location.pathname === '/dashboard/audio-library' &&

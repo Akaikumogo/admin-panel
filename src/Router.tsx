@@ -50,6 +50,7 @@ const ArchiveEmployeesPage = lazy(() => import('./pages/Archive/ArchiveEmployees
 const UserActivityPage = lazy(() => import('./pages/UserActivity/UserActivity'));
 const ImportExportPage = lazy(() => import('./pages/ImportExport/ImportExport'));
 const TelegramBotPage = lazy(() => import('./pages/TelegramBot/TelegramBot'));
+const TelegramNewsPage = lazy(() => import('./pages/TelegramNews/TelegramNews'));
 const AnalyticsLayout = lazy(() => import('./pages/Analytics'));
 const ExecutiveDashboard = lazy(() => import('./pages/Analytics/ExecutiveDashboard'));
 const BranchDetail = lazy(() => import('./pages/Analytics/BranchDetail'));
@@ -252,6 +253,10 @@ export const routes: RouteObject[] = [
           {
             path: 'telegram-bot',
             element: withSuspense(TelegramBotPage)
+          },
+          {
+            path: 'telegram-news',
+            element: withSuspense(TelegramNewsPage)
           },
           {
             path: 'branch-analytics',

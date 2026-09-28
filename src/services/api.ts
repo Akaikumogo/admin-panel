@@ -428,6 +428,15 @@ export type TelegramNewsItem = {
   running: boolean;
   hasSuccessfulTest: boolean;
   history: TelegramNewsHistoryRow[];
+  /** true = tizim newsi (koddagi rasmlar), false = superadmin yaratgan. */
+  builtin: boolean;
+  postId: string | null;
+  body: string | null;
+  images: { url: string; fileName: string }[];
+  withAppButton: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+  createdBy: string | null;
 };
 
 export type TelegramNewsResponse = {
@@ -2921,11 +2930,30 @@ class ApiService {
     return response.data as Blob;
   }
 
-  async sendTelegramNewsTest(key: string, chatRowId: string) {
+  async sendTelegramNewsToChat(key: string, chatRowId: string) {
     const response = await this.api.post(
-      `/admin/telegram-news/${encodeURIComponent(key)}/test`,
+      `/admin/telegram-news/${encodeURIComponent(key)}/send`,
       { chatRowId }
     );
+    return response.data as { ok: boolean };
+  }
+
+  async createTelegramNewsPost(form: FormData) {
+    const response = await this.api.post('/admin/telegram-news/posts', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as { ok: boolean; id: string; key: string };
+  }
+
+  async updateTelegramNewsPost(id: string, form: FormData) {
+    const response = await this.api.put(`/admin/telegram-news/posts/${id}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as { ok: boolean };
+  }
+
+  async deleteTelegramNewsPost(id: string) {
+    const response = await this.api.delete(`/admin/telegram-news/posts/${id}`);
     return response.data as { ok: boolean };
   }
 
