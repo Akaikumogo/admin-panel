@@ -445,6 +445,7 @@ export type TelegramNewsResponse = {
 };
 
 export type UserProfile = {
+  adminAccess?: boolean;
   id: string;
   email: string;
   firstName: string;

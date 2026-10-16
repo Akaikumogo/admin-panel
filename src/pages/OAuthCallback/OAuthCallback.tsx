@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Spin } from '@/components/ui';
 import apiService from '@/services/api';
 
-const MOBILE_APP_URL = 'https://elektrolearn-mobile.uzbekistonmet.uz';
+// Mobile shu domenda (__app=mobile cookie orqali server/index.js proxy qiladi).
+const MOBILE_APP_URL = '/mobile/learn';
 const REDIRECT_SECONDS = 5;
 
 function resolveCallbackRedirectUri() {
@@ -78,7 +79,7 @@ const OAuthCallbackPage = () => {
 
     void (async () => {
       try {
-        await apiService.exchangeAdminEnergoIdCode(
+        const result = await apiService.exchangeAdminEnergoIdCode(
           code,
           redirectUri,
           state,
@@ -86,6 +87,11 @@ const OAuthCallbackPage = () => {
           codeVerifier,
         );
         clearOAuthStorage();
+        if (result?.data?.user?.adminAccess === false) {
+          // Tokenlar saqlandi - mobile qayta login so'ramaydi.
+          window.location.replace(MOBILE_APP_URL);
+          return;
+        }
         navigate('/dashboard/home', { replace: true });
       } catch (e) {
         clearOAuthStorage();

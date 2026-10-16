@@ -16,6 +16,65 @@ const FALLBACK_TARGET = new URL(
   process.env.API_FALLBACK ?? 'https://elektrolearn-api.uzbekistonmet.uz',
 );
 const DIST = path.resolve(__dirname, '../dist');
+/** Mobile ilova (shu domenda __app=mobile cookie orqali ochiladi). */
+const MOBILE_TARGET = new URL(
+  process.env.MOBILE_TARGET ?? 'http://127.0.0.1:15163',
+);
+const APP_COOKIE = '__app';
+
+function cookieApp(req) {
+  const match = /(?:^|;\s*)__app=(\w+)/.exec(req.headers.cookie || '');
+  return match && (match[1] === 'mobile' || match[1] === 'admin')
+    ? match[1]
+    : null;
+}
+
+function appCookie(app) {
+  return `${APP_COOKIE}=${app}; Path=/; SameSite=Lax`;
+}
+
+function redirect(res, location, cookie) {
+  const headers = { Location: location, 'Cache-Control': 'no-store' };
+  if (cookie) headers['Set-Cookie'] = cookie;
+  res.writeHead(302, headers);
+  res.end();
+}
+
+/** Admin login/OAuth sahifalari doim admin panelda ochiladi. */
+function isAdminForcedPath(pathname) {
+  return (
+    pathname === '/login' ||
+    pathname === '/oauth/callback' ||
+    pathname.startsWith('/oauth/callback/')
+  );
+}
+
+function proxyApp(req, res, target) {
+  const headers = { ...req.headers, host: target.host };
+  delete headers.connection;
+  const upstream = clientFor(target).request(
+    {
+      hostname: target.hostname,
+      port: portFor(target),
+      path: req.url,
+      method: req.method,
+      headers,
+    },
+    (upstreamResponse) => {
+      res.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers);
+      upstreamResponse.pipe(res);
+    },
+  );
+  upstream.on('error', (error) => {
+    console.error('[proxy:mobile]', target.origin, req.url, error.message);
+    if (!res.headersSent) {
+      res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
+    }
+    res.end('Mobile ilova bilan aloqa yo\'q (' + target.origin + ')');
+  });
+  res.on('close', () => upstream.destroy());
+  req.pipe(upstream);
+}
 
 const MIME = {
   '.css': 'text/css; charset=utf-8',
@@ -250,10 +309,38 @@ function securityHeaders(contentType, cacheControl = 'no-cache') {
 }
 
 const server = http.createServer((req, res) => {
-  if (isBackendPath(req.url)) {
+  const url = req.url || '/';
+  const pathname = url.split('?')[0];
+
+  // /mobile/xxx yoki /admin/xxx -> cookie o'rnatiladi va /xxx ga yo'naltiriladi.
+  const entry = /^\/(mobile|admin)(?=\/|\?|$)/.exec(url);
+  if (entry) {
+    let rest = url.slice(entry[0].length) || '/';
+    if (rest.startsWith('?')) rest = '/' + rest;
+    redirect(res, rest, appCookie(entry[1]));
+    return;
+  }
+
+  // API / uploads / socket.io doim backendga.
+  if (isBackendPath(url)) {
     proxyHttp(req, res);
     return;
   }
+
+  // Admin login va OAuth callback doim admin panel.
+  if (isAdminForcedPath(pathname)) {
+    if (cookieApp(req) === 'mobile') {
+      res.setHeader('Set-Cookie', appCookie('admin'));
+    }
+    sendStatic(req, res);
+    return;
+  }
+
+  if (cookieApp(req) === 'mobile') {
+    proxyApp(req, res, MOBILE_TARGET);
+    return;
+  }
+
   sendStatic(req, res);
 });
 
@@ -269,4 +356,5 @@ server.listen(PORT, HOST, () => {
   console.log(`ElektroLearn admin: http://${HOST}:${PORT}`);
   console.log(`Backend primary   : ${PRIMARY_TARGET.origin}`);
   console.log(`Backend fallback  : ${FALLBACK_TARGET.origin}`);
+  console.log(`Mobile (cookie)   : ${MOBILE_TARGET.origin}`);
 });
