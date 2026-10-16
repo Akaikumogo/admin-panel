@@ -34,7 +34,6 @@ import {
   CalendarDays,
   UserCog,
   Megaphone,
-  Smartphone,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -732,17 +731,6 @@ const Layout = () => {
                 )
               }
             />
-            {me && me.role !== 'USER' && me.adminAccess !== false ? (
-              <a
-                href="/mobile/learn"
-                title="Mobile"
-                aria-label="Mobile"
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                <Smartphone size={15} strokeWidth={1.75} />
-                <span>Mobile</span>
-              </a>
-            ) : null}
             <ThemeToggle />
             <Select
               value={lang}

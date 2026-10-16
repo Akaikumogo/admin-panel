@@ -22,6 +22,42 @@ const MOBILE_TARGET = new URL(
 );
 const APP_COOKIE = '__app';
 
+/* Navigator uslubidagi admin <-> mobile switcher (server/switcher.js). */
+const SWITCHER_FILE = path.resolve(__dirname, 'switcher.js');
+const SWITCHER_PATH = '/__switcher.js';
+
+function injectSwitcher(html, app) {
+  const text = Buffer.isBuffer(html) ? html.toString('utf8') : String(html);
+  if (text.includes(SWITCHER_PATH)) return text;
+  const tag = `<script src="${SWITCHER_PATH}" data-app="${app}" defer></script>`;
+  const index = text.lastIndexOf('</body>');
+  return index >= 0 ? text.slice(0, index) + tag + text.slice(index) : text + tag;
+}
+
+function sendSwitcher(res) {
+  fs.readFile(SWITCHER_FILE, (error, data) => {
+    if (error) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('switcher topilmadi');
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'text/javascript; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    res.end(data);
+  });
+}
+
+function wantsHtml(req) {
+  return (
+    req.method === 'GET' &&
+    ((req.headers.accept || '').includes('text/html') ||
+      req.headers['sec-fetch-dest'] === 'document')
+  );
+}
+
 function cookieApp(req) {
   const match = /(?:^|;\s*)__app=(\w+)/.exec(req.headers.cookie || '');
   return match && (match[1] === 'mobile' || match[1] === 'admin')
@@ -52,6 +88,12 @@ function isAdminForcedPath(pathname) {
 function proxyApp(req, res, target) {
   const headers = { ...req.headers, host: target.host };
   delete headers.connection;
+  const isDoc = wantsHtml(req);
+  if (isDoc) {
+    delete headers['accept-encoding'];
+    delete headers['if-none-match'];
+    delete headers['if-modified-since'];
+  }
   const upstream = clientFor(target).request(
     {
       hostname: target.hostname,
@@ -61,6 +103,24 @@ function proxyApp(req, res, target) {
       headers,
     },
     (upstreamResponse) => {
+      const type = String(upstreamResponse.headers['content-type'] || '');
+      const encoded = Boolean(upstreamResponse.headers['content-encoding']);
+      if (isDoc && type.includes('text/html') && !encoded) {
+        const chunks = [];
+        upstreamResponse.on('data', (chunk) => chunks.push(chunk));
+        upstreamResponse.on('end', () => {
+          const html = injectSwitcher(Buffer.concat(chunks), 'mobile');
+          const out = { ...upstreamResponse.headers };
+          delete out.etag;
+          delete out['last-modified'];
+          out['cache-control'] = 'no-store';
+          out['content-length'] = String(Buffer.byteLength(html));
+          res.writeHead(upstreamResponse.statusCode ?? 200, out);
+          res.end(html);
+        });
+        upstreamResponse.on('error', () => res.destroy());
+        return;
+      }
       res.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers);
       upstreamResponse.pipe(res);
     },
@@ -276,7 +336,7 @@ function sendStatic(req, res) {
           return;
         }
         res.writeHead(200, securityHeaders('text/html; charset=utf-8'));
-        res.end(indexHtml);
+        res.end(injectSwitcher(indexHtml, 'admin'));
       });
       return;
     }
@@ -287,7 +347,7 @@ function sendStatic(req, res) {
       ? 'no-cache'
       : 'public, max-age=31536000, immutable';
     res.writeHead(200, securityHeaders(contentType, cacheControl));
-    res.end(data);
+    res.end(contentType.startsWith('text/html') ? injectSwitcher(data, 'admin') : data);
   });
 }
 
@@ -311,6 +371,12 @@ function securityHeaders(contentType, cacheControl = 'no-cache') {
 const server = http.createServer((req, res) => {
   const url = req.url || '/';
   const pathname = url.split('?')[0];
+
+  // Switcher skripti (admin ham, mobile cookie bo'lsa ham shu serverdan).
+  if (pathname === SWITCHER_PATH) {
+    sendSwitcher(res);
+    return;
+  }
 
   // /mobile/xxx yoki /admin/xxx -> cookie o'rnatiladi va /xxx ga yo'naltiriladi.
   const entry = /^\/(mobile|admin)(?=\/|\?|$)/.exec(url);
