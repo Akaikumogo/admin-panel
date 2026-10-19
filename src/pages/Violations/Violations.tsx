@@ -139,7 +139,7 @@ export default function ViolationsPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="page-stack">
       <PageHeader
         icon={ShieldAlert}
         title={t(T.title)}

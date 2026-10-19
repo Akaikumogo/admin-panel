@@ -478,10 +478,8 @@ export function DataTable<T extends Record<string, unknown>>({
           'sticky overflow-hidden shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)]',
           !isFlat && 'border-l border-border',
         ),
-      fixed === 'left' &&
-        (isHeader ? 'bg-[var(--table-header)]' : 'bg-[var(--table-surface)]'),
-      fixed === 'right' &&
-        (isHeader ? 'bg-[var(--table-header)]' : 'bg-[var(--table-surface)]'),
+      fixed === 'left' && 'bg-[var(--table-surface)]',
+      fixed === 'right' && 'bg-[var(--table-surface)]',
       isHeader && fixed && 'z-40',
     );
 
@@ -557,7 +555,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 : { width: '100%' }
           }
         >
-          <TableHeader className="sticky top-0 z-[45] bg-[var(--table-header)]">
+          <TableHeader className="sticky top-0 z-[45] bg-[var(--table-surface)]">
             {groupedHeaders ? (
               <>
                 <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'hover:bg-transparent')}>

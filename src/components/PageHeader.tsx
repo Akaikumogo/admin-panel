@@ -24,21 +24,21 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        'flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between',
+        'flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between',
         className,
       )}
     >
       <div className="min-w-0">
         {Icon ? (
-          <div className="mb-2 inline-flex items-center gap-2 text-muted-foreground">
-            <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+          <div className="mb-1.5 inline-flex items-center gap-2 text-muted-foreground">
+            <Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
           </div>
         ) : null}
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance md:text-[28px] md:leading-tight">
+        <h1 className="text-[22px] font-semibold tracking-tight text-foreground text-balance md:text-2xl md:leading-tight">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1.5 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-1 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
             {description}
           </p>
         ) : null}

@@ -298,7 +298,7 @@ const Organizations = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title={t(T.title)}
         description={t({

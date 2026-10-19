@@ -167,6 +167,14 @@ body {
 
 /* SCHETCHIK shell — document scroll (body lock yo‘q) */
 
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
@@ -392,21 +400,22 @@ body {
   min-width: 280px;
 }
 
-/* Enterprise jadval — tokenlar orqali, joylashuv o‘zgarmaydi */
+/* Enterprise jadval — quiet rules, no zebra bands */
 .enterprise-table {
   background: var(--table-surface);
 }
 
 .enterprise-table thead {
-  background: var(--table-header);
+  background: transparent;
 }
 
 .enterprise-table thead th {
   font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted-foreground);
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
 }
 
 .enterprise-table tbody tr {
@@ -415,6 +424,11 @@ body {
 
 .enterprise-table tbody tr:hover {
   background: var(--table-row-hover);
+}
+
+.enterprise-table tbody td {
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+  font-size: 0.8125rem;
 }
 
 .enterprise-table input,
