@@ -654,15 +654,15 @@ const Layout = () => {
             )}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold tracking-tight">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-[13px] font-bold tracking-tight">
               EL
             </span>
             {!isCollapsed && (
               <span className="min-w-0">
                 <span className="block truncate text-[15px] font-semibold tracking-tight text-foreground">
-                  Elektrolearn
+                  ElektroLearn
                 </span>
-                <span className="block text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Admin
                 </span>
               </span>

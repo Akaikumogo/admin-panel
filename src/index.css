@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'react-day-picker/style.css';
@@ -6,8 +6,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -33,66 +33,72 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ElektroLearn ops shell — cool zinc + electric blue accent */
+/* ElektroLearn ops shell — cool paper + restrained electric accent */
 :root {
-  --background: #f1f4f6;
-  --foreground: #0f172a;
+  --background: #f3f5f7;
+  --foreground: #0c1222;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #0c1222;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #1d4ed8;
-  --primary-foreground: #eff6ff;
-  --secondary: #e8eef2;
-  --secondary-foreground: #0f172a;
-  --muted: #e8eef2;
-  --muted-foreground: #64748b;
-  --accent: #dbeafe;
-  --accent-foreground: #1e3a8a;
-  --destructive: #dc2626;
+  --popover-foreground: #0c1222;
+  --primary: #0f5ebd;
+  --primary-foreground: #f5f9ff;
+  --secondary: #e9eef3;
+  --secondary-foreground: #0c1222;
+  --muted: #e9eef3;
+  --muted-foreground: #5b6b7c;
+  --accent: #eef2f6;
+  --accent-foreground: #0c1222;
+  --destructive: #c62828;
   --destructive-foreground: #ffffff;
-  --border: #d5dee7;
-  --input: #d5dee7;
-  --ring: #1d4ed8;
-  --radius: 0.625rem;
-  --bg-main: #f1f4f6;
+  --border: #dce3ea;
+  --input: #dce3ea;
+  --ring: #0f5ebd;
+  --radius: 0.5rem;
+  --bg-main: #f3f5f7;
   --bg-card: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --border-color: #d5dee7;
-  --primary-hover: #2563eb;
-  --shell-rail: #1d4ed8;
-  --shell-sidebar: #fafbfc;
+  --text-primary: #0c1222;
+  --text-secondary: #5b6b7c;
+  --border-color: #dce3ea;
+  --primary-hover: #1470d9;
+  --shell-rail: #0f5ebd;
+  --shell-sidebar: #f7f9fb;
+  --table-header: #f0f3f6;
+  --table-row-hover: #f6f8fa;
+  --table-surface: #ffffff;
 }
 
 .dark {
-  --background: #0c1117;
-  --foreground: #e8eef2;
-  --card: #121a22;
-  --card-foreground: #e8eef2;
-  --popover: #121a22;
-  --popover-foreground: #e8eef2;
-  --primary: #60a5fa;
-  --primary-foreground: #0b1220;
-  --secondary: #1a2430;
-  --secondary-foreground: #e8eef2;
-  --muted: #1a2430;
-  --muted-foreground: #94a3b8;
-  --accent: #1e3a8a;
-  --accent-foreground: #bfdbfe;
-  --destructive: #ef4444;
+  --background: #0b1016;
+  --foreground: #e6edf4;
+  --card: #111820;
+  --card-foreground: #e6edf4;
+  --popover: #111820;
+  --popover-foreground: #e6edf4;
+  --primary: #5ba3f0;
+  --primary-foreground: #071018;
+  --secondary: #18212b;
+  --secondary-foreground: #e6edf4;
+  --muted: #18212b;
+  --muted-foreground: #8fa0b3;
+  --accent: #1a2430;
+  --accent-foreground: #e6edf4;
+  --destructive: #ef5350;
   --destructive-foreground: #ffffff;
-  --border: #243040;
-  --input: #1a2430;
-  --ring: #60a5fa;
-  --bg-main: #0c1117;
-  --bg-card: #121a22;
-  --text-primary: #e8eef2;
-  --text-secondary: #94a3b8;
-  --border-color: #243040;
-  --primary-hover: #93c5fd;
-  --shell-rail: #60a5fa;
-  --shell-sidebar: #0e151c;
+  --border: #243140;
+  --input: #18212b;
+  --ring: #5ba3f0;
+  --bg-main: #0b1016;
+  --bg-card: #111820;
+  --text-primary: #e6edf4;
+  --text-secondary: #8fa0b3;
+  --border-color: #243140;
+  --primary-hover: #7bb6f5;
+  --shell-rail: #5ba3f0;
+  --shell-sidebar: #0d131a;
+  --table-header: #151c25;
+  --table-row-hover: #161e27;
+  --table-surface: #111820;
 }
 
 .glass {
@@ -106,6 +112,8 @@
 
 body {
   font-family: var(--font-sans);
+  font-feature-settings: 'ss01' on, 'cv11' on;
+  letter-spacing: -0.011em;
   margin: 0;
   padding: 0;
   min-width: 320px;
@@ -282,7 +290,36 @@ body:has([data-app-shell='true']) {
   min-width: 280px;
 }
 
-/* Enterprise jadval — dark rejimda ko'k emas, qoramtir fon */
+/* Enterprise jadval — tokenlar orqali, joylashuv o‘zgarmaydi */
+.enterprise-table {
+  background: var(--table-surface);
+}
+
+.enterprise-table thead {
+  background: var(--table-header);
+}
+
+.enterprise-table thead th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.enterprise-table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.enterprise-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+.enterprise-table input,
+.enterprise-table button {
+  font-family: var(--font-sans);
+}
+
 .dark .enterprise-table input:focus-visible {
   --tw-ring-color: rgb(100 116 139);
 }

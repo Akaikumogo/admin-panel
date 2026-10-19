@@ -432,7 +432,7 @@ export function DataTable<T extends Record<string, unknown>>({
         colSpan={colSpan}
         className={cn(
           cellPadding,
-          'text-foreground/80 dark:text-slate-300',
+          'text-muted-foreground',
           meta.align === 'center' && 'text-center',
           meta.align === 'right' && 'text-right',
           stickyCellClass(fixed, true),
@@ -442,20 +442,22 @@ export function DataTable<T extends Record<string, unknown>>({
         {canSort ? (
           <button
             type="button"
-            className="inline-flex items-center gap-1 font-semibold cursor-pointer select-none"
+            className="inline-flex items-center gap-1 cursor-pointer select-none text-[11px] font-semibold uppercase tracking-[0.04em]"
             onClick={onSort}
           >
             {title}
             {sortState === 'asc' ? (
-              <ArrowUp className="h-3.5 w-3.5" />
+              <ArrowUp className="h-3 w-3" />
             ) : sortState === 'desc' ? (
-              <ArrowDown className="h-3.5 w-3.5" />
+              <ArrowDown className="h-3 w-3" />
             ) : (
-              <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+              <ArrowUpDown className="h-3 w-3 opacity-35" />
             )}
           </button>
         ) : (
-          <span className="font-semibold">{title}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">
+            {title}
+          </span>
         )}
       </TableHead>
     );
@@ -474,9 +476,9 @@ export function DataTable<T extends Record<string, unknown>>({
           !isFlat && 'border-l border-border',
         ),
       fixed === 'left' &&
-        (isHeader ? 'bg-muted dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
+        (isHeader ? 'bg-[var(--table-header)]' : 'bg-[var(--table-surface)]'),
       fixed === 'right' &&
-        (isHeader ? 'bg-muted dark:bg-[#111318]' : 'bg-card dark:bg-[#0c0e14]'),
+        (isHeader ? 'bg-[var(--table-header)]' : 'bg-[var(--table-surface)]'),
       isHeader && fixed && 'z-40',
     );
 
@@ -513,7 +515,7 @@ export function DataTable<T extends Record<string, unknown>>({
   return (
     <div
       className={cn(
-        'enterprise-table relative w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-card dark:bg-[#0c0e14]',
+        'enterprise-table relative w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-[var(--table-surface)]',
         isFlat ? 'border-0 shadow-none' : 'border border-border',
         className,
       )}
@@ -552,7 +554,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 : undefined
           }
         >
-          <TableHeader className="sticky top-0 z-[45] bg-muted dark:bg-[#111318]">
+          <TableHeader className="sticky top-0 z-[45] bg-[var(--table-header)]">
             {groupedHeaders ? (
               <>
                 <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'hover:bg-transparent')}>
@@ -607,7 +609,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         key={header.id}
                         className={cn(
                           cellPadding,
-                          'text-foreground/80 dark:text-slate-300',
+                          'text-muted-foreground',
                           meta?.align === 'center' && 'text-center',
                           meta?.align === 'right' && 'text-right',
                           stickyCellClass(fixed, true),
@@ -618,7 +620,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           <button
                             type="button"
                             className={cn(
-                              'inline-flex items-center gap-1 font-semibold',
+                              'inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.04em]',
                               header.column.getCanSort() && 'cursor-pointer select-none',
                             )}
                             onClick={header.column.getToggleSortingHandler()}
@@ -626,11 +628,11 @@ export function DataTable<T extends Record<string, unknown>>({
                             {flexRender(header.column.columnDef.header, header.getContext())}
                             {header.column.getCanSort() ? (
                               header.column.getIsSorted() === 'asc' ? (
-                                <ArrowUp className="h-3.5 w-3.5" />
+                                <ArrowUp className="h-3 w-3" />
                               ) : header.column.getIsSorted() === 'desc' ? (
-                                <ArrowDown className="h-3.5 w-3.5" />
+                                <ArrowDown className="h-3 w-3" />
                               ) : (
-                                <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+                                <ArrowUpDown className="h-3 w-3 opacity-35" />
                               )
                             ) : null}
                           </button>
@@ -642,7 +644,7 @@ export function DataTable<T extends Record<string, unknown>>({
               ))
             )}
             {hasColumnFilters && !groupedHeaders ? (
-              <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'bg-muted/30 dark:bg-[#0a0c10] hover:bg-muted/30 dark:hover:bg-[#0a0c10]')}>
+              <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'bg-[var(--table-header)]/70 hover:bg-[var(--table-header)]/70')}>
                 {table.getHeaderGroups()[0]?.headers.map((header) => {
                   const col = findLeafColumn(columns, header.column.id);
                   const meta = header.column.columnDef.meta as {
@@ -676,7 +678,7 @@ export function DataTable<T extends Record<string, unknown>>({
                             value={draftFilters[colId] ?? ''}
                             onChange={(e) => updateColumnFilter(colId, e.target.value)}
                             placeholder={meta.filterPlaceholder ?? 'Qidirish...'}
-                            className="h-8 pl-7 text-xs bg-background dark:bg-[#151820] dark:border-slate-700 dark:placeholder:text-slate-500"
+                            className="h-8 pl-7 text-xs bg-card border-border placeholder:text-muted-foreground/70"
                             aria-label={`${colId} bo'yicha qidirish`}
                           />
                         </div>
@@ -687,7 +689,7 @@ export function DataTable<T extends Record<string, unknown>>({
               </TableRow>
             ) : null}
           </TableHeader>
-          <TableBody className="dark:bg-[#0c0e14]">
+          <TableBody className="bg-[var(--table-surface)]">
             {paginatedRows.length ? (
               paginatedRows.map((row) => {
                 const record = row.original;
@@ -713,12 +715,10 @@ export function DataTable<T extends Record<string, unknown>>({
                       }}
                       style={rowProps.style}
                       className={cn(
-                        isFlat ? 'border-border/30 dark:border-slate-800/60' : 'border-border dark:border-slate-800',
-                        'dark:hover:bg-[#151820]',
-                        row.index % 2 === 1 && 'bg-muted/20 dark:bg-white/[0.02]',
-                        'hover:bg-muted/45 dark:hover:bg-[#151820]',
+                        isFlat ? 'border-border/40' : 'border-border',
+                        'hover:bg-[var(--table-row-hover)]',
                         rowProps.onClick && 'cursor-pointer',
-                        isExpanded && 'bg-muted/30 dark:bg-[#151820]',
+                        isExpanded && 'bg-[var(--table-row-hover)]',
                       )}
                     >
                       {row.getVisibleCells().map((cell) => {
@@ -735,7 +735,7 @@ export function DataTable<T extends Record<string, unknown>>({
                             key={cell.id}
                             className={cn(
                               cellPadding,
-                              'align-middle dark:text-slate-200',
+                              'align-middle text-foreground',
                               'whitespace-nowrap overflow-hidden',
                               meta?.align === 'center' && 'text-center',
                               meta?.align === 'right' && 'text-right',
@@ -752,11 +752,14 @@ export function DataTable<T extends Record<string, unknown>>({
                     {isExpanded ? (
                       <TableRow
                         key={`${key}-expanded`}
-                        className={cn(isFlat ? 'border-border/30 dark:border-slate-800/60' : 'border-border dark:border-slate-800', 'bg-muted/20 dark:bg-[#0a0c10] hover:bg-muted/20 dark:hover:bg-[#0a0c10]')}
+                        className={cn(
+                          isFlat ? 'border-border/40' : 'border-border',
+                          'bg-[var(--table-header)] hover:bg-[var(--table-header)]',
+                        )}
                       >
                         <TableCell
                           colSpan={leafColumns.length}
-                          className={cn(cellPadding, 'dark:text-slate-200')}
+                          className={cn(cellPadding, 'text-foreground')}
                         >
                           <div className="min-w-0 overflow-x-auto py-2" data-stop-row-click>
                             {expandedRowRender(record)}
@@ -778,7 +781,12 @@ export function DataTable<T extends Record<string, unknown>>({
         </UITable>
       </div>
       {showPager ? (
-        <div className={cn('flex flex-col gap-3 bg-muted/20 dark:bg-[#111318] px-4 py-3 sm:flex-row sm:items-center sm:justify-between', isFlat ? 'border-t border-border/30 dark:border-slate-800/50' : 'border-t border-border dark:border-slate-800')}>
+        <div
+          className={cn(
+            'flex flex-col gap-3 bg-[var(--table-header)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between',
+            isFlat ? 'border-t border-border/40' : 'border-t border-border',
+          )}
+        >
           <span className="text-sm text-muted-foreground">
             {recordTotal.toLocaleString('uz-UZ')} ta yozuv
             {Object.values(columnFilters).some((v) => v.trim()) ? ' (filtrlangan)' : ''}
@@ -786,7 +794,7 @@ export function DataTable<T extends Record<string, unknown>>({
           <div className="flex flex-wrap items-center gap-2">
             {paginated && pagination.showSizeChanger ? (
               <Select value={String(pageSize)} onValueChange={changePageSize}>
-                <SelectTrigger className="h-8 w-[120px] dark:bg-[#151820] dark:border-slate-700">
+                <SelectTrigger className="h-8 w-[120px] bg-card border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -803,7 +811,6 @@ export function DataTable<T extends Record<string, unknown>>({
               size="sm"
               disabled={currentPage <= 1}
               onClick={() => goToPage(currentPage - 1)}
-              className="dark:border-slate-700 dark:hover:bg-slate-800"
             >
               Oldingi
             </Button>
@@ -815,7 +822,6 @@ export function DataTable<T extends Record<string, unknown>>({
               size="sm"
               disabled={currentPage >= totalPages}
               onClick={() => goToPage(currentPage + 1)}
-              className="dark:border-slate-700 dark:hover:bg-slate-800"
             >
               Keyingi
             </Button>
