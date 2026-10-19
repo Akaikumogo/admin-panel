@@ -1,421 +1,907 @@
+import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  ShieldCheck,
+  Users,
   Activity,
+  Building2,
+  Shield,
+  Layers,
+  HelpCircle,
   AlertTriangle,
-  ArrowRight,
-  CalendarDays,
-  ClipboardCheck,
-  FileSpreadsheet,
-  Plus,
-  UserRound,
+  Home as HomeIcon,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Trophy,
   Wifi,
+  Plus,
+  BookOpen,
+  Flame,
+  Star,
+  Sparkles,
+  Upload,
 } from 'lucide-react';
-import { Button, Skeleton } from '@/components/ui';
-import { PageHeader } from '@/components/PageHeader';
-import { AvatarPreview } from '@/components/AvatarPreview';
-import { useFetch } from '@/hooks/useFetch';
-import { useTranslation } from '@/hooks/useTranslation';
-import { formatPersonName } from '@/lib/person-name';
-import { cn } from '@/lib/utils';
-import apiService, {
-  userActivityApi,
-  type ExecutiveDashboard,
-  type OnlineUserRow,
-  type Underperformers,
-  type UserProfile,
-} from '@/services/api';
 import {
-  estimateEodPercent,
-  formatNumber,
-  todayStr,
-} from '@/pages/Analytics/analytics-utils';
+  Card,
+  Button,
+  Badge,
+  Typography,
+  Avatar,
+  Skeleton,
+  Table,
+  Progress,
+  Tooltip,
+} from '@/components/ui';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useFetch } from '@/hooks/useFetch';
+import apiService from '@/services/api';
+import type {
+  AnalyticsSummary,
+  DailyTrend,
+  HomeOverview,
+  LevelFunnelItem,
+  QuestionError,
+  UserProfile,
+} from '@/services/api';
+import { BranchActivityHeatmap } from './Home/BranchActivityHeatmap';
+import { MiniSparkline } from './Home/MiniSparkline';
+import { formatDelta, shortBranchName } from './Home/branchName';
+import { PageHeader } from '@/components/PageHeader';
+import { cn } from '@/lib/utils';
 
-const emptyDash: ExecutiveDashboard = {
-  planDate: todayStr(),
-  dailyGoalCorrect: 10,
-  totalPlan: 0,
-  completedTotal: 0,
-  extraCorrectTotal: 0,
-  remaining: 0,
-  completionPercent: 0,
-  totalEmployees: 0,
-  activeEmployees: 0,
-  completedEmployees: 0,
-  branchCount: 0,
+const { Title, Text } = Typography;
+
+type KpiTone = {
+  accent: string;
+  spark: string;
+  chip: string;
 };
 
-const emptyUnder: Underperformers = {
-  planDate: todayStr(),
-  threshold: 70,
-  branchCount: 0,
-  divisionCount: 0,
-  employeeCount: 0,
-  branches: [],
+const KPI_META: Array<{
+  key: keyof Pick<
+    AnalyticsSummary,
+    | 'totalUsers'
+    | 'activeUsers7d'
+    | 'totalOrganizations'
+    | 'totalModerators'
+    | 'totalLevels'
+    | 'totalQuestions'
+  >;
+  icon: typeof Users;
+  tone: KpiTone;
+}> = [
+  {
+    key: 'totalUsers',
+    icon: Users,
+    tone: {
+      accent: 'text-cyan-600 dark:text-cyan-400',
+      spark: 'rgb(8 145 178)',
+      chip: 'bg-cyan-500/10',
+    },
+  },
+  {
+    key: 'activeUsers7d',
+    icon: Activity,
+    tone: {
+      accent: 'text-teal-600 dark:text-teal-400',
+      spark: 'rgb(13 148 136)',
+      chip: 'bg-teal-500/10',
+    },
+  },
+  {
+    key: 'totalOrganizations',
+    icon: Building2,
+    tone: {
+      accent: 'text-orange-600 dark:text-orange-400',
+      spark: 'rgb(234 88 12)',
+      chip: 'bg-orange-500/10',
+    },
+  },
+  {
+    key: 'totalModerators',
+    icon: Shield,
+    tone: {
+      accent: 'text-violet-600 dark:text-violet-400',
+      spark: 'rgb(124 58 237)',
+      chip: 'bg-violet-500/10',
+    },
+  },
+  {
+    key: 'totalLevels',
+    icon: Layers,
+    tone: {
+      accent: 'text-sky-600 dark:text-sky-400',
+      spark: 'rgb(2 132 199)',
+      chip: 'bg-sky-500/10',
+    },
+  },
+  {
+    key: 'totalQuestions',
+    icon: HelpCircle,
+    tone: {
+      accent: 'text-emerald-600 dark:text-emerald-400',
+      spark: 'rgb(5 150 105)',
+      chip: 'bg-emerald-500/10',
+    },
+  },
+];
+
+const KPI_LABELS: Record<string, { uz: string; en: string; ru: string }> = {
+  totalUsers: {
+    uz: 'Foydalanuvchilar',
+    en: 'Total users',
+    ru: 'Пользователей',
+  },
+  activeUsers7d: { uz: 'Faol (7 kun)', en: 'Active (7d)', ru: 'Активные (7д)' },
+  totalOrganizations: {
+    uz: 'Tashkilotlar',
+    en: 'Organizations',
+    ru: 'Организации',
+  },
+  totalModerators: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
+  totalLevels: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
+  totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
 };
 
-function roleLabel(role: string, t: (m: { uz: string; en: string; ru: string }) => string) {
-  if (role === 'MODERATOR') {
-    return t({ uz: 'Moderator', en: 'Moderator', ru: 'Модератор' });
-  }
-  if (role === 'APPROVER') {
-    return t({ uz: 'Tasdiqlovchi', en: 'Approver', ru: 'Утверждающий' });
-  }
-  if (role === 'SUPERADMIN') {
-    return t({ uz: 'Admin', en: 'Admin', ru: 'Админ' });
-  }
-  if (role === 'ACCOUNTING') {
-    return t({ uz: 'Hisob', en: 'Accounting', ru: 'Бухгалтерия' });
-  }
-  return t({ uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' });
-}
+const FUNNEL_ICONS = [Star, Flame, BookOpen, Layers, Trophy];
 
-function formatOnlineFor(sec: number): string {
-  if (!sec || sec < 60) return `${sec || 0}s`;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}s ${m}m`;
-  return `${m}m`;
-}
-
-export default function HomePage() {
-  const { t } = useTranslation();
-  const today = todayStr();
-  const hour = new Date().getHours();
-
-  const { data: me, initialLoading: meLoading } = useFetch<UserProfile | null>(
-    ['me'],
-    () => apiService.me(),
-    null,
-  );
-
-  const ready = !!me;
-
-  const { data: dashboard, initialLoading: dashLoading } =
-    useFetch<ExecutiveDashboard>(
-      ['home-executive-dashboard', today],
-      () => apiService.getExecutiveDashboard({ date: today }),
-      emptyDash,
-      { enabled: ready },
-    );
-
-  const { data: onlineUsers, initialLoading: onlineLoading } = useFetch<
-    OnlineUserRow[]
-  >(
-    ['home-online-users'],
-    () => userActivityApi.listOnline({}),
-    [],
-    { enabled: ready, refetchInterval: 30_000 },
-  );
-
-  const { data: under, initialLoading: underLoading } = useFetch<Underperformers>(
-    ['home-underperformers', today],
-    () => apiService.getUnderperformers({ date: today, threshold: 70 }),
-    emptyUnder,
-    { enabled: ready },
-  );
-
-  const { data: pendingApprovals } = useFetch<{ total: number }>(
-    ['home-pending-approvals'],
-    () => apiService.getPendingSafetyApprovalsCount(),
-    { total: 0 },
-    { enabled: ready, refetchInterval: 30_000 },
-  );
-
-  const eod = estimateEodPercent(dashboard.completionPercent, hour);
-  const onlineCount = onlineUsers.length;
-  const pendingCount = pendingApprovals.total ?? 0;
-  const weakest = under.branches[0] ?? null;
-
-  const dateLabel = new Date().toLocaleDateString('uz-UZ', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-  });
-
-  const loading = meLoading || dashLoading;
-
-  return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-6 overflow-x-hidden">
-      <PageHeader
-        icon={Activity}
-        title={t({
-          uz: `Salom${me?.firstName ? `, ${me.firstName}` : ''}`,
-          en: `Hello${me?.firstName ? `, ${me.firstName}` : ''}`,
-          ru: `Здравствуйте${me?.firstName ? `, ${me.firstName}` : ''}`,
-        })}
-        description={
-          <span className="inline-flex items-center gap-1.5 capitalize">
-            <CalendarDays className="h-3.5 w-3.5" />
-            {dateLabel}
-            <span className="text-muted-foreground/50">·</span>
-            {t({
-              uz: 'Bugungi holat — 5 soniyada',
-              en: "Today's pulse — in 5 seconds",
-              ru: 'Статус на сегодня — за 5 секунд',
-            })}
-          </span>
-        }
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard/analytics">
-                {t({ uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' })}
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard/reports">
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                {t({ uz: 'Hisobotlar', en: 'Reports', ru: 'Отчёты' })}
-              </Link>
-            </Button>
-            <Button asChild type="primary" size="sm">
-              <Link to="/dashboard/employees">
-                <Plus className="h-3.5 w-3.5" />
-                {t({ uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' })}
-              </Link>
-            </Button>
-          </div>
-        }
-      />
-
-      {/* KPI strip */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Kpi
-          loading={loading}
-          label={t({ uz: 'Bajarilish', en: 'Completion', ru: 'Выполнение' })}
-          value={`${dashboard.completionPercent}%`}
-          hint={t({
-            uz: `Kun oxiri ~${eod}%`,
-            en: `EOD ~${eod}%`,
-            ru: `К концу дня ~${eod}%`,
-          })}
-        />
-        <Kpi
-          loading={loading}
-          label={t({ uz: 'Qoldi', en: 'Remaining', ru: 'Осталось' })}
-          value={formatNumber(dashboard.remaining)}
-          hint={`${formatNumber(dashboard.completedTotal)} / ${formatNumber(dashboard.totalPlan)}`}
-        />
-        <Kpi
-          loading={loading || onlineLoading}
-          label={t({ uz: 'Online', en: 'Online', ru: 'Онлайн' })}
-          value={formatNumber(onlineCount)}
-          hint={t({
-            uz: 'hozir sessiyada',
-            en: 'in session now',
-            ru: 'сейчас в сессии',
-          })}
-          accent
-        />
-      </div>
-
-      {/* Diqqat */}
-      <section className="space-y-2">
-        <h2 className="px-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-          {t({ uz: 'Diqqat', en: 'Needs attention', ru: 'Внимание' })}
-        </h2>
-        <div className="space-y-2">
-          {(under.branchCount > 0 || underLoading) && (
-            <AlertRow
-              loading={underLoading}
-              icon={<AlertTriangle className="h-4 w-4 text-amber-600" />}
-              title={t({
-                uz: 'Rejani bajarmayotganlar',
-                en: 'Underperformers',
-                ru: 'Не выполняют план',
-              })}
-              detail={
-                underLoading
-                  ? '…'
-                  : `${under.branchCount} ${t({ uz: 'filial', en: 'branches', ru: 'фил.' })} · ${formatNumber(under.employeeCount)} ${t({ uz: 'xodim', en: 'employees', ru: 'сотр.' })}${
-                      weakest
-                        ? ` · ${t({ uz: 'eng sust', en: 'weakest', ru: 'слабый' })}: ${weakest.orgName} (${weakest.percent}%)`
-                        : ''
-                    }`
-              }
-              to={`/dashboard/analytics/underperformers?date=${today}`}
-            />
-          )}
-
-          {pendingCount > 0 && (
-            <AlertRow
-              icon={<ClipboardCheck className="h-4 w-4 text-rose-600" />}
-              title={t({
-                uz: 'Tasdiq kutmoqda',
-                en: 'Pending approvals',
-                ru: 'Ждут утверждения',
-              })}
-              detail={`${pendingCount} ${t({ uz: 'ta so‘rov', en: 'requests', ru: 'заявок' })}`}
-              to="/dashboard/approvals"
-            />
-          )}
-
-          {!underLoading && under.branchCount === 0 && pendingCount === 0 && (
-            <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-              {t({
-                uz: 'Hozircha shoshilinch narsa yo‘q.',
-                en: 'Nothing urgent right now.',
-                ru: 'Срочных задач нет.',
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Online kim */}
-      <section className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
-              {t({ uz: 'Hozir online', en: 'Online now', ru: 'Сейчас онлайн' })}
-            </h2>
-            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
-              {onlineCount}
-            </span>
-          </div>
-          <Link
-            to="/dashboard/user-activity"
-            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            <Wifi className="h-3.5 w-3.5" />
-            {t({ uz: 'Batafsil', en: 'Details', ru: 'Подробнее' })}
-          </Link>
-        </div>
-
-        {onlineLoading ? (
-          <div className="space-y-3 p-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : onlineCount === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-            <UserRound className="h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
-              {t({
-                uz: 'Hozir hech kim online emas',
-                en: 'Nobody is online right now',
-                ru: 'Сейчас никто не онлайн',
-              })}
-            </p>
-          </div>
-        ) : (
-          <ul className="max-h-[420px] divide-y divide-border overflow-y-auto">
-            {onlineUsers.map((u) => {
-              const name = formatPersonName({
-                lastName: u.lastName,
-                firstName: u.firstName,
-              });
-              return (
-                <li key={u.userId}>
-                  <Link
-                    to={`/dashboard/employees/${u.userId}`}
-                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="relative shrink-0">
-                      <AvatarPreview
-                        name={name}
-                        initials={`${u.firstName?.[0] ?? ''}${u.lastName?.[0] ?? ''}`}
-                        size={36}
-                        avatarClassName="bg-gradient-to-br from-slate-600 to-slate-800"
-                      />
-                      <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold tracking-tight text-foreground">
-                        {name}
-                      </p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {roleLabel(u.role, t)}
-                        {u.organizationName ? ` · ${u.organizationName}` : ''}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                      {formatOnlineFor(u.durationSeconds)}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  hint,
-  loading,
-  accent,
+function DeltaBadge({
+  percent,
+  invert = false,
 }: {
-  label: string;
-  value: string;
-  hint?: string;
-  loading?: boolean;
-  accent?: boolean;
+  percent: number | null | undefined;
+  invert?: boolean;
 }) {
+  const { text, up } = formatDelta(percent);
+  if (up === null) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground">
+        <Minus size={11} /> —
+      </span>
+    );
+  }
+  const good = invert ? !up : up;
+  const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <div
+    <span
       className={cn(
-        'rounded-xl border border-border bg-card p-4',
-        accent && 'border-emerald-500/25 bg-emerald-500/[0.04]',
+        'inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums',
+        good
+          ? 'text-emerald-600 dark:text-emerald-400'
+          : 'text-rose-600 dark:text-rose-400',
       )}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-        {label}
-      </p>
+      <Icon size={11} strokeWidth={2.25} />
+      {text}
+    </span>
+  );
+}
+
+function KpiCell({
+  label,
+  value,
+  icon: Icon,
+  loading,
+  tone,
+  sparkValues,
+  deltaPercent,
+}: {
+  label: string;
+  value: number | string;
+  icon: typeof Users;
+  loading: boolean;
+  tone: KpiTone;
+  sparkValues?: number[];
+  deltaPercent?: number | null;
+}) {
+  return (
+    <div className="relative px-3 py-3 sm:px-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+          {label}
+        </p>
+        <span
+          className={cn(
+            'flex h-7 w-7 items-center justify-center rounded-md',
+            tone.chip,
+            tone.accent,
+          )}
+        >
+          <Icon size={14} strokeWidth={1.75} />
+        </span>
+      </div>
       {loading ? (
-        <Skeleton className="mt-2 h-8 w-24" />
+        <Skeleton.Input active size="small" className="mt-2 !w-16" />
       ) : (
         <>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight tabular-nums text-foreground">
-            {value}
+          <p
+            className={cn(
+              'mt-1.5 text-2xl font-semibold tracking-tight tabular-nums',
+              tone.accent,
+            )}
+          >
+            {typeof value === 'number' ? value.toLocaleString() : value}
           </p>
-          {hint ? (
-            <p className="mt-1.5 text-[11px] text-muted-foreground">{hint}</p>
-          ) : null}
+          <div className="mt-2 flex items-end justify-between gap-2">
+            <DeltaBadge percent={deltaPercent} />
+            {sparkValues && sparkValues.length > 1 ? (
+              <MiniSparkline values={sparkValues} stroke={tone.spark} />
+            ) : null}
+          </div>
         </>
       )}
     </div>
   );
 }
 
-function AlertRow({
-  icon,
-  title,
-  detail,
-  to,
-  loading,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  detail: string;
-  to: string;
-  loading?: boolean;
-}) {
+function severityOf(rate: number): {
+  label: string;
+  color: string;
+} {
+  if (rate >= 50) return { label: 'Critical', color: 'text-rose-600 dark:text-rose-400' };
+  if (rate >= 30) return { label: 'High', color: 'text-orange-600 dark:text-orange-400' };
+  return { label: 'Medium', color: 'text-amber-600 dark:text-amber-400' };
+}
+
+export default function HomePage() {
+  const { t } = useTranslation();
+
+  const { data: me, refetch: refetchMe, initialLoading: meLoading } =
+    useFetch<UserProfile | null>(['me'], () => apiService.me(), null);
+
+  const orgIdForAnalytics = 'all';
+  const ready = !!me;
+
+  const { data: homeOverview, initialLoading: homeOverviewLoading } =
+    useFetch<HomeOverview | null>(
+      ['home-overview'],
+      () => apiService.getHomeOverview(),
+      null,
+      { enabled: ready },
+    );
+
+  const { data: adminPing } = useFetch<{ message: string } | null>(
+    ['admin-ping', me?.role],
+    () => apiService.adminPing(),
+    null,
+    { enabled: me?.role === 'SUPERADMIN' },
+  );
+
+  const { data: summary, initialLoading: summaryLoading } =
+    useFetch<AnalyticsSummary | null>(
+      ['analytics-summary', orgIdForAnalytics],
+      () => apiService.getAnalyticsSummary(orgIdForAnalytics),
+      null,
+      { enabled: ready },
+    );
+
+  const { data: funnel, initialLoading: funnelLoading } = useFetch<
+    LevelFunnelItem[]
+  >(
+    ['level-funnel', orgIdForAnalytics],
+    () => apiService.getLevelFunnel(orgIdForAnalytics),
+    [] as LevelFunnelItem[],
+    { enabled: ready },
+  );
+
+  const { data: errorQuestions, initialLoading: errorsLoading } = useFetch<
+    QuestionError[]
+  >(
+    ['question-errors', orgIdForAnalytics],
+    () => apiService.getQuestionErrors(orgIdForAnalytics),
+    [] as QuestionError[],
+    { enabled: ready },
+  );
+
+  const { data: dailyTrend } = useFetch<DailyTrend | null>(
+    ['daily-trend-home'],
+    () => apiService.getDailyTrend({ orgId: 'all' }),
+    null,
+    { enabled: ready },
+  );
+
+  const insight = homeOverview?.insight;
+  const weekSpark = useMemo(() => {
+    const rows = homeOverview?.branchHeatmap ?? [];
+    if (!rows.length) return [] as number[];
+    const weeks = rows[0]?.weeks ?? [];
+    return weeks.map((_, i) =>
+      rows.reduce((sum, r) => sum + (r.weeks[i]?.count ?? 0), 0),
+    );
+  }, [homeOverview?.branchHeatmap]);
+
+  const planSpark = useMemo(
+    () => (dailyTrend?.points ?? []).slice(-14).map((p) => p.percent),
+    [dailyTrend?.points],
+  );
+
+  const storyInsight = useMemo(() => {
+    const top = homeOverview?.mostActiveBranch;
+    const err = homeOverview?.topErrorBranches?.[0];
+    const loginD = formatDelta(insight?.loginDeltaPercent);
+    const errD = formatDelta(insight?.errorDeltaPercent);
+    const parts: string[] = [];
+    if (top) {
+      parts.push(
+        t({
+          uz: `Eng faol: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} login)`,
+          en: `Top activity: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} logins)`,
+          ru: `Активнее всего: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} входов)`,
+        }),
+      );
+    }
+    if (err && insight) {
+      parts.push(
+        t({
+          uz: `Eng ko‘p xato: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30 kun). Umumiy xato ${errD.text}.`,
+          en: `Most errors: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30d). Errors overall ${errD.text}.`,
+          ru: `Больше ошибок: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30д). Ошибки ${errD.text}.`,
+        }),
+      );
+    } else if (insight) {
+      parts.push(
+        t({
+          uz: `Loginlar haftalik ${loginD.text}, xatolar 30 kun ${errD.text}.`,
+          en: `Weekly logins ${loginD.text}, 30d errors ${errD.text}.`,
+          ru: `Логины за неделю ${loginD.text}, ошибки 30д ${errD.text}.`,
+        }),
+      );
+    }
+    return parts.join(' ');
+  }, [homeOverview, insight, t]);
+
+  const weakModules = useMemo(() => {
+    return (funnel ?? []).filter((item) => {
+      if (item.totalStarted <= 0) return true;
+      return item.totalCompleted / item.totalStarted < 0.25;
+    }).length;
+  }, [funnel]);
+
+  const errorColumns = useMemo(
+    () => [
+      {
+        title: t({ uz: 'Savol', en: 'Question', ru: 'Вопрос' }),
+        dataIndex: 'prompt',
+        key: 'prompt',
+        ellipsis: true,
+        width: '32%',
+        filterable: true,
+      },
+      {
+        title: t({ uz: 'Modul', en: 'Module', ru: 'Модуль' }),
+        dataIndex: 'levelTitle',
+        key: 'levelTitle',
+        filterable: true,
+      },
+      {
+        title: t({ uz: 'Nazariya', en: 'Theory', ru: 'Теория' }),
+        dataIndex: 'theoryTitle',
+        key: 'theoryTitle',
+        filterable: true,
+      },
+      {
+        title: t({ uz: 'Urinishlar', en: 'Attempts', ru: 'Попытки' }),
+        dataIndex: 'totalAttempts',
+        key: 'totalAttempts',
+        width: 100,
+        filterable: false,
+        render: (v: number) => (
+          <span className="tabular-nums">{v.toLocaleString()}</span>
+        ),
+      },
+      {
+        title: t({ uz: 'Xatolik %', en: 'Error %', ru: 'Ошибки %' }),
+        dataIndex: 'errorRate',
+        key: 'errorRate',
+        width: 180,
+        filterable: false,
+        render: (val: number) => {
+          const sev = severityOf(val);
+          return (
+            <div className="min-w-[140px] space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold tabular-nums">{val}%</span>
+                <span className={cn('text-[10px] font-semibold uppercase', sev.color)}>
+                  ● {sev.label}
+                </span>
+              </div>
+              <Progress
+                percent={val}
+                size="small"
+                showInfo={false}
+                strokeColor={
+                  val > 50
+                    ? 'rgb(225 29 72)'
+                    : val > 30
+                      ? 'rgb(234 88 12)'
+                      : 'rgb(5 150 105)'
+                }
+              />
+            </div>
+          );
+        },
+      },
+    ],
+    [t],
+  );
+
+  const quickActions = [
+    {
+      to: '/dashboard/users',
+      label: t({ uz: '+ User', en: '+ User', ru: '+ User' }),
+      icon: Plus,
+    },
+    {
+      to: '/dashboard/levels',
+      label: t({ uz: '+ Modul', en: '+ Module', ru: '+ Модуль' }),
+      icon: Layers,
+    },
+    {
+      to: '/dashboard/organizations',
+      label: t({ uz: '+ Tashkilot', en: '+ Org', ru: '+ Орг.' }),
+      icon: Building2,
+    },
+    {
+      to: '/dashboard/import-export',
+      label: t({ uz: 'Import', en: 'Import', ru: 'Импорт' }),
+      icon: Upload,
+    },
+  ];
+
   return (
-    <Link
-      to={to}
-      className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:bg-muted/40"
-    >
-      <span className="shrink-0">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        {loading ? (
-          <Skeleton className="mt-1 h-3 w-48" />
-        ) : (
-          <p className="truncate text-xs text-muted-foreground">{detail}</p>
-        )}
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <PageHeader
+          icon={HomeIcon}
+          title={t({
+            uz: `Xush kelibsiz${me?.firstName ? `, ${me.firstName}` : ''}`,
+            en: `Welcome${me?.firstName ? `, ${me.firstName}` : ''}`,
+            ru: `Добро пожаловать${me?.firstName ? `, ${me.firstName}` : ''}`,
+          })}
+          description={t({
+            uz: 'Bugungi holat — 5 soniyada tushunarli',
+            en: 'Today’s status — clear in 5 seconds',
+            ru: 'Статус на сегодня — понятно за 5 секунд',
+          })}
+        />
+        <div className="flex flex-wrap gap-2 lg:pt-1">
+          {quickActions.map((a) => (
+            <Button key={a.to} type="default" size="small" asChild>
+              <Link to={a.to} className="inline-flex items-center gap-1.5">
+                <a.icon size={13} strokeWidth={2} />
+                {a.label}
+              </Link>
+            </Button>
+          ))}
+        </div>
       </div>
-      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-    </Link>
+
+      {/* Story strip — "nima bo'lyapti?" */}
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+        <StoryTile
+          loading={homeOverviewLoading || summaryLoading}
+          icon={<Activity size={14} />}
+          label={t({ uz: 'Faol foydalanuvchi', en: 'Active users', ru: 'Активные' })}
+          value={(summary?.activeUsers7d ?? 0).toLocaleString()}
+          hint={<DeltaBadge percent={insight?.loginDeltaPercent} />}
+          tone="teal"
+        />
+        <StoryTile
+          loading={homeOverviewLoading}
+          icon={<AlertTriangle size={14} />}
+          label={t({ uz: 'Yangi xato (30 kun)', en: 'Errors (30d)', ru: 'Ошибки (30д)' })}
+          value={(insight?.errors30d ?? 0).toLocaleString()}
+          hint={<DeltaBadge percent={insight?.errorDeltaPercent} invert />}
+          tone="rose"
+        />
+        <StoryTile
+          loading={homeOverviewLoading}
+          icon={<Trophy size={14} />}
+          label={t({ uz: 'Top filial', en: 'Top branch', ru: 'Топ филиал' })}
+          value={
+            homeOverview?.mostActiveBranch
+              ? shortBranchName(homeOverview.mostActiveBranch.orgName)
+              : '—'
+          }
+          hint={
+            homeOverview?.mostActiveBranch
+              ? `${homeOverview.mostActiveBranch.value.toLocaleString()} login`
+              : undefined
+          }
+          tone="amber"
+          title={homeOverview?.mostActiveBranch?.orgName}
+        />
+        <StoryTile
+          loading={funnelLoading}
+          icon={<AlertTriangle size={14} />}
+          label={t({ uz: 'Diqqat', en: 'Attention', ru: 'Внимание' })}
+          value={`${weakModules}`}
+          hint={t({
+            uz: 'ta modul past completion',
+            en: 'modules with low completion',
+            ru: 'модуля с низким completion',
+          })}
+          tone="amber"
+        />
+        <StoryTile
+          loading={homeOverviewLoading}
+          icon={<Wifi size={14} />}
+          label={t({ uz: 'Online', en: 'Online', ru: 'Онлайн' })}
+          value={(insight?.onlineHint ?? 0).toLocaleString()}
+          hint={t({ uz: 'hozir sessiyada', en: 'in session now', ru: 'сейчас в сессии' })}
+          tone="cyan"
+          className="col-span-2 md:col-span-1 xl:col-span-1"
+        />
+      </div>
+
+      {storyInsight ? (
+        <div className="flex items-start gap-3 rounded-lg border border-teal-500/25 bg-teal-500/5 px-4 py-3">
+          <Sparkles
+            size={16}
+            className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-400"
+          />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700 dark:text-teal-300">
+              {t({ uz: 'AI Insight', en: 'AI Insight', ru: 'AI Insight' })}
+            </p>
+            <p className="mt-0.5 text-sm leading-relaxed text-foreground/90">
+              {storyInsight}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {/* KPI — larger visual weight */}
+      <Card className="!border-border !shadow-none">
+        <div className="mb-1 flex items-center justify-between px-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            {t({
+              uz: 'Asosiy ko‘rsatkichlar',
+              en: 'Core metrics',
+              ru: 'Ключевые метрики',
+            })}
+          </p>
+          <p className="text-[11px] tabular-nums text-muted-foreground">
+            {new Date().toLocaleDateString()}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-6">
+          {KPI_META.map(({ key, icon, tone }) => {
+            const spark =
+              key === 'activeUsers7d'
+                ? weekSpark
+                : key === 'totalUsers'
+                  ? planSpark
+                  : weekSpark.slice(-6).map((v, i) => v * (0.7 + i * 0.05));
+            const delta =
+              key === 'activeUsers7d'
+                ? insight?.loginDeltaPercent
+                : key === 'totalQuestions'
+                  ? insight?.errorDeltaPercent
+                  : null;
+            return (
+              <KpiCell
+                key={key}
+                label={t(KPI_LABELS[key])}
+                icon={icon}
+                tone={tone}
+                loading={summaryLoading}
+                value={summary?.[key] ?? 0}
+                sparkValues={spark}
+                deltaPercent={
+                  key === 'activeUsers7d' || key === 'totalUsers'
+                    ? insight?.loginDeltaPercent
+                    : delta
+                }
+              />
+            );
+          })}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <Card
+          className="xl:col-span-8 !border-border !shadow-none min-h-[320px]"
+          title={
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <Activity
+                size={15}
+                strokeWidth={1.75}
+                className="text-[var(--shell-rail)]"
+              />
+              {t({
+                uz: 'Filial bo‘yicha faollik (12 hafta)',
+                en: 'Branch activity (12 weeks)',
+                ru: 'Активность филиалов (12 недель)',
+              })}
+            </span>
+          }
+          extra={
+            <span className="text-xs text-muted-foreground">
+              {homeOverview?.scopeLabel}
+            </span>
+          }
+        >
+          {homeOverviewLoading ? (
+            <Skeleton active paragraph={{ rows: 6 }} />
+          ) : (
+            <BranchActivityHeatmap rows={homeOverview?.branchHeatmap ?? []} />
+          )}
+        </Card>
+
+        <div className="xl:col-span-4 space-y-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  {t({ uz: 'Profil', ru: 'Профиль', en: 'Profile' })}
+                </p>
+                {meLoading ? (
+                  <Skeleton active title={false} paragraph={{ rows: 2 }} />
+                ) : (
+                  <>
+                    <Title level={4} className="!mb-0 !mt-1 !text-base">
+                      {me?.firstName} {me?.lastName}
+                    </Title>
+                    <Text className="text-sm text-muted-foreground">
+                      {me?.email} · {me?.role}
+                    </Text>
+                  </>
+                )}
+              </div>
+              <Avatar
+                size={44}
+                className="!rounded-md"
+                style={{ backgroundColor: 'var(--primary)' }}
+                icon={<ShieldCheck size={20} />}
+              />
+            </div>
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                {t({
+                  uz: 'Ruxsat holati',
+                  en: 'Permissions',
+                  ru: 'Права доступа',
+                })}
+              </p>
+              <div className="mt-2 flex items-center justify-between">
+                <Badge
+                  color="green"
+                  text={
+                    me?.role === 'SUPERADMIN'
+                      ? adminPing?.message || 'OK'
+                      : 'Limited'
+                  }
+                />
+                {me?.role === 'SUPERADMIN' ? (
+                  <Button type="primary" onClick={() => void refetchMe()}>
+                    {t({ uz: 'Yangilash', ru: 'Обновить', en: 'Refresh' })}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <AlertTriangle
+                size={15}
+                strokeWidth={1.75}
+                className="text-destructive"
+              />
+              {t({
+                uz: 'Filial xatolari (30 kun)',
+                en: 'Branch errors (30d)',
+                ru: 'Ошибки филиалов (30д)',
+              })}
+            </div>
+            {homeOverviewLoading ? (
+              <Skeleton active paragraph={{ rows: 4 }} />
+            ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
+              <p className="py-2 text-sm text-muted-foreground">
+                {t({ uz: 'Maʼlumot yoʻq', en: 'No data', ru: 'Нет данных' })}
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {(homeOverview?.topErrorBranches ?? []).map((row, idx) => {
+                  const prev = row.previousValue ?? 0;
+                  const deltaPct =
+                    prev > 0
+                      ? Math.round(((row.value - prev) / prev) * 1000) / 10
+                      : row.value > 0
+                        ? 100
+                        : null;
+                  const short = shortBranchName(row.orgName);
+                  return (
+                    <li
+                      key={row.orgId}
+                      className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[10px] tabular-nums text-muted-foreground">
+                          #{idx + 1}
+                        </span>
+                        <Tooltip title={row.orgName}>
+                          <p className="truncate text-sm font-semibold">
+                            {row.isDefault ? (
+                              <span className="mr-1 text-amber-500">★</span>
+                            ) : null}
+                            {short}
+                          </p>
+                        </Tooltip>
+                        <p className="text-[11px] text-muted-foreground">
+                          {t({
+                            uz: `Oldingi: ${prev.toLocaleString()}`,
+                            en: `Prev: ${prev.toLocaleString()}`,
+                            ru: `Было: ${prev.toLocaleString()}`,
+                          })}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="block rounded bg-destructive/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-destructive">
+                          {row.value.toLocaleString()}
+                        </span>
+                        <div className="mt-1 flex justify-end">
+                          <DeltaBadge percent={deltaPct} invert />
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {(funnelLoading || (funnel?.length ?? 0) > 0) && (
+        <Card
+          title={
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <Layers
+                size={15}
+                strokeWidth={1.75}
+                className="text-[var(--shell-rail)]"
+              />
+              {t({
+                uz: 'Modul funnel',
+                en: 'Module funnel',
+                ru: 'Воронка модулей',
+              })}
+            </span>
+          }
+          className="!border-border !shadow-none"
+        >
+          {funnelLoading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : (
+            <div className="space-y-3">
+              {funnel.map((item, idx) => {
+                const pct =
+                  item.totalStarted > 0
+                    ? Math.round(
+                        (item.totalCompleted / item.totalStarted) * 100,
+                      )
+                    : 0;
+                const Icon = FUNNEL_ICONS[idx % FUNNEL_ICONS.length];
+                return (
+                  <div
+                    key={item.levelId}
+                    className="flex items-center gap-3 rounded-md px-1 py-1.5 hover:bg-muted/40"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-300">
+                      <Icon size={15} strokeWidth={1.75} />
+                    </span>
+                    <div className="w-40 shrink-0 truncate text-sm font-medium text-foreground sm:w-52">
+                      #{item.orderIndex + 1} {item.levelTitle}
+                    </div>
+                    <Progress
+                      percent={pct}
+                      size="small"
+                      className="min-w-0 flex-1"
+                      strokeColor="var(--primary)"
+                    />
+                    <div className="hidden w-36 shrink-0 text-right text-xs text-muted-foreground sm:block">
+                      <div className="font-semibold tabular-nums text-foreground">
+                        {item.totalStarted.toLocaleString()} users
+                      </div>
+                      <div className="tabular-nums">
+                        {pct}% · {item.totalCompleted.toLocaleString()} done
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {(errorsLoading || (errorQuestions?.length ?? 0) > 0) && (
+        <Card
+          title={
+            <span className="flex items-center gap-2 text-sm font-semibold text-destructive">
+              <AlertTriangle size={15} strokeWidth={1.75} />
+              {t({
+                uz: 'Eng ko‘p xato qilingan savollar',
+                en: 'Most error-prone questions',
+                ru: 'Вопросы с наибольшим числом ошибок',
+              })}
+            </span>
+          }
+          className="!border-border !shadow-none"
+        >
+          {errorsLoading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : (
+            <Table
+              dataSource={errorQuestions as unknown as Record<string, unknown>[]}
+              columns={errorColumns}
+              rowKey="questionId"
+              pagination={false}
+              size="small"
+              scroll={{ y: 420 }}
+              className="[&_tbody_tr:nth-child(even)]:bg-muted/25 [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10"
+            />
+          )}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function StoryTile({
+  loading,
+  icon,
+  label,
+  value,
+  hint,
+  tone,
+  title,
+  className,
+}: {
+  loading?: boolean;
+  icon: ReactNode;
+  label: string;
+  value: string;
+  hint?: ReactNode;
+  tone: 'teal' | 'rose' | 'amber' | 'cyan';
+  title?: string;
+  className?: string;
+}) {
+  const toneMap = {
+    teal: 'border-teal-500/20 bg-teal-500/[0.06] text-teal-700 dark:text-teal-300',
+    rose: 'border-rose-500/20 bg-rose-500/[0.06] text-rose-700 dark:text-rose-300',
+    amber:
+      'border-amber-500/25 bg-amber-500/[0.07] text-amber-800 dark:text-amber-300',
+    cyan: 'border-cyan-500/20 bg-cyan-500/[0.06] text-cyan-700 dark:text-cyan-300',
+  };
+  return (
+    <div
+      title={title}
+      className={cn(
+        'rounded-lg border px-3 py-3',
+        toneMap[tone],
+        className,
+      )}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide opacity-80">
+        {icon}
+        {label}
+      </div>
+      {loading ? (
+        <Skeleton.Input active size="small" className="mt-2 !w-20" />
+      ) : (
+        <>
+          <p className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
+            {value}
+          </p>
+          {hint ? (
+            <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }

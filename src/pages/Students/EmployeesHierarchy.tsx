@@ -28,12 +28,42 @@ import {
   Users,
   Zap
 } from 'lucide-react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/uz-latn';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { StudentSummary } from '@/services/api';
 import apiService from '@/services/api';
 import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
+import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { formatPersonName } from '@/lib/person-name';
+
+dayjs.extend(relativeTime);
+dayjs.locale('uz-latn');
+
+function LastOnlineLabel({ s }: { s: StudentSummary }) {
+  if (s.isOnline) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        online
+      </span>
+    );
+  }
+  if (!s.lastSeenAt) {
+    return (
+      <span className="shrink-0 text-[11px] text-muted-foreground/70">—</span>
+    );
+  }
+  return (
+    <Tooltip title={dayjs(s.lastSeenAt).format('DD.MM.YYYY HH:mm:ss')}>
+      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+        {dayjs(s.lastSeenAt).fromNow()}
+      </span>
+    </Tooltip>
+  );
+}
 
 /* ─── tree model ─────────────────────────────────────────────────────────── */
 
@@ -233,6 +263,7 @@ const EmployeeRow = memo(function EmployeeRow({
             {s.personnelNumber ? `№ ${s.personnelNumber}` : s.email}
           </span>
         </span>
+        <LastOnlineLabel s={s} />
         <span className="flex shrink-0 items-center gap-1 font-mono text-[11px] tabular-nums text-amber-700 dark:text-amber-400">
           <Zap size={11} strokeWidth={2} />
           {s.totalXp}
