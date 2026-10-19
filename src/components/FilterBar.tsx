@@ -39,17 +39,17 @@ export function ListSurface({
   return (
     <div
       className={cn(
-        'surface overflow-hidden',
+        'surface min-w-0 max-w-full overflow-hidden',
         loading && 'opacity-60 transition-opacity',
         className,
       )}
     >
       {toolbar ? (
-        <div className="flex flex-wrap items-center gap-3 border-b border-border/80 px-4 py-3 md:px-5">
+        <div className="flex min-w-0 flex-wrap items-center gap-3 border-b border-border/80 px-4 py-3 md:px-5">
           {toolbar}
         </div>
       ) : null}
-      {children}
+      <div className="min-w-0 max-w-full">{children}</div>
     </div>
   );
 }

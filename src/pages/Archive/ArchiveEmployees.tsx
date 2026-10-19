@@ -163,6 +163,8 @@ export default function ArchiveEmployeesPage() {
             loading={loading}
             dataSource={data}
             columns={columns}
+            variant="flat"
+            className="!rounded-none !border-0"
             pagination={{
               current: currentPage,
               pageSize: 20,

@@ -120,6 +120,8 @@ export default function DepartmentsPage() {
             loading={loading}
             dataSource={data.data}
             columns={columns}
+            variant="flat"
+            className="!rounded-none !border-0"
             pagination={{ pageSize: 50, showSizeChanger: true }}
             size="small"
           />

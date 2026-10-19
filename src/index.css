@@ -138,6 +138,11 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+html {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   font-family: var(--font-sans);
   font-feature-settings: 'ss01' on, 'cv11' on;
@@ -146,20 +151,18 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100dvh;
-  max-width: 100vw;
+  max-width: 100%;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background);
   color: var(--foreground);
 }
 
-html {
-  max-width: 100vw;
-}
-
 #root {
   min-height: 100dvh;
-  max-width: 100vw;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* SCHETCHIK shell — document scroll (body lock yo‘q) */

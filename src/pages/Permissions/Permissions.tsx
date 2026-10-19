@@ -10,13 +10,15 @@ import {
   Tag,
 } from '@/components/ui';
 import type { ColumnsType } from '@/components/ui';
-import { Filter, Mail, Search, Star } from 'lucide-react';
+import { Mail, Search, Star } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { AvatarPreview } from '@/components/AvatarPreview';
+import { PageHeader } from '@/components/PageHeader';
+import { FilterBar, ListSurface } from '@/components/FilterBar';
 import apiService, { resolveAssetUrl } from '@/services/api';
 import type {
   CrudPermissions,
@@ -95,9 +97,9 @@ const MODULES: {
 
 const CRUD_ORDER: (keyof CrudPermissions)[] = ['view', 'create', 'update', 'delete'];
 const PAGE_SIZE = 10;
-const CRUD_COL_WIDTH = 72;
-const USER_COL_WIDTH = 280;
-const ACTIONS_COL_WIDTH = 100;
+const CRUD_COL_WIDTH = 76;
+const USER_COL_WIDTH = 260;
+const ACTIONS_COL_WIDTH = 104;
 
 const QP_DEFAULTS = { search: undefined, orgId: undefined, page: undefined } as const;
 
@@ -267,6 +269,7 @@ const PermissionsPage = () => {
       key: 'user',
       fixed: 'left',
       width: USER_COL_WIDTH,
+      wrap: true,
       render: (_, mod) => (
         <div className="flex min-w-0 items-center gap-3">
           <AvatarPreview
@@ -382,69 +385,66 @@ const PermissionsPage = () => {
   ]);
 
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex-shrink-0">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-          {t(T.title)}
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{t(T.subtitle)}</p>
-      </div>
+    <div className="min-w-0 max-w-full space-y-6">
+      <PageHeader title={t(T.title)} description={t(T.subtitle)} />
 
-      <div className="flex flex-shrink-0 flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/60 dark:bg-card">
-        <Filter size={16} className="text-slate-400" />
-        <Input
-          allowClear
-          defaultValue={qp.search}
-          prefix={<Search size={14} className="text-slate-400" />}
-          placeholder={t(T.search)}
-          style={{ width: 220 }}
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
-        <Select
-          allowClear
-          showSearch
-          placeholder={t(T.organization)}
-          value={qp.orgId}
-          onChange={handleOrgChange}
-          optionFilterProp="label"
-          style={{ minWidth: 260, maxWidth: 360 }}
-          options={organizations.map((o) => ({
-            value: o.id,
-            label: o.name,
-          }))}
-        />
-        <Tag className="text-xs">
-          {t(T.total)}: {total}
-        </Tag>
-        <Button size="small" onClick={() => refetch()}>
-          {t({ uz: 'Yangilash', en: 'Refresh', ru: 'Обновить' })}
-        </Button>
-        <span className="ml-auto text-xs text-slate-400">
-          {t({
-            uz: "Switchlar uchun jadvalni o'ngga suring →",
-            en: 'Scroll right to see permission switches →',
-            ru: 'Прокрутите вправо для переключателей →',
-          })}
-        </span>
-      </div>
-
-      <div className="rounded-lg border border-slate-200 bg-white dark:border-slate-700/60 dark:bg-card">
+      <ListSurface
+        loading={loading && !initialLoading}
+        toolbar={
+          <FilterBar showIcon>
+            <Input
+              allowClear
+              defaultValue={qp.search}
+              prefix={<Search size={14} className="text-muted-foreground" />}
+              placeholder={t(T.search)}
+              className="h-9 max-w-[220px]"
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
+            <Select
+              allowClear
+              showSearch
+              placeholder={t(T.organization)}
+              value={qp.orgId}
+              onChange={handleOrgChange}
+              optionFilterProp="label"
+              className="min-w-[180px] max-w-[280px]"
+              options={organizations.map((o) => ({
+                value: o.id,
+                label: o.name,
+              }))}
+            />
+            <Tag className="text-xs">
+              {t(T.total)}: {total}
+            </Tag>
+            <Button size="small" onClick={() => refetch()}>
+              {t({ uz: 'Yangilash', en: 'Refresh', ru: 'Обновить' })}
+            </Button>
+            <span className="ml-auto hidden text-xs text-muted-foreground xl:inline">
+              {t({
+                uz: "Switchlar uchun jadvalni o'ngga suring →",
+                en: 'Scroll right to see permission switches →',
+                ru: 'Прокрутите вправо для переключателей →',
+              })}
+            </span>
+          </FilterBar>
+        }
+      >
         {initialLoading ? (
           <div className="flex h-48 items-center justify-center">
             <Spin />
           </div>
         ) : moderators.length === 0 && !loading ? (
-          <div className="p-8">
-            <NoData text={t(T.noData)} />
-          </div>
+          <NoData text={t(T.noData)} />
         ) : (
           <Table<UserProfile>
             size="small"
             rowKey="id"
-            loading={loading}
+            loading={false}
             dataSource={moderators}
             columns={columns}
             scroll={{ x: scrollX }}
+            variant="flat"
+            className="permissions-table !rounded-none !border-0"
             pagination={{
               current: currentPage,
               pageSize: PAGE_SIZE,
@@ -453,10 +453,9 @@ const PermissionsPage = () => {
               onChange: (page) =>
                 setParam('page', page === 1 ? undefined : String(page)),
             }}
-            className="permissions-table"
           />
         )}
-      </div>
+      </ListSurface>
     </div>
   );
 };

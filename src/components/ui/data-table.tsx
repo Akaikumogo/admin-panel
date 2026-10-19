@@ -36,6 +36,8 @@ export type ColumnType<T = Record<string, unknown>> = {
   fixed?: 'left' | 'right';
   align?: 'left' | 'center' | 'right';
   ellipsis?: boolean;
+  /** Multi-line cell (avatar + name) — disable nowrap */
+  wrap?: boolean;
   sorter?: boolean | ((a: T, b: T) => number);
   defaultSortOrder?: string;
   render?: (value: any, record: T, index: number) => React.ReactNode;
@@ -161,6 +163,7 @@ function colDefFromType<T>(col: ColumnType<T>): ColumnDef<T> {
       align: col.align,
       width: col.width,
       ellipsis: col.ellipsis,
+      wrap: col.wrap,
       filterable: isColumnFilterable(col),
       filterPlaceholder: col.filterPlaceholder,
       fixed: col.fixed,
@@ -487,6 +490,7 @@ export function DataTable<T extends Record<string, unknown>>({
     fixed?: 'left' | 'right',
     width?: number | string,
     isHeader?: boolean,
+    opts?: { skipWidth?: boolean },
   ): React.CSSProperties | undefined => {
     const resolvedWidth = width ?? (fixed === 'right' ? 120 : 160);
     if (fixed === 'left') {
@@ -507,21 +511,23 @@ export function DataTable<T extends Record<string, unknown>>({
         zIndex: isHeader ? 50 : (rightZ.get(colId) ?? 30),
       };
     }
-    return width != null
-      ? { width, minWidth: width, maxWidth: width }
-      : undefined;
+    if (opts?.skipWidth || width == null) return undefined;
+    // Leaf columns: preferred width only (no maxWidth lock) so headers stay aligned
+    return { width, minWidth: typeof width === 'number' ? width : width };
   };
+
+  const hasHorizontalScroll = scroll?.x != null && scroll.x !== false;
 
   return (
     <div
       className={cn(
-        'enterprise-table relative w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-[var(--table-surface)]',
-        isFlat ? 'border-0 shadow-none' : 'border border-border',
+        'enterprise-table relative w-full min-w-0 max-w-full overflow-hidden bg-[var(--table-surface)]',
+        isFlat ? 'rounded-none border-0 shadow-none' : 'rounded-xl border border-border',
         className,
       )}
     >
       {loading ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/60">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-background/60">
           <Spinner size={28} />
         </div>
       ) : null}
@@ -530,28 +536,25 @@ export function DataTable<T extends Record<string, unknown>>({
         className={cn(
           'w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto overscroll-x-contain',
           '[&_button]:cursor-pointer [&_a]:cursor-pointer [&_input]:cursor-text [&_textarea]:cursor-text [&_select]:cursor-pointer [&_[role=switch]]:cursor-pointer',
-          isDragging ? 'cursor-grabbing select-none' : 'cursor-grab',
+          hasHorizontalScroll && (isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'),
         )}
         style={{
           maxHeight: scroll?.y,
         }}
-        onPointerDown={onScrollPointerDown}
-        onPointerMove={onScrollPointerMove}
-        onPointerUp={endScrollDrag}
-        onPointerCancel={endScrollDrag}
-        onClickCapture={onScrollClickCapture}
+        onPointerDown={hasHorizontalScroll ? onScrollPointerDown : undefined}
+        onPointerMove={hasHorizontalScroll ? onScrollPointerMove : undefined}
+        onPointerUp={hasHorizontalScroll ? endScrollDrag : undefined}
+        onPointerCancel={hasHorizontalScroll ? endScrollDrag : undefined}
+        onClickCapture={hasHorizontalScroll ? onScrollClickCapture : undefined}
       >
         <UITable
-          className={cn(
-            'w-full border-separate border-spacing-0',
-            'min-w-full table-fixed',
-          )}
+          className="w-full table-fixed border-separate border-spacing-0"
           style={
             typeof scroll?.x === 'number'
-              ? { minWidth: scroll.x, width: scroll.x }
-              : scroll?.x
-                ? { minWidth: 'max-content' }
-                : undefined
+              ? { minWidth: scroll.x, width: '100%' }
+              : scroll?.x === true || scroll?.x === 'max-content'
+                ? { minWidth: 'max-content', width: '100%' }
+                : { width: '100%' }
           }
         >
           <TableHeader className="sticky top-0 z-[45] bg-[var(--table-header)]">
@@ -561,15 +564,20 @@ export function DataTable<T extends Record<string, unknown>>({
                   {columns.map((col) => {
                     const colId = getColumnId(col);
                     if (col.children?.length) {
-                      return renderHeaderCell(
-                        col,
-                        `group-${colId}`,
-                        col.title,
-                        false,
-                        undefined,
-                        undefined,
-                        undefined,
-                        col.children.length,
+                      // Group headers: no width style — leaf columns own the widths
+                      return (
+                        <TableHead
+                          key={`group-${colId}`}
+                          colSpan={col.children.length}
+                          className={cn(
+                            cellPadding,
+                            'text-center text-muted-foreground',
+                          )}
+                        >
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">
+                            {col.title}
+                          </span>
+                        </TableHead>
                       );
                     }
                     return renderHeaderCell(
@@ -726,6 +734,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         const meta = cell.column.columnDef.meta as {
                           align?: string;
                           ellipsis?: boolean;
+                          wrap?: boolean;
                           width?: number | string;
                           fixed?: 'left' | 'right';
                         } | undefined;
@@ -735,11 +744,14 @@ export function DataTable<T extends Record<string, unknown>>({
                             key={cell.id}
                             className={cn(
                               cellPadding,
-                              'align-middle text-foreground',
-                              'whitespace-nowrap overflow-hidden',
+                              'align-middle text-foreground overflow-hidden',
+                              meta?.ellipsis
+                                ? 'max-w-0 truncate'
+                                : meta?.wrap
+                                  ? 'whitespace-normal'
+                                  : 'whitespace-nowrap',
                               meta?.align === 'center' && 'text-center',
                               meta?.align === 'right' && 'text-right',
-                              meta?.ellipsis && 'truncate text-ellipsis',
                               stickyCellClass(fixed, false),
                             )}
                             style={stickyStyle(cell.column.id, fixed, meta?.width, false)}

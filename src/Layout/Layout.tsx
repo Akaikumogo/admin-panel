@@ -718,7 +718,10 @@ const Layout = () => {
   );
 
   return (
-    <div data-app-shell="true" className="grain min-h-[100dvh] bg-background">
+    <div
+      data-app-shell="true"
+      className="grain min-h-[100dvh] max-w-full overflow-x-clip bg-background"
+    >
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-border/70 bg-background/80 backdrop-blur-xl lg:block">
         {sidebarBody}
       </aside>
@@ -754,29 +757,29 @@ const Layout = () => {
         ) : null}
       </AnimatePresence>
 
-      <div className="lg:pl-[264px]">
-        <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
-          <div className="flex h-14 w-full items-center justify-between gap-3 px-4 md:px-6 lg:px-8">
-            <div className="flex min-w-0 items-center gap-2 lg:hidden">
+      <div className="min-w-0 max-w-full lg:pl-[264px]">
+        <header className="sticky top-0 z-20 overflow-x-clip border-b border-border/60 bg-background/75 backdrop-blur-xl">
+          <div className="flex h-14 w-full min-w-0 items-center justify-between gap-2 px-4 md:gap-3 md:px-6 lg:px-8">
+            <div className="flex min-w-0 flex-1 items-center gap-2 lg:hidden">
               <button
                 type="button"
                 onClick={() => setMobileOpen(true)}
-                className="-ml-2 flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+                className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
                 aria-label={t({ uz: 'Menyu', en: 'Menu', ru: 'Меню' })}
               >
                 <Menu className="h-6 w-6" />
               </button>
-              <BrandMark className="h-8 w-8" />
+              <BrandMark className="h-8 w-8 shrink-0" />
               <span className="hidden truncate font-semibold tracking-tight min-[380px]:inline">
                 ElektroLearn
               </span>
             </div>
 
-            <div className="hidden min-w-0 lg:block">
+            <div className="hidden min-w-0 flex-1 overflow-hidden lg:block">
               <div className="truncate text-[13px] font-medium text-foreground">
                 {t(getCurrentPageTitle())}
               </div>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="truncate text-[12px] text-muted-foreground">
                 {getCurrentDate()}
               </div>
             </div>
@@ -813,7 +816,7 @@ const Layout = () => {
               <ThemeToggle />
               <Select
                 value={lang}
-                className="w-[120px]"
+                className="w-[100px] sm:w-[120px]"
                 size="middle"
                 prefix={<Languages size={14} />}
                 onChange={(value) => setLang(value as typeof lang)}
@@ -828,7 +831,7 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100dvh-3.5rem)] w-full px-4 py-6 md:px-6 md:py-8 lg:px-8">
+        <main className="min-h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-full overflow-x-clip px-4 py-6 md:px-6 md:py-8 lg:px-8">
           {me?.role !== 'USER' &&
           !isModeratorForbiddenRoute &&
           !isDirectorForbiddenRoute &&

@@ -170,26 +170,32 @@ const Organizations = () => {
       {
         title: '№',
         key: 'index',
-        width: 64,
+        width: 52,
+        align: 'center',
         render: (_: unknown, __: Organization, index: number) => (
-          <span className="text-sm text-slate-500">{index + 1}</span>
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+            {index + 1}
+          </span>
         ),
       },
       {
         title: t(T.orgName),
         key: 'name',
+        wrap: true,
         render: (_: unknown, org: Organization) => (
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
-              <Building2 size={16} className="text-white" />
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground dark:bg-accent-500/15 dark:text-accent-300">
+              <Building2 size={16} strokeWidth={1.75} />
             </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-slate-900 dark:text-white truncate">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">
                 <HighlightText text={org.name} highlight={qp.search} />
               </p>
-              {org.branchCode && (
-                <p className="text-xs text-slate-500 truncate">Kod: {org.branchCode}</p>
-              )}
+              {org.branchCode ? (
+                <p className="truncate font-mono text-[11px] text-muted-foreground">
+                  Kod: {org.branchCode}
+                </p>
+              ) : null}
             </div>
           </div>
         ),
@@ -197,56 +203,67 @@ const Organizations = () => {
       {
         title: t(T.members),
         key: 'members',
-        width: 110,
+        width: 96,
+        align: 'right',
         render: (_: unknown, org: Organization) => (
-          <span className="text-sm">{org.users?.length ?? 0}</span>
+          <span className="font-mono text-sm tabular-nums text-foreground">
+            {(org.users?.length ?? 0).toLocaleString()}
+          </span>
         ),
       },
       {
         title: t(T.moderators),
         key: 'moderators',
-        width: 120,
+        width: 110,
+        align: 'right',
         render: (_: unknown, org: Organization) => {
           const count = countModerators(org);
           return count > 0 ? (
-            <Tag color="blue">{count}</Tag>
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-2 font-mono text-xs tabular-nums text-foreground">
+              {count}
+            </span>
           ) : (
-            <span className="text-slate-400">—</span>
+            <span className="text-muted-foreground">—</span>
           );
         },
       },
       {
         title: t(T.mainTag),
         key: 'isDefault',
-        width: 100,
+        width: 108,
+        align: 'center',
         render: (_: unknown, org: Organization) =>
           org.isDefault ? (
-            <Tag color="gold" className="flex items-center gap-1 w-fit">
+            <Tag color="gold" className="inline-flex w-fit items-center gap-1">
               <Star size={12} />
               {t(T.mainTag)}
             </Tag>
           ) : (
-            <span className="text-slate-400">—</span>
+            <span className="text-muted-foreground">—</span>
           ),
       },
       {
         title: t(T.actions),
         key: 'actions',
-        width: 140,
+        width: 128,
         align: 'right',
+        fixed: 'right',
         render: (_: unknown, org: Organization) => (
           <div
-            className="flex items-center justify-end gap-1"
+            className="flex items-center justify-end gap-0.5"
             onClick={(e) => e.stopPropagation()}
+            data-stop-row-click
           >
             <Button
               size="small"
+              variant="ghost"
               icon={<Eye size={14} />}
               title={t(T.view)}
               onClick={() => navigate(`/dashboard/organizations/${org.id}`)}
             />
             <Button
               size="small"
+              variant="ghost"
               icon={<Pencil size={14} />}
               onClick={() => openModal(org)}
               disabled={
@@ -264,7 +281,8 @@ const Organizations = () => {
             >
               <Button
                 size="small"
-                danger
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 icon={<Trash2 size={14} />}
                 disabled={
                   !can('organizations', 'delete') ||
@@ -324,6 +342,8 @@ const Organizations = () => {
             dataSource={organizations}
             columns={columns}
             loading={false}
+            variant="flat"
+            className="!rounded-none !border-0"
             pagination={{
               pageSize: 20,
               showSizeChanger: false,

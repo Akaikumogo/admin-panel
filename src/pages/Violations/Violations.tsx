@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Card, Select, Spin, Table, Tag } from '@/components/ui';
+import { Select, Spin, Table, Tag } from '@/components/ui';
 import { ShieldAlert } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { ModeratorViolationRow, UserProfile } from '@/services/api';
 import { DateTimeDisplay } from '@/components/DateTimeDisplay';
+import { PageHeader } from '@/components/PageHeader';
+import { FilterBar, ListSurface } from '@/components/FilterBar';
 
 const T = {
   title: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
@@ -60,41 +62,67 @@ export default function ViolationsPage() {
         title: t({ uz: 'Vaqt', en: 'Time', ru: 'Время' }),
         dataIndex: 'createdAt',
         key: 'createdAt',
-        width: 180,
+        width: 168,
         render: (v: string) => <DateTimeDisplay value={v} />,
       },
       {
         title: t({ uz: 'Moderator', en: 'Moderator', ru: 'Модератор' }),
         dataIndex: 'moderator',
         key: 'moderator',
+        width: 220,
+        ellipsis: true,
         render: (m: ModeratorViolationRow['moderator']) =>
-          m ? `${m.firstName} ${m.lastName} (${m.email})` : '—',
+          m ? (
+            <span className="truncate" title={`${m.firstName} ${m.lastName} (${m.email})`}>
+              {m.firstName} {m.lastName}{' '}
+              <span className="text-muted-foreground">({m.email})</span>
+            </span>
+          ) : (
+            '—'
+          ),
       },
       {
         title: t({ uz: 'Action', en: 'Action', ru: 'Действие' }),
         dataIndex: 'actionKey',
         key: 'actionKey',
-        width: 220,
-        render: (v: string) => <Tag color="red">{v}</Tag>,
+        width: 160,
+        render: (v: string) => (
+          <Tag color="default" className="font-mono text-[11px]">
+            {v}
+          </Tag>
+        ),
       },
       {
         title: t({ uz: 'Method', en: 'Method', ru: 'Метод' }),
         dataIndex: 'method',
         key: 'method',
-        width: 90,
+        width: 80,
+        align: 'center' as const,
+        render: (v: string) => (
+          <span className="font-mono text-[11px] font-semibold uppercase text-muted-foreground">
+            {v}
+          </span>
+        ),
       },
       {
         title: t({ uz: 'Path', en: 'Path', ru: 'Путь' }),
         dataIndex: 'path',
         key: 'path',
         ellipsis: true,
+        render: (v: string) => (
+          <span className="font-mono text-[12px] text-muted-foreground" title={v}>
+            {v}
+          </span>
+        ),
       },
       {
         title: t({ uz: 'IP', en: 'IP', ru: 'IP' }),
         dataIndex: 'ip',
         key: 'ip',
-        width: 140,
-        render: (v: string | null) => v || '—',
+        width: 128,
+        render: (v: string | null) => (
+          <span className="font-mono text-xs tabular-nums">{v || '—'}</span>
+        ),
       },
     ],
     [t],
@@ -104,58 +132,66 @@ export default function ViolationsPage() {
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
-      <Card
-        className="!border-slate-200 dark:!border-slate-700/60"
-        title={
-          <span className="flex items-center gap-2">
-            <ShieldAlert size={16} />
-            {t(T.title)}
-          </span>
+    <div className="min-w-0 space-y-6">
+      <PageHeader
+        icon={ShieldAlert}
+        title={t(T.title)}
+        description={t({
+          uz: 'Moderator harakatlari va taqiqlangan urinishlar',
+          en: 'Moderator actions and forbidden attempts',
+          ru: 'Действия модераторов и запрещённые попытки',
+        })}
+      />
+
+      <ListSurface
+        loading={loading}
+        toolbar={
+          <FilterBar>
+            <Select
+              value={range}
+              className="w-[140px]"
+              onChange={(v) => {
+                setRange(v);
+                setPage(1);
+              }}
+              options={[
+                { value: 'today', label: t(T.today) },
+                { value: 'month', label: t(T.month) },
+                { value: 'year', label: t(T.year) },
+              ]}
+            />
+            <Select
+              allowClear
+              placeholder={t(T.moderator)}
+              className="min-w-[200px] max-w-[320px] flex-1"
+              value={moderatorId}
+              onChange={(v) => {
+                setModeratorId(v || undefined);
+                setPage(1);
+              }}
+              options={moderators.map((m) => ({
+                value: m.id,
+                label: `${m.firstName} ${m.lastName} (${m.email})`,
+              }))}
+            />
+          </FilterBar>
         }
       >
-        <div className="flex items-center gap-3 flex-wrap mb-4">
-          <Select
-            value={range}
-            style={{ width: 160 }}
-            onChange={(v) => {
-              setRange(v);
-              setPage(1);
-            }}
-            options={[
-              { value: 'today', label: t(T.today) },
-              { value: 'month', label: t(T.month) },
-              { value: 'year', label: t(T.year) },
-            ]}
-          />
-          <Select
-            allowClear
-            placeholder={t(T.moderator)}
-            style={{ width: 320 }}
-            value={moderatorId}
-            onChange={(v) => {
-              setModeratorId(v || undefined);
-              setPage(1);
-            }}
-            options={moderators.map((m) => ({
-              value: m.id,
-              label: `${m.firstName} ${m.lastName} (${m.email})`,
-            }))}
-          />
-        </div>
-
         <Table
           rowKey="id"
-          loading={loading}
+          loading={false}
           dataSource={violations.data}
           columns={columns}
+          variant="flat"
+          className="!rounded-none !border-0"
+          scroll={{ x: 960 }}
           pagination={{
             current: page,
             pageSize: limit,
@@ -169,8 +205,7 @@ export default function ViolationsPage() {
           }}
           size="small"
         />
-      </Card>
+      </ListSurface>
     </div>
   );
 }
-
