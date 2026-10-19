@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   Button,
-  Card,
   Form,
   Input,
   Modal,
@@ -33,7 +32,7 @@ import NoData from '@/components/NoData';
 import apiService from '@/services/api';
 import type { Organization } from '@/services/api';
 import { PageHeader } from '@/components/PageHeader';
-import { FilterBar } from '@/components/FilterBar';
+import { FilterBar, ListSurface } from '@/components/FilterBar';
 import { can } from '@/utils/can';
 
 const T = {
@@ -281,9 +280,8 @@ const Organizations = () => {
   );
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="space-y-6 overflow-y-auto p-6 h-[calc(100vh-100px)]">
       <PageHeader
-        icon={Building2}
         title={t(T.title)}
         description={t({
           uz: 'Energo ID filiallari — ro‘yxat sinxronizatsiyadan keladi',
@@ -297,35 +295,35 @@ const Organizations = () => {
         }
       />
 
-      <p className="text-sm text-muted-foreground">{t(T.energoSyncHint)}</p>
-
-      <FilterBar>
-        <Input
-          allowClear
-          value={search.value}
-          prefix={<Search size={14} className="text-slate-400" />}
-          placeholder={t(T.search)}
-          style={{ width: 220 }}
-          onChange={(e) => search.onChange(e.target.value)}
-        />
-        <Tag className="text-sm ml-auto">{t(T.total)}: {organizations.length}</Tag>
-      </FilterBar>
-
-      {initialLoading ? (
-        <div className="flex items-center justify-center h-32">
-          <Spin />
-        </div>
-      ) : organizations.length === 0 && !loading ? (
-        <NoData text={t(T.noData)} />
-      ) : (
-        <Card
-          className={`!border-slate-200 dark:!border-slate-700/60 transition-opacity duration-150 ${loading ? 'opacity-50' : ''}`}
-        >
+      <ListSurface
+        loading={loading && !initialLoading}
+        toolbar={
+          <FilterBar>
+            <Search size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+            <Input
+              value={search.value}
+              placeholder={t(T.search)}
+              onChange={(e) => search.onChange(e.target.value)}
+              className="h-8 max-w-xs flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+            />
+            <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
+              {organizations.length}
+            </span>
+          </FilterBar>
+        }
+      >
+        {initialLoading ? (
+          <div className="flex h-32 items-center justify-center">
+            <Spin />
+          </div>
+        ) : organizations.length === 0 && !loading ? (
+          <NoData text={t(T.noData)} />
+        ) : (
           <Table
             rowKey="id"
             dataSource={organizations}
             columns={columns}
-            loading={initialLoading}
+            loading={false}
             pagination={{
               pageSize: 20,
               showSizeChanger: false,
@@ -333,11 +331,11 @@ const Organizations = () => {
             }}
             onRow={(record) => ({
               onClick: () => navigate(`/dashboard/organizations/${record.id}`),
-              className: 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5',
+              className: 'cursor-pointer hover:bg-muted/40',
             })}
           />
-        </Card>
-      )}
+        )}
+      </ListSurface>
 
       <Modal
         title={editing ? t(T.editOrg) : t(T.addOrg)}

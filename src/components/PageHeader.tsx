@@ -4,11 +4,16 @@ import { cn } from '@/lib/utils';
 type PageHeaderProps = {
   title: React.ReactNode;
   description?: React.ReactNode;
+  /** Optional — SCHETCHIK uslubida ko‘pincha icon yo‘q */
   icon?: LucideIcon;
   actions?: React.ReactNode;
   className?: string;
 };
 
+/**
+ * Flat page title (SCHETCHIK PageHeader andozasi).
+ * Card/icon-box yo‘q — faqat matn + actions.
+ */
 export function PageHeader({
   title,
   description,
@@ -19,29 +24,24 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+        'flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between',
         className,
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="min-w-0">
         {Icon ? (
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground"
-            aria-hidden
-          >
-            <Icon className="h-5 w-5" strokeWidth={1.75} />
+          <div className="mb-2 inline-flex items-center gap-2 text-muted-foreground">
+            <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
           </div>
         ) : null}
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold tracking-tight text-foreground text-balance sm:text-2xl">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance md:text-[28px] md:leading-tight">
+          {title}
+        </h1>
+        {description ? (
+          <p className="mt-1.5 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
       </div>
       {actions ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>

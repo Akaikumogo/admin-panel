@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, Search } from 'lucide-react';
-import { Card, Input, Spin, Table, Tag } from '@/components/ui';
+import { ArrowLeft, Search } from 'lucide-react';
+import { Input, Spin, Table } from '@/components/ui';
 import type { ColumnsType } from '@/components/ui';
 import { PageHeader } from '@/components/PageHeader';
-import { FilterBar } from '@/components/FilterBar';
+import { FilterBar, ListSurface } from '@/components/FilterBar';
 import NoData from '@/components/NoData';
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { usePaginatedFetch } from '@/hooks/useFetch';
@@ -104,8 +104,8 @@ export default function ArchiveEmployeesPage() {
   }
 
   return (
-    <div className="space-y-4 overflow-y-auto p-6 h-[calc(100vh-100px)]">
-      <div className="mb-1">
+    <div className="space-y-6 overflow-y-auto p-6 h-[calc(100vh-100px)]">
+      <div>
         <Link
           to="/dashboard/archive"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -126,26 +126,29 @@ export default function ArchiveEmployeesPage() {
           en: 'Employees removed from sync — not shown in main lists',
           ru: 'Исключённые из sync сотрудники',
         })}
-        icon={GraduationCap}
-        actions={<Tag>Jami: {nf.format(total)}</Tag>}
       />
 
-      <FilterBar>
-        <Input
-          allowClear
-          prefix={<Search size={14} />}
-          placeholder={t({
-            uz: 'Ism, login yoki tabel…',
-            en: 'Name, login or personnel #…',
-            ru: 'Имя, логин или табель…',
-          })}
-          value={search.value}
-          onChange={(e) => search.onChange(e.target.value)}
-          className="max-w-sm"
-        />
-      </FilterBar>
-
-      <Card className="!border-slate-200 dark:!border-slate-700/60">
+      <ListSurface
+        loading={loading && !initialLoading}
+        toolbar={
+          <FilterBar>
+            <Search size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+            <Input
+              placeholder={t({
+                uz: 'Ism, login yoki tabel…',
+                en: 'Name, login or personnel #…',
+                ru: 'Имя, логин или табель…',
+              })}
+              value={search.value}
+              onChange={(e) => search.onChange(e.target.value)}
+              className="h-8 max-w-md flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+            />
+            <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
+              {nf.format(total)}
+            </span>
+          </FilterBar>
+        }
+      >
         {data.length === 0 && !loading ? (
           <NoData
             text={t({
@@ -170,7 +173,7 @@ export default function ArchiveEmployeesPage() {
             size="small"
           />
         )}
-      </Card>
+      </ListSurface>
     </div>
   );
 }

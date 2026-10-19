@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
-import { Card, Input, Spin, Table, Tag } from '@/components/ui';
+import { Input, Spin, Table } from '@/components/ui';
 import type { ColumnsType } from '@/components/ui';
-import { Building, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import apiService, { type NesDepartment } from '@/services/api';
 import { PageHeader } from '@/components/PageHeader';
-import { FilterBar } from '@/components/FilterBar';
+import { FilterBar, ListSurface } from '@/components/FilterBar';
 import NoData from '@/components/NoData';
 
 const nf = new Intl.NumberFormat('uz-UZ');
@@ -44,7 +44,9 @@ export default function DepartmentsPage() {
         dataIndex: 'employeeCount',
         key: 'employeeCount',
         width: 120,
-        render: (v: number) => nf.format(v ?? 0),
+        render: (v: number) => (
+          <span className="font-mono tabular-nums">{nf.format(v ?? 0)}</span>
+        ),
       },
       {
         title: t({ uz: 'Oxirgi sync', en: 'Last sync', ru: 'Последний sync' }),
@@ -52,7 +54,13 @@ export default function DepartmentsPage() {
         key: 'lastSyncedAt',
         width: 180,
         render: (v: string | null) =>
-          v ? new Date(v).toLocaleString() : '—',
+          v ? (
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
+              {new Date(v).toLocaleString()}
+            </span>
+          ) : (
+            '—'
+          ),
       },
     ],
     [t],
@@ -67,7 +75,7 @@ export default function DepartmentsPage() {
   }
 
   return (
-    <div className="space-y-4 overflow-y-auto p-6 h-[calc(100vh-100px)]">
+    <div className="space-y-6 overflow-y-auto p-6 h-[calc(100vh-100px)]">
       <PageHeader
         title={t({ uz: 'Bo‘limlar', en: 'Departments', ru: 'Отделы' })}
         description={t({
@@ -75,26 +83,29 @@ export default function DepartmentsPage() {
           en: 'Departments catalog synced from Energo ID',
           ru: 'Каталог отделов из Energo ID',
         })}
-        icon={Building}
       />
 
-      <FilterBar>
-        <Input
-          allowClear
-          prefix={<Search size={14} />}
-          placeholder={t({
-            uz: 'Bo‘lim qidirish…',
-            en: 'Search department…',
-            ru: 'Поиск отдела…',
-          })}
-          value={search.value}
-          onChange={(e) => search.onChange(e.target.value)}
-          className="max-w-sm"
-        />
-        <Tag>Jami: {nf.format(data.total)}</Tag>
-      </FilterBar>
-
-      <Card className="!border-slate-200 dark:!border-slate-700/60">
+      <ListSurface
+        loading={loading && !initialLoading}
+        toolbar={
+          <FilterBar>
+            <Search size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+            <Input
+              placeholder={t({
+                uz: 'Bo‘lim qidirish…',
+                en: 'Search department…',
+                ru: 'Поиск отдела…',
+              })}
+              value={search.value}
+              onChange={(e) => search.onChange(e.target.value)}
+              className="h-8 max-w-md flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+            />
+            <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
+              {nf.format(data.total)}
+            </span>
+          </FilterBar>
+        }
+      >
         {data.data.length === 0 && !loading ? (
           <NoData
             text={t({
@@ -113,7 +124,7 @@ export default function DepartmentsPage() {
             size="small"
           />
         )}
-      </Card>
+      </ListSurface>
     </div>
   );
 }

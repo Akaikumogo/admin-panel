@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   Button,
-  Card,
   Form,
   Input,
   Modal,
@@ -9,14 +8,14 @@ import {
   Table,
   message,
   Popconfirm,
-  Tag,
 } from '@/components/ui';
-import { BriefcaseBusiness, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type { Position, UserProfile } from '@/services/api';
 import { PageHeader } from '@/components/PageHeader';
+import { ListSurface } from '@/components/FilterBar';
 import { can } from '@/utils/can';
 
 const T = {
@@ -122,34 +121,37 @@ export default function PositionsPage() {
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 overflow-y-auto p-6 h-[calc(100vh-100px)]">
+    <div className="space-y-6 overflow-y-auto p-6 h-[calc(100vh-100px)]">
       <PageHeader
         title={t(T.title)}
         description={t(T.subtitle)}
-        icon={BriefcaseBusiness}
         actions={
-          <div className="flex items-center gap-2">
-            <Tag>Jami: {rows.length}</Tag>
-            <Button
-              type="primary"
-              icon={<Plus size={16} />}
-              disabled={!can('exams', 'create')}
-              onClick={() => openModal()}
-            >
-              {t(T.add)}
-            </Button>
-          </div>
+          <Button
+            type="primary"
+            icon={<Plus size={16} />}
+            disabled={!can('exams', 'create')}
+            onClick={() => openModal()}
+          >
+            {t(T.add)}
+          </Button>
         }
       />
 
-      <Card className="!border-slate-200 dark:!border-slate-700/60">
+      <ListSurface
+        loading={loading}
+        toolbar={
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+            {rows.length}
+          </span>
+        }
+      >
         <Table
           rowKey="id"
           loading={loading}
@@ -158,7 +160,7 @@ export default function PositionsPage() {
           pagination={{ pageSize: 50, showSizeChanger: true }}
           size="small"
         />
-      </Card>
+      </ListSurface>
 
       <Modal
         open={modalOpen}

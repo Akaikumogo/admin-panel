@@ -33,7 +33,6 @@ import {
   ChevronRight,
   Download,
   Eye,
-  GraduationCap,
   Mail,
   Trophy,
   Zap,
@@ -44,7 +43,7 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
-import { FilterBar, ContentCard } from '@/components/FilterBar';
+import { FilterBar, ListSurface } from '@/components/FilterBar';
 import { EmployeeAvatarUpload } from '@/components/EmployeeAvatarUpload';
 import { downloadCsv } from '@/lib/csv';
 import apiService from '@/services/api';
@@ -913,7 +912,6 @@ const Students = () => {
   return (
     <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden p-4 md:p-6">
       <PageHeader
-        icon={GraduationCap}
         title={t(T.title)}
         description={t(T.subtitle)}
         actions={
@@ -928,62 +926,65 @@ const Students = () => {
         }
       />
 
-      <FilterBar showIcon>
-        <Segmented<'flat' | 'tree'>
-          value={viewMode}
-          onChange={(v) =>
-            setParams({
-              view: v === 'tree' ? 'tree' : undefined,
-              page: undefined,
-            })
-          }
-          options={[
-            { value: 'flat', label: t(T.flat) },
-            { value: 'tree', label: t(T.tree) },
-          ]}
-        />
-        <Select
-          allowClear
-          placeholder={t(T.allOrgs)}
-          style={{ width: 220 }}
-          value={qp.orgId}
-          onChange={(v) => setParams({ orgId: v, page: undefined })}
-          options={orgs.map((o) => ({ value: o.id, label: o.name }))}
-        />
+      <ListSurface
+        loading={showTree ? treeFetching && !treeLoading : loading || initialLoading}
+        toolbar={
+          <FilterBar>
+            <Segmented<'flat' | 'tree'>
+              value={viewMode}
+              onChange={(v) =>
+                setParams({
+                  view: v === 'tree' ? 'tree' : undefined,
+                  page: undefined,
+                })
+              }
+              options={[
+                { value: 'flat', label: t(T.flat) },
+                { value: 'tree', label: t(T.tree) },
+              ]}
+            />
+            <Select
+              allowClear
+              placeholder={t(T.allOrgs)}
+              style={{ width: 220 }}
+              value={qp.orgId}
+              onChange={(v) => setParams({ orgId: v, page: undefined })}
+              options={orgs.map((o) => ({ value: o.id, label: o.name }))}
+            />
+            {!showTree ? (
+              <Select
+                allowClear
+                placeholder={t(T.allLevels)}
+                style={{ width: 200 }}
+                value={qp.levelId}
+                onChange={(v) => setParams({ levelId: v, page: undefined })}
+                options={levels.map((l) => ({ value: l.id, label: l.title }))}
+              />
+            ) : null}
+            <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
+              {showTree ? treeStudents.length : total}
+            </span>
+          </FilterBar>
+        }
+      >
         {!showTree ? (
-          <Select
-            allowClear
-            placeholder={t(T.allLevels)}
-            style={{ width: 200 }}
-            value={qp.levelId}
-            onChange={(v) => setParams({ levelId: v, page: undefined })}
-            options={levels.map((l) => ({ value: l.id, label: l.title }))}
-          />
+          <p className="border-b border-border/60 px-4 py-2 text-right text-[11px] text-muted-foreground md:px-5">
+            {t({
+              uz: 'Switch OFF = hisobotdan chiqarish (o‘chirish emas)',
+              en: 'Switch OFF = exclude from reports (not delete)',
+              ru: 'Switch OFF = исключить из отчётов (не удаление)',
+            })}
+          </p>
         ) : null}
-        <Tag className="text-sm ml-auto">
-          {t(T.total)}: {showTree ? treeStudents.length : total}
-        </Tag>
-      </FilterBar>
 
-      {!showTree ? (
-        <p className="text-right text-[11px] text-muted-foreground">
-          {t({
-            uz: 'Switch OFF = hisobotdan chiqarish (o‘chirish emas)',
-            en: 'Switch OFF = exclude from reports (not delete)',
-            ru: 'Switch OFF = исключить из отчётов (не удаление)',
-          })}
-        </p>
-      ) : null}
-
-      {showTree ? (
-        busy ? (
-          <div className="flex h-32 items-center justify-center">
-            <Spin />
-          </div>
-        ) : treeEmpty ? (
-          <NoData text={t(T.noData)} />
-        ) : (
-          <ContentCard loading={treeFetching && !treeLoading}>
+        {showTree ? (
+          busy ? (
+            <div className="flex h-32 items-center justify-center">
+              <Spin />
+            </div>
+          ) : treeEmpty ? (
+            <NoData text={t(T.noData)} />
+          ) : (
             <EmployeesHierarchy
               students={treeStudents}
               organizations={reportingActivation.organizations}
@@ -995,10 +996,8 @@ const Students = () => {
                 void refetchActivation();
               }}
             />
-          </ContentCard>
-        )
-      ) : (
-        <ContentCard loading={loading || initialLoading}>
+          )
+        ) : (
           <Table
             dataSource={students}
             columns={columns}
@@ -1037,8 +1036,8 @@ const Students = () => {
             scroll={{ x: 2500 }}
             size="small"
           />
-        </ContentCard>
-      )}
+        )}
+      </ListSurface>
 
       <AlertDialog
         open={!!pendingOff}
