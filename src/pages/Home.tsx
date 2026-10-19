@@ -24,7 +24,6 @@ import {
 import {
   Card,
   Button,
-  Typography,
   Avatar,
   Skeleton,
   Table,
@@ -51,8 +50,6 @@ import { MiniSparkline } from './Home/MiniSparkline';
 import { formatDelta, shortBranchName } from './Home/branchName';
 import { PageHeader } from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
-
-const { Title, Text } = Typography;
 
 type KpiTone = {
   accent: string;
@@ -646,12 +643,10 @@ export default function HomePage() {
                     <Skeleton active title={false} paragraph={{ rows: 2 }} />
                   ) : (
                     <>
-                      <Title level={4} className="!mb-0 !mt-1 !text-base">
+                      <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">
                         {me?.firstName} {me?.lastName}
-                      </Title>
-                      <Text className="text-sm text-muted-foreground">
-                        {me?.role}
-                      </Text>
+                      </h2>
+                      <p className="text-sm text-muted-foreground">{me?.role}</p>
                     </>
                   )}
                 </div>

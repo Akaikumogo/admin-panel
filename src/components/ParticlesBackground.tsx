@@ -18,7 +18,7 @@ const ParticlesBackground = () => {
         background: { color: { value: 'transparent' } },
         particles: {
           number: { value: 30 },
-          color: { value: '#3d57c4' },
+          color: { value: '#0d9488' },
           shape: { type: 'circle' },
           opacity: { value: 0.6 },
           size: { value: 3 },

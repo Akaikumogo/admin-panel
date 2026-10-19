@@ -110,7 +110,7 @@ export function CertificateCard({
 
       <button
         type="button"
-        className="border-0 bg-transparent text-xs font-semibold cursor-pointer rounded-sm px-3 py-[5px] text-slate-500 transition-colors hover:text-blue-600 hover:bg-blue-500/10 dark:text-slate-400 dark:hover:text-blue-400"
+        className="cursor-pointer rounded-sm border-0 bg-transparent px-3 py-[5px] text-xs font-semibold text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
         onClick={toggleFlip}
         aria-hidden
         tabIndex={-1}

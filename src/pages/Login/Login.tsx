@@ -76,9 +76,9 @@ const LoginPage = () => {
           ru: 'Обучайте. Отслеживайте прогресс.',
         })}
         body={t({
-          en: 'Admin workspace for modules, employees, and live activity — calm zinc stage, teal signal.',
-          uz: 'Modullar, xodimlar va jonli faollik — tinch zinc sahna, teal signal.',
-          ru: 'Модули, сотрудники и активность — спокойная zinc-сцена, teal-сигнал.',
+          en: 'Modules, people, and live progress in one calm workspace.',
+          uz: 'Modullar, xodimlar va jonli natija — bitta tinch ish maydonida.',
+          ru: 'Модули, сотрудники и прогресс — в одном спокойном пространстве.',
         })}
         meta={`© ${new Date().getFullYear()} ElektroLearn`}
       />
@@ -122,9 +122,9 @@ const LoginPage = () => {
             </h2>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
               {t({
-                en: 'Sign in with Energo ID',
-                uz: 'Energo ID orqali kiring',
-                ru: 'Войдите через Energo ID',
+                en: 'Continue with Energo ID, or use email if you have a local account.',
+                uz: 'Energo ID bilan davom eting yoki email orqali kiring.',
+                ru: 'Продолжите через Energo ID или войдите по email.',
               })}
             </p>
           </motion.div>
@@ -163,9 +163,9 @@ const LoginPage = () => {
               <span className="h-px flex-1 bg-border" />
               <span className="text-[12px] text-muted-foreground">
                 {t({
-                  en: 'or local superadmin',
-                  uz: 'yoki local superadmin',
-                  ru: 'или локальный superadmin',
+                  en: 'or email',
+                  uz: 'yoki email',
+                  ru: 'или email',
                 })}
               </span>
               <span className="h-px flex-1 bg-border" />
@@ -231,9 +231,9 @@ const LoginPage = () => {
                         ru: 'Вход…',
                       })
                     : t({
-                        en: 'Local login',
-                        uz: 'Local kirish',
-                        ru: 'Локальный вход',
+                        en: 'Sign in with email',
+                        uz: 'Email orqali kirish',
+                        ru: 'Войти по email',
                       })}
                 </MagneticButton>
               </Form.Item>

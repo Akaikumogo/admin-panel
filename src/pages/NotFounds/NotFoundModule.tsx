@@ -11,10 +11,10 @@ const NotFoundPage = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="w-full h-full  flex flex-col items-center justify-center bg-white text-gray-800 dark:bg-[#000000] dark:text-white transition-colors duration-300 px-4 text-center"
+      className="flex h-full w-full flex-col items-center justify-center bg-background px-4 text-center text-foreground transition-colors duration-300"
     >
       <motion.h1
-        className="text-6xl font-bold mb-2 text-[#3d57c4]"
+        className="mb-2 text-6xl font-bold text-primary"
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -23,7 +23,7 @@ const NotFoundPage = () => {
       </motion.h1>
 
       <motion.h2
-        className="text-lg md:text-xl text-gray-500 dark:text-gray-400 mb-5"
+        className="mb-5 text-lg text-muted-foreground md:text-xl"
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.5 }}
@@ -31,7 +31,7 @@ const NotFoundPage = () => {
         {t({
           uz: 'Module topilmadi',
           ru: 'Страница не найдена',
-          en: 'Module not found'
+          en: 'Module not found',
         })}
       </motion.h2>
 
@@ -41,13 +41,14 @@ const NotFoundPage = () => {
         transition={{ delay: 0.6, duration: 0.5 }}
       >
         <button
+          type="button"
           onClick={() => navigate('/dashboard')}
-          className="px-6 py-2 rounded-md text-sm font-medium bg-[#3d57c4] text-white hover:bg-[#2f459f] transition "
+          className="rounded-xl bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
           {t({
             uz: 'Bosh sahifaga qaytish',
             ru: 'Вернуться на главную',
-            en: 'Go back home'
+            en: 'Go back home',
           })}
         </button>
       </motion.div>

@@ -21,12 +21,13 @@ import { can } from '@/utils/can';
 
 const ROLE_COLOR_MAP: Record<string, string> = {
   SUPERADMIN: 'red',
-  MODERATOR: 'blue',
+  MODERATOR: 'default',
   USER: 'default'
 };
 
+/** Zinc → teal brand header / avatar fallback */
 const GRADIENT_STYLE = Object.freeze({
-  background: 'linear-gradient(135deg, #3B82F6 0%, #0a36ad 100%)'
+  background: 'linear-gradient(135deg, #3f3f46 0%, #0d9488 100%)'
 });
 
 const TAB_VISIBLE =
@@ -230,7 +231,7 @@ const AvatarCard = memo(function AvatarCard({
   );
 
   return (
-    <Card className="bg-white/95 dark:bg-card/95 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-xl">
+    <Card className="border-border bg-card shadow-sm">
       <div className="flex flex-col items-center">
         <div className="relative group">
           <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-white dark:ring-card shadow-lg">
@@ -298,11 +299,11 @@ const AvatarCard = memo(function AvatarCard({
           ) : null}
         </div>
 
-        <div className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left dark:border-slate-700 dark:bg-slate-900/50">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="mt-3 w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-left">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t(T.rulesTitle)}
           </p>
-          <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+          <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-[11px] leading-snug text-muted-foreground">
             <li>{t(T.rule1)}</li>
             <li>{t(T.rule2)}</li>
             <li>{t(T.rule3)}</li>
@@ -310,32 +311,32 @@ const AvatarCard = memo(function AvatarCard({
           </ul>
         </div>
 
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-4">
+        <h2 className="mt-4 text-xl font-bold text-foreground">
           {me.firstName} {me.lastName}
         </h2>
         <Tag color={ROLE_COLOR_MAP[me.role]} className="mt-1">
           {me.role}
         </Tag>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <p className="mt-1 text-sm text-muted-foreground">
           {me.email}
         </p>
       </div>
 
       <Divider className="my-4" />
       <div className="grid grid-cols-2 gap-4 text-center">
-        <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-3">
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">
+        <div className="rounded-xl bg-muted/40 p-3">
+          <div className="text-2xl font-bold text-foreground">
             {me.organizations.length || 0}
           </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <div className="mt-0.5 text-xs text-muted-foreground">
             {t(T.orgs)}
           </div>
         </div>
-        <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-3">
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">
+        <div className="rounded-xl bg-muted/40 p-3">
+          <div className="text-2xl font-bold text-foreground">
             {me.role === 'SUPERADMIN' ? 'Full' : 'Limited'}
           </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <div className="mt-0.5 text-xs text-muted-foreground">
             {t(T.access)}
           </div>
         </div>
@@ -422,7 +423,7 @@ const GeneralTab = memo(function GeneralTab({
                   </Tag>
                 ))
               ) : (
-                <span className="text-slate-400">—</span>
+                <span className="text-muted-foreground">—</span>
               )}
             </div>
           </Form.Item>
@@ -711,17 +712,17 @@ export default function ProfilePage() {
         </div>
 
         <div className="w-full">
-          <div className="p-6 rounded-2xl bg-white/95 dark:bg-card/95 backdrop-blur-sm border border-slate-200 dark:border-slate-800 shadow-xl">
-            <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700/60 pb-3 mb-6">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <div className="mb-6 flex gap-1 border-b border-border pb-3">
               {TAB_ITEMS.map(({ key, icon: Icon, labelKey }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => handleTabClick(key)}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 active:scale-[0.97] ${
+                  className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150 active:scale-[0.97] ${
                     activeTab === key
-                      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                   }`}
                 >
                   <Icon size={16} />
@@ -766,7 +767,7 @@ export default function ProfilePage() {
                   <LogOut size={18} />
                   {t(T.logout)}
                 </h4>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {t(T.logoutDesc)}
                 </p>
               </div>

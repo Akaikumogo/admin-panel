@@ -124,8 +124,14 @@ function ChangesTab() {
         <div className="min-w-0">
           <div className="font-medium truncate">{v || '—'}</div>
           {row.actorRole ? (
-            <Tag color={row.actorRole === 'SUPERADMIN' ? 'purple' : 'blue'}>
-              {row.actorRole === 'SUPERADMIN' ? 'Superadmin' : t({ uz: 'Markaziy apparat', en: 'Head office', ru: 'Центр. аппарат' })}
+            <Tag color="default">
+              {row.actorRole === 'SUPERADMIN'
+                ? 'Superadmin'
+                : t({
+                    uz: 'Markaziy apparat',
+                    en: 'Head office',
+                    ru: 'Центр. аппарат',
+                  })}
             </Tag>
           ) : null}
         </div>

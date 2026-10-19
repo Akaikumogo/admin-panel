@@ -161,13 +161,13 @@ function KpiMetric({
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium tracking-wide text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-medium tracking-wide text-muted-foreground">
             {label}
           </p>
           {loading ? (
             <Skeleton.Input active size="small" className="mt-3 !h-8 !w-24" />
           ) : (
-            <p className="mt-2 text-[1.75rem] font-semibold leading-none tracking-tight text-slate-900 tabular-nums dark:text-slate-50">
+            <p className="mt-2 text-[1.75rem] font-semibold leading-none tracking-tight tabular-nums text-foreground">
               {value.toLocaleString()}
             </p>
           )}
@@ -182,7 +182,7 @@ function KpiMetric({
           {loading ? null : deltaPercent != null ? (
             <DeltaBadge percent={deltaPercent} />
           ) : hint ? (
-            <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">
+            <p className="truncate text-[11px] text-muted-foreground">
               {hint}
             </p>
           ) : null}
@@ -230,7 +230,7 @@ export function CoreMetricsPanel({
               ru: 'Ключевые метрики',
             })}
           </p>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             {t({
               uz: 'Platforma holati — bir qarashda',
               en: 'Platform pulse at a glance',
@@ -240,7 +240,7 @@ export function CoreMetricsPanel({
         </div>
         <time
           dateTime={new Date().toISOString().slice(0, 10)}
-          className="rounded-md border border-border/80 bg-card/80 px-2 py-1 text-[11px] font-medium tabular-nums text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] dark:text-slate-400"
+          className="rounded-md border border-border/80 bg-card/80 px-2 py-1 text-[11px] font-medium tabular-nums text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
         >
           {dateLabel}
         </time>

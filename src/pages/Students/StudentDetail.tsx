@@ -261,7 +261,7 @@ const StudentDetailPage = () => {
           />
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+            <h2 className="text-xl font-semibold text-foreground">
               {formatPersonName(student)}
               {student.role === 'MODERATOR' ? (
                 <Tag className="ml-2 align-middle" color="default">
@@ -275,7 +275,7 @@ const StudentDetailPage = () => {
                 {student.badge?.label ?? 'Yangi ishchi'}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-slate-500 dark:text-slate-400">
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><Mail size={14} /> {student.email}</span>
               <span className="flex items-center gap-1">
                 <Calendar size={14} /> {t(T.joined)}: {new Date(student.createdAt).toLocaleDateString()}
@@ -304,7 +304,7 @@ const StudentDetailPage = () => {
             </div>
             {student.organizations.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-slate-400">{t(T.organizations)}:</span>
+                <span className="text-xs text-muted-foreground">{t(T.organizations)}:</span>
                 {student.organizations.map((o) => (
                   <Tag key={o.id}>{o.name}</Tag>
                 ))}
@@ -321,31 +321,31 @@ const StudentDetailPage = () => {
               <div className="flex items-center justify-center gap-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
                 <Zap size={20} /> {student.totalXp}
               </div>
-              <p className="text-xs text-slate-400 mt-1">{t(T.totalXp)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(T.totalXp)}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 size={20} /> {student.correctAnswers ?? Math.floor(student.totalXp / 10)}
               </div>
-              <p className="text-xs text-slate-400 mt-1">{t(T.correctAnswers)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(T.correctAnswers)}</p>
             </div>
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-primary">
                 {student.uniqueCorrectQuestions ?? '—'}
               </div>
-              <p className="text-xs text-slate-400 mt-1">{t(T.uniqueQuestions)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(T.uniqueQuestions)}</p>
             </div>
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-green-600 dark:text-green-400">
+              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 <Trophy size={20} /> {student.completedLevels}
               </div>
-              <p className="text-xs text-slate-400 mt-1">{t(T.completedLevels)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(T.completedLevels)}</p>
             </div>
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-red-500">
+              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-destructive">
                 <XCircle size={20} /> {student.totalErrors}
               </div>
-              <p className="text-xs text-slate-400 mt-1">{t(T.totalErrors)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(T.totalErrors)}</p>
             </div>
           </div>
         </div>
@@ -377,7 +377,7 @@ const StudentDetailPage = () => {
             pageSize={5}
             syncUrl={false}
             title={
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                 <CalendarDays size={16} className="text-[var(--shell-rail)]" />
                 {t({
                   uz: 'Shaxsiy reja natijalari',
@@ -393,8 +393,8 @@ const StudentDetailPage = () => {
       {/* XP history — qachon / qaysi savol / necha ball */}
       <div className="bg-card border border-border rounded-lg p-6">
         <div className="mb-4">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t(T.xpHistory)}</h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t(T.xpHistoryHint)}</p>
+          <h3 className="text-base font-semibold text-foreground">{t(T.xpHistory)}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">{t(T.xpHistoryHint)}</p>
         </div>
         {xpLoading && !xpHistory ? (
           <div className="flex items-center justify-center h-16"><Spin /></div>
@@ -420,11 +420,11 @@ const StudentDetailPage = () => {
 
       {/* Level progress */}
       <div className="bg-card border border-border rounded-lg p-6">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t(T.progress)}</h3>
+        <h3 className="text-base font-semibold text-foreground mb-4">{t(T.progress)}</h3>
         <div className="space-y-3">
           {student.levelProgress.map((lp) => (
             <div key={lp.levelId} className="flex items-center gap-4">
-              <span className="w-48 text-sm text-slate-700 dark:text-slate-300 truncate">{lp.title}</span>
+              <span className="w-48 text-sm text-foreground truncate">{lp.title}</span>
               <Progress
                 percent={lp.completionPercent}
                 size="small"
@@ -432,7 +432,7 @@ const StudentDetailPage = () => {
                 status={lp.completionPercent >= 100 ? 'success' : 'active'}
               />
               {lp.completedAt && (
-                <span className="text-xs text-slate-400 flex-shrink-0">
+                <span className="text-xs text-muted-foreground flex-shrink-0">
                   {new Date(lp.completedAt).toLocaleDateString()}
                 </span>
               )}
@@ -445,7 +445,7 @@ const StudentDetailPage = () => {
 
       {/* Lost questions */}
       <div className="bg-card border border-border rounded-lg p-6">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t(T.lostQuestions)}</h3>
+        <h3 className="text-base font-semibold text-foreground mb-4">{t(T.lostQuestions)}</h3>
         {lqLoading ? (
           <div className="flex items-center justify-center h-16"><Spin /></div>
         ) : lostQuestions.length === 0 ? (

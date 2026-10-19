@@ -254,7 +254,7 @@ const EmployeeRow = memo(function EmployeeRow({
           <span className="block truncate text-[13px] font-medium tracking-tight text-foreground">
             {formatPersonName(s)}
             {s.role === 'MODERATOR' ? (
-              <span className="ml-1.5 rounded bg-blue-500/15 px-1 py-0.5 text-[10px] font-normal text-blue-700 dark:text-blue-300">
+              <span className="ml-1.5 rounded bg-primary/12 px-1 py-0.5 text-[10px] font-normal text-primary">
                 Mod
               </span>
             ) : null}
@@ -396,9 +396,9 @@ function BranchToggle({
             accent === 'warn'
               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200'
               : depth === 0
-                ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200'
+                ? 'bg-primary/12 text-primary'
                 : depth === 1
-                  ? 'bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                  ? 'bg-muted text-muted-foreground'
                   : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'
           )}
         >
@@ -425,7 +425,7 @@ function BranchToggle({
             'mt-0.5 shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums',
             accent === 'warn'
               ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
-              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+              : 'bg-muted text-muted-foreground'
           )}
         >
           {count}
