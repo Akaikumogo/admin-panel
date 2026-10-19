@@ -13,14 +13,14 @@ function SkeletonBase({ className, active, style, paragraph, size, ...props }: S
     return (
       <div className={cn('space-y-2', className)} style={style} {...props}>
         {Array.from({ length: paragraph.rows ?? 3 }).map((_, i) => (
-          <div key={i} className="h-3 w-full animate-pulse rounded-md bg-muted" />
+          <SkeletonLine key={i} className="h-3 w-full" />
         ))}
       </div>
     );
   }
   return (
-    <div
-      className={cn('animate-pulse rounded-md bg-muted', className)}
+    <SkeletonLine
+      className={className}
       style={{
         width: typeof size === 'number' ? size : undefined,
         height: typeof size === 'number' ? size : undefined,
@@ -28,6 +28,25 @@ function SkeletonBase({ className, active, style, paragraph, size, ...props }: S
       }}
       {...props}
     />
+  );
+}
+
+function SkeletonLine({
+  className,
+  style,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-lg bg-zinc-200/70 dark:bg-zinc-800/70',
+        className,
+      )}
+      style={style}
+      {...props}
+    >
+      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/5" />
+    </div>
   );
 }
 
@@ -40,7 +59,13 @@ SkeletonBase.Input = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 
 SkeletonBase.Avatar = ({ className, active, size, style, ...props }: SkeletonProps) => (
-  <SkeletonBase className={cn('rounded-full', className)} active={active} size={size} style={style} {...props} />
+  <SkeletonBase
+    className={cn('rounded-full', className)}
+    active={active}
+    size={size}
+    style={style}
+    {...props}
+  />
 );
 
 export const Skeleton = SkeletonBase;

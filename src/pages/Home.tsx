@@ -75,54 +75,54 @@ const KPI_META: Array<{
     key: 'totalUsers',
     icon: Users,
     tone: {
-      accent: 'text-cyan-600 dark:text-cyan-400',
-      spark: 'rgb(8 145 178)',
-      chip: 'bg-cyan-500/10',
+      accent: 'text-primary',
+      spark: '#22786e',
+      chip: 'bg-accent',
     },
   },
   {
     key: 'activeUsers7d',
     icon: Activity,
     tone: {
-      accent: 'text-teal-600 dark:text-teal-400',
-      spark: 'rgb(13 148 136)',
-      chip: 'bg-teal-500/10',
+      accent: 'text-accent-600 dark:text-accent-400',
+      spark: '#2f9688',
+      chip: 'bg-accent-100 dark:bg-accent-500/15',
     },
   },
   {
     key: 'totalOrganizations',
     icon: Building2,
     tone: {
-      accent: 'text-orange-600 dark:text-orange-400',
-      spark: 'rgb(234 88 12)',
-      chip: 'bg-orange-500/10',
+      accent: 'text-amber-700 dark:text-amber-400',
+      spark: 'rgb(217 119 6)',
+      chip: 'bg-amber-500/10',
     },
   },
   {
     key: 'totalModerators',
     icon: Shield,
     tone: {
-      accent: 'text-violet-600 dark:text-violet-400',
-      spark: 'rgb(124 58 237)',
-      chip: 'bg-violet-500/10',
+      accent: 'text-zinc-700 dark:text-zinc-300',
+      spark: '#71717a',
+      chip: 'bg-zinc-100 dark:bg-zinc-800',
     },
   },
   {
     key: 'totalLevels',
     icon: Layers,
     tone: {
-      accent: 'text-sky-600 dark:text-sky-400',
-      spark: 'rgb(2 132 199)',
-      chip: 'bg-sky-500/10',
+      accent: 'text-accent-700 dark:text-accent-300',
+      spark: '#1f6159',
+      chip: 'bg-accent-50 dark:bg-accent-500/10',
     },
   },
   {
     key: 'totalQuestions',
     icon: HelpCircle,
     tone: {
-      accent: 'text-emerald-600 dark:text-emerald-400',
-      spark: 'rgb(5 150 105)',
-      chip: 'bg-emerald-500/10',
+      accent: 'text-accent-800 dark:text-accent-200',
+      spark: '#1d4e49',
+      chip: 'bg-accent-100/80 dark:bg-accent-500/12',
     },
   },
 ];
@@ -536,13 +536,13 @@ export default function HomePage() {
       </div>
 
       {storyInsight ? (
-        <div className="flex items-start gap-3 rounded-lg border border-teal-500/25 bg-teal-500/5 px-4 py-3">
+        <div className="surface flex items-start gap-3 border-primary/20 bg-accent px-4 py-3">
           <Sparkles
             size={16}
-            className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-400"
+            className="mt-0.5 shrink-0 text-primary"
           />
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700 dark:text-teal-300">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
               {t({ uz: 'AI Insight', en: 'AI Insight', ru: 'AI Insight' })}
             </p>
             <p className="mt-0.5 text-sm leading-relaxed text-foreground/90">
@@ -553,8 +553,8 @@ export default function HomePage() {
       ) : null}
 
       {/* KPI — larger visual weight */}
-      <Card className="!border-border !shadow-none">
-        <div className="mb-1 flex items-center justify-between px-1">
+      <div className="surface overflow-hidden p-4 md:p-5">
+        <div className="mb-3 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             {t({
               uz: 'Asosiy ko‘rsatkichlar',
@@ -598,17 +598,17 @@ export default function HomePage() {
             );
           })}
         </div>
-      </Card>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <Card
-          className="xl:col-span-8 !border-border !shadow-none min-h-[320px]"
+          className="xl:col-span-8 min-h-[320px]"
           title={
             <span className="flex items-center gap-2 text-sm font-semibold">
               <Activity
                 size={15}
                 strokeWidth={1.75}
-                className="text-[var(--shell-rail)]"
+                className="text-primary"
               />
               {t({
                 uz: 'Filial bo‘yicha faollik (12 hafta)',
@@ -631,7 +631,7 @@ export default function HomePage() {
         </Card>
 
         <div className="xl:col-span-4 space-y-4">
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
@@ -683,7 +683,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="surface p-4">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <AlertTriangle
                 size={15}
@@ -762,7 +762,7 @@ export default function HomePage() {
               <Layers
                 size={15}
                 strokeWidth={1.75}
-                className="text-[var(--shell-rail)]"
+                className="text-primary"
               />
               {t({
                 uz: 'Modul funnel',
@@ -771,7 +771,6 @@ export default function HomePage() {
               })}
             </span>
           }
-          className="!border-border !shadow-none"
         >
           {funnelLoading ? (
             <Skeleton active paragraph={{ rows: 4 }} />
@@ -830,7 +829,6 @@ export default function HomePage() {
               })}
             </span>
           }
-          className="!border-border !shadow-none"
         >
           {errorsLoading ? (
             <Skeleton active paragraph={{ rows: 4 }} />
@@ -871,17 +869,17 @@ function StoryTile({
   className?: string;
 }) {
   const toneMap = {
-    teal: 'border-teal-500/20 bg-teal-500/[0.06] text-teal-700 dark:text-teal-300',
+    teal: 'border-primary/20 bg-accent text-accent-foreground',
     rose: 'border-rose-500/20 bg-rose-500/[0.06] text-rose-700 dark:text-rose-300',
     amber:
       'border-amber-500/25 bg-amber-500/[0.07] text-amber-800 dark:text-amber-300',
-    cyan: 'border-cyan-500/20 bg-cyan-500/[0.06] text-cyan-700 dark:text-cyan-300',
+    cyan: 'border-accent-400/30 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300',
   };
   return (
     <div
       title={title}
       className={cn(
-        'rounded-lg border px-3 py-3',
+        'surface-flat px-3 py-3',
         toneMap[tone],
         className,
       )}

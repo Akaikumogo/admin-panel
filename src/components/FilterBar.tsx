@@ -8,8 +8,8 @@ type FilterBarProps = {
 };
 
 /**
- * Flat toolbar row (SCHETCHIK andozasi) — alohida card emas.
- * Odatda `ListSurface` ichidagi `toolbar` sifatida ishlatiladi.
+ * Flat toolbar row (SCHETCHIK) — alohida card emas.
+ * Odatda `ListSurface` ichidagi `toolbar` sifatida.
  */
 export function FilterBar({ children, className, showIcon = false }: FilterBarProps) {
   return (
@@ -23,8 +23,7 @@ export function FilterBar({ children, className, showIcon = false }: FilterBarPr
 }
 
 /**
- * Bitta surface: qidiruv/toolbar + jadval/list.
- * Card → alohida FilterBar → alohida Table o‘rniga SCHETCHIK uslubi.
+ * Bitta surface: qidiruv/toolbar + jadval/list (SCHETCHIK).
  */
 export function ListSurface({
   toolbar,
@@ -40,8 +39,7 @@ export function ListSurface({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-2xl border border-border/70 bg-card',
-        'shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-border/80 dark:shadow-none',
+        'surface overflow-hidden',
         loading && 'opacity-60 transition-opacity',
         className,
       )}
@@ -56,7 +54,7 @@ export function ListSurface({
   );
 }
 
-/** @deprecated Use ListSurface — kept as alias for gradual migration */
+/** @deprecated Use ListSurface */
 export function ContentCard({
   children,
   className,

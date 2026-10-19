@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { IdCard, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Form, Input, Button, Select, message, Divider } from '@/components/ui';
+import { Form, Input, Select, message } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import apiService from '@/services/api';
+import { LoginCinema } from './LoginCinema';
+import { MagneticButton } from './MagneticButton';
 
 const LoginPage = () => {
   const { t, lang, setLang } = useTranslation();
@@ -56,152 +59,189 @@ const LoginPage = () => {
     }
   };
 
+  const busy = loading || oauthLoading;
+
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-[#2563EB] to-[#0a36ad] dark:from-[#020617] dark:to-[#0F172A] transition-colors duration-1000"
-        initial={{ scale: 1.1, opacity: 0.8 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 1.1, opacity: 0 }}
+    <div className="grid min-h-dvh bg-background lg:grid-cols-[1.15fr_0.85fr]">
+      <LoginCinema
+        brand="ElektroLearn"
+        brandSub={t({
+          en: 'Learning control panel',
+          uz: 'O‘quv boshqaruv paneli',
+          ru: 'Панель обучения',
+        })}
+        title={t({
+          en: 'Train teams. Track progress.',
+          uz: 'Jamoani o‘qing. Natijani kuzating.',
+          ru: 'Обучайте. Отслеживайте прогресс.',
+        })}
+        body={t({
+          en: 'Admin workspace for modules, employees, and live activity — calm zinc stage, teal signal.',
+          uz: 'Modullar, xodimlar va jonli faollik — tinch zinc sahna, teal signal.',
+          ru: 'Модули, сотрудники и активность — спокойная zinc-сцена, teal-сигнал.',
+        })}
+        meta={`© ${new Date().getFullYear()} ElektroLearn`}
       />
 
-      <motion.div
-        className="absolute top-4 right-4 z-20 flex items-center gap-2"
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.3 }}
-      >
-        <Select
-          value={lang}
-          size="middle"
-          variant="filled"
-          onChange={(value) => setLang(value as typeof lang)}
-          className="min-w-[120px] [&_.ant-select-selector]:!bg-white/15 [&_.ant-select-selector]:!border-white/20 [&_.ant-select-selection-item]:!text-white"
-          popupClassName="backdrop-blur-sm"
-          options={[
-            { value: 'en', label: 'English' },
-            { value: 'ru', label: 'Русский' },
-            { value: 'uz', label: "O'zbekcha" },
-            { value: 'uz-cyrl', label: 'Узбекча' },
-          ]}
-        />
-        <ThemeToggle />
-      </motion.div>
-
-      <motion.div
-        className="w-full max-w-sm relative z-10 bg-white/90 dark:bg-[#0F172A]/90 border border-[#E2E8F0] dark:border-[#1E293B] backdrop-blur-md rounded-2xl shadow-xl p-8"
-        initial={{ scale: 0.95, y: 30, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 100, damping: 15 }}
-      >
-        <motion.h1
-          className="text-3xl font-semibold mb-2 text-[#2563EB] dark:text-[#60A5FA] text-center"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          {t({
-            en: 'Welcome back',
-            uz: 'Xush kelibsiz',
-            ru: 'Добро пожаловать',
-          })}
-        </motion.h1>
-        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-6">
-          {t({
-            en: 'Sign in with Energo ID',
-            uz: 'Energo ID orqali kiring',
-            ru: 'Войдите через Energo ID',
-          })}
-        </p>
-
-        <Button
-          type="primary"
-          block
-          size="large"
-          className="font-medium mb-4"
-          loading={oauthLoading}
-          onClick={() => void handleEnergoIdLogin()}
-        >
-          {t({
-            en: 'Login with Energo ID',
-            uz: 'Energo ID orqali kirish',
-            ru: 'Войти через Energo ID',
-          })}
-        </Button>
-
-        <Divider plain className="text-xs text-slate-400">
-          {t({
-            en: 'or local superadmin',
-            uz: 'yoki local superadmin',
-            ru: 'или локальный superadmin',
-          })}
-        </Divider>
-
-        <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item
-            label={t({ en: 'Email', uz: 'Email', ru: 'Эл. почта' })}
-            name="email"
-            rules={[
-              {
-                required: true,
-                message: t({
-                  en: 'Please enter your email',
-                  uz: 'Email kiriting',
-                  ru: 'Введите эл. почту',
-                }),
-              },
-              {
-                type: 'email',
-                message: t({
-                  en: 'Invalid email',
-                  uz: "Noto'g'ri email",
-                  ru: 'Неверная эл. почта',
-                }),
-              },
+      <section className="relative flex min-h-dvh flex-col px-5 py-5 sm:px-8 lg:px-10 lg:py-6">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Select
+            value={lang}
+            size="middle"
+            onChange={(value) => setLang(value as typeof lang)}
+            className="min-w-[120px]"
+            options={[
+              { value: 'en', label: 'English' },
+              { value: 'ru', label: 'Русский' },
+              { value: 'uz', label: "O'zbekcha" },
+              { value: 'uz-cyrl', label: 'Узбекча' },
             ]}
-          >
-            <Input placeholder="superadmin@example.com" />
-          </Form.Item>
+          />
+          <ThemeToggle />
+        </div>
 
-          <Form.Item
-            label={t({ en: 'Password', uz: 'Parol', ru: 'Пароль' })}
-            name="password"
-            rules={[
-              {
-                required: true,
-                message: t({
-                  en: 'Please enter your password',
-                  uz: 'Parol kiriting',
-                  ru: 'Введите пароль',
-                }),
-              },
-            ]}
+        <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-6">
+          <motion.div
+            initial={{ opacity: 0.2, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 140, damping: 22 }}
           >
-            <Input.Password placeholder="********" />
-          </Form.Item>
+            <div className="mb-6 flex items-center gap-3 lg:hidden">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                <Zap className="h-5 w-5" fill="currentColor" strokeWidth={0} />
+              </span>
+              <span className="font-semibold tracking-tight">ElektroLearn</span>
+            </div>
 
-          <Form.Item>
-            <Button
-              htmlType="submit"
-              block
-              className="font-medium"
-              loading={loading}
-            >
+            <h2 className="text-[1.75rem] font-semibold tracking-tight text-foreground">
               {t({
-                en: 'Local login',
-                uz: 'Local kirish',
-                ru: 'Локальный вход',
+                en: 'Welcome back',
+                uz: 'Xush kelibsiz',
+                ru: 'Добро пожаловать',
               })}
-            </Button>
-          </Form.Item>
-        </Form>
-      </motion.div>
-    </motion.div>
+            </h2>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
+              {t({
+                en: 'Sign in with Energo ID',
+                uz: 'Energo ID orqali kiring',
+                ru: 'Войдите через Energo ID',
+              })}
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="mt-6 space-y-3.5"
+            initial={{ opacity: 0.2, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: 0.04,
+              type: 'spring',
+              stiffness: 140,
+              damping: 22,
+            }}
+          >
+            <MagneticButton
+              variant="primary"
+              disabled={busy}
+              onClick={() => void handleEnergoIdLogin()}
+            >
+              <IdCard size={20} aria-hidden />
+              {oauthLoading
+                ? t({
+                    en: 'Redirecting…',
+                    uz: 'Yo‘naltirilmoqda…',
+                    ru: 'Перенаправление…',
+                  })
+                : t({
+                    en: 'Login with Energo ID',
+                    uz: 'Energo ID orqali kirish',
+                    ru: 'Войти через Energo ID',
+                  })}
+            </MagneticButton>
+
+            <div className="flex items-center gap-3 py-1">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[12px] text-muted-foreground">
+                {t({
+                  en: 'or local superadmin',
+                  uz: 'yoki local superadmin',
+                  ru: 'или локальный superadmin',
+                })}
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <Form layout="vertical" onFinish={onFinish} className="space-y-1">
+              <Form.Item
+                label={t({ en: 'Email', uz: 'Email', ru: 'Эл. почта' })}
+                name="email"
+                rules={[
+                  {
+                    required: true,
+                    message: t({
+                      en: 'Please enter your email',
+                      uz: 'Email kiriting',
+                      ru: 'Введите эл. почту',
+                    }),
+                  },
+                  {
+                    type: 'email',
+                    message: t({
+                      en: 'Invalid email',
+                      uz: "Noto'g'ri email",
+                      ru: 'Неверная эл. почта',
+                    }),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder="superadmin@example.com"
+                  autoComplete="username"
+                  disabled={busy}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={t({ en: 'Password', uz: 'Parol', ru: 'Пароль' })}
+                name="password"
+                rules={[
+                  {
+                    required: true,
+                    message: t({
+                      en: 'Please enter your password',
+                      uz: 'Parol kiriting',
+                      ru: 'Введите пароль',
+                    }),
+                  },
+                ]}
+              >
+                <Input.Password
+                  placeholder="********"
+                  autoComplete="current-password"
+                  disabled={busy}
+                />
+              </Form.Item>
+
+              <Form.Item className="!mb-0">
+                <MagneticButton type="submit" variant="ghost" disabled={busy}>
+                  {loading
+                    ? t({
+                        en: 'Signing in…',
+                        uz: 'Kirilmoqda…',
+                        ru: 'Вход…',
+                      })
+                    : t({
+                        en: 'Local login',
+                        uz: 'Local kirish',
+                        ru: 'Локальный вход',
+                      })}
+                </MagneticButton>
+              </Form.Item>
+            </Form>
+          </motion.div>
+        </div>
+      </section>
+    </div>
   );
 };
 

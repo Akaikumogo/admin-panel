@@ -284,7 +284,7 @@ function BrandMark({ className }: { className?: string }) {
       )}
     >
       <Zap className="h-5 w-5" fill="currentColor" strokeWidth={0} />
-      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-breathe rounded-full border-2 border-background bg-emerald-400" />
+      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-breathe rounded-full border-2 border-background bg-accent-400" />
     </span>
   );
 }
@@ -756,7 +756,7 @@ const Layout = () => {
 
       <div className="lg:pl-[264px]">
         <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
-          <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-3 px-4 md:px-8">
+          <div className="flex h-14 w-full items-center justify-between gap-3 px-4 md:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-2 lg:hidden">
               <button
                 type="button"
@@ -828,7 +828,7 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className="mx-auto min-h-[calc(100dvh-3.5rem)] max-w-[1400px] px-4 py-6 md:px-8 md:py-8">
+        <main className="min-h-[calc(100dvh-3.5rem)] w-full px-4 py-6 md:px-6 md:py-8 lg:px-8">
           {me?.role !== 'USER' &&
           !isModeratorForbiddenRoute &&
           !isDirectorForbiddenRoute &&

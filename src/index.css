@@ -27,78 +27,106 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  /* SCHETCHIK teal scale */
+  --color-accent-50: #effaf8;
+  --color-accent-100: #d6f2ec;
+  --color-accent-200: #ade3d9;
+  --color-accent-300: #7bcdc0;
+  --color-accent-400: #4db1a3;
+  --color-accent-500: #2f9688;
+  --color-accent-600: #22786e;
+  --color-accent-700: #1f6159;
+  --color-accent-800: #1d4e49;
+  --color-accent-900: #1b413d;
+  --color-accent-950: #0b2624;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --shadow-soft: 0 20px 40px -24px rgba(24, 24, 27, 0.18);
+  --shadow-soft-dark: 0 20px 40px -24px rgba(0, 0, 0, 0.6);
 }
 
-/* ElektroLearn ops shell — cool paper + restrained electric accent */
+/*
+ * SCHETCHIK palette → ElektroLearn tokens
+ * Light: zinc-50 paper + teal accent
+ * Dark: zinc-950 + teal accents
+ */
 :root {
-  --background: #f3f5f7;
-  --foreground: #0c1222;
+  --background: #fafafa;
+  --foreground: #18181b;
   --card: #ffffff;
-  --card-foreground: #0c1222;
+  --card-foreground: #18181b;
   --popover: #ffffff;
-  --popover-foreground: #0c1222;
-  --primary: #0f5ebd;
-  --primary-foreground: #f5f9ff;
-  --secondary: #e9eef3;
-  --secondary-foreground: #0c1222;
-  --muted: #e9eef3;
-  --muted-foreground: #5b6b7c;
-  --accent: #eef2f6;
-  --accent-foreground: #0c1222;
-  --destructive: #c62828;
+  --popover-foreground: #18181b;
+  --primary: #22786e;
+  --primary-foreground: #effaf8;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #effaf8;
+  --accent-foreground: #1f6159;
+  --destructive: #e11d48;
   --destructive-foreground: #ffffff;
-  --border: #dce3ea;
-  --input: #dce3ea;
-  --ring: #0f5ebd;
-  --radius: 0.5rem;
-  --bg-main: #f3f5f7;
+  --border: rgba(228, 228, 231, 0.9);
+  --input: #e4e4e7;
+  --ring: #2f9688;
+  --radius: 0.75rem;
+  --bg-main: #fafafa;
   --bg-card: #ffffff;
-  --text-primary: #0c1222;
-  --text-secondary: #5b6b7c;
-  --border-color: #dce3ea;
-  --primary-hover: #1470d9;
-  --shell-rail: #0f5ebd;
-  --shell-sidebar: #f7f9fb;
-  --table-header: #f0f3f6;
-  --table-row-hover: #f6f8fa;
+  --text-primary: #18181b;
+  --text-secondary: #71717a;
+  --border-color: #e4e4e7;
+  --primary-hover: #1f6159;
+  --shell-rail: #22786e;
+  --shell-sidebar: #fafafa;
+  --table-header: #f4f4f5;
+  --table-row-hover: #fafafa;
   --table-surface: #ffffff;
+  /* Cinematic login stage (teal · zinc) */
+  --cinema-fg: #effaf8;
+  --cinema-muted: rgba(239, 250, 248, 0.72);
+  --cinema-accent: #2f9688;
+  --cinema-accent-fg: #effaf8;
 }
 
 .dark {
-  --background: #0b1016;
-  --foreground: #e6edf4;
-  --card: #111820;
-  --card-foreground: #e6edf4;
-  --popover: #111820;
-  --popover-foreground: #e6edf4;
-  --primary: #5ba3f0;
-  --primary-foreground: #071018;
-  --secondary: #18212b;
-  --secondary-foreground: #e6edf4;
-  --muted: #18212b;
-  --muted-foreground: #8fa0b3;
-  --accent: #1a2430;
-  --accent-foreground: #e6edf4;
-  --destructive: #ef5350;
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  --card: rgba(24, 24, 27, 0.72);
+  --card-foreground: #f4f4f5;
+  --popover: #18181b;
+  --popover-foreground: #f4f4f5;
+  --primary: #4db1a3;
+  --primary-foreground: #0b2624;
+  --secondary: #27272a;
+  --secondary-foreground: #f4f4f5;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: rgba(47, 150, 136, 0.12);
+  --accent-foreground: #ade3d9;
+  --destructive: #fb7185;
   --destructive-foreground: #ffffff;
-  --border: #243140;
-  --input: #18212b;
-  --ring: #5ba3f0;
-  --bg-main: #0b1016;
-  --bg-card: #111820;
-  --text-primary: #e6edf4;
-  --text-secondary: #8fa0b3;
-  --border-color: #243140;
-  --primary-hover: #7bb6f5;
-  --shell-rail: #5ba3f0;
-  --shell-sidebar: #0d131a;
-  --table-header: #151c25;
-  --table-row-hover: #161e27;
-  --table-surface: #111820;
+  --border: rgba(39, 39, 42, 0.85);
+  --input: #27272a;
+  --ring: #4db1a3;
+  --bg-main: #09090b;
+  --bg-card: #18181b;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --border-color: #27272a;
+  --primary-hover: #7bcdc0;
+  --shell-rail: #4db1a3;
+  --shell-sidebar: #09090b;
+  --table-header: #18181b;
+  --table-row-hover: rgba(39, 39, 42, 0.45);
+  --table-surface: rgba(24, 24, 27, 0.72);
+  --cinema-fg: #effaf8;
+  --cinema-muted: rgba(239, 250, 248, 0.7);
+  --cinema-accent: #4db1a3;
+  --cinema-accent-fg: #0b2624;
 }
 
 .glass {
@@ -166,6 +194,60 @@ html {
 
 .animate-breathe {
   animation: el-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes el-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: el-shimmer 1.6s infinite;
+}
+
+/* Cinematic login (V2 LoginCinema · teal stage) */
+.cinema-stage {
+  background:
+    radial-gradient(ellipse 70% 55% at 18% 22%, rgba(77, 177, 163, 0.18), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 88% 78%, rgba(34, 120, 110, 0.4), transparent 60%),
+    linear-gradient(155deg, #09090b 0%, #18181b 45%, #1b413d 78%, #0b2624 100%);
+}
+
+.cinema-grain {
+  opacity: 0.16;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+.cinema-vignette {
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(5, 10, 12, 0.55) 100%);
+}
+
+.dark .cinema-stage {
+  background:
+    radial-gradient(ellipse 70% 55% at 18% 22%, rgba(77, 177, 163, 0.14), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 88% 78%, rgba(27, 65, 61, 0.85), transparent 60%),
+    linear-gradient(155deg, #050505 0%, #09090b 40%, #18181b 100%);
+}
+
+/* SCHETCHIK surface */
+.surface {
+  border-radius: 1rem; /* rounded-2xl */
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  background: var(--card);
+  box-shadow: var(--shadow-soft);
+}
+
+.dark .surface {
+  box-shadow: var(--shadow-soft-dark);
+  background: color-mix(in oklab, var(--card) 100%, transparent);
+}
+
+.surface-flat {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  background: var(--card);
 }
 
 @layer base {
