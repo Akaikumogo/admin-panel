@@ -435,7 +435,7 @@ export function DataTable<T extends Record<string, unknown>>({
         colSpan={colSpan}
         className={cn(
           cellPadding,
-          'text-muted-foreground',
+          'text-foreground',
           meta.align === 'center' && 'text-center',
           meta.align === 'right' && 'text-right',
           stickyCellClass(fixed, true),
@@ -445,7 +445,7 @@ export function DataTable<T extends Record<string, unknown>>({
         {canSort ? (
           <button
             type="button"
-            className="inline-flex items-center gap-1 cursor-pointer select-none text-[11px] font-semibold uppercase tracking-[0.04em]"
+            className="inline-flex cursor-pointer select-none items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-foreground"
             onClick={onSort}
           >
             {title}
@@ -454,11 +454,11 @@ export function DataTable<T extends Record<string, unknown>>({
             ) : sortState === 'desc' ? (
               <ArrowDown className="h-3 w-3" />
             ) : (
-              <ArrowUpDown className="h-3 w-3 opacity-35" />
+              <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
             )}
           </button>
         ) : (
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-foreground">
             {title}
           </span>
         )}
@@ -466,21 +466,33 @@ export function DataTable<T extends Record<string, unknown>>({
     );
   };
 
-  const stickyCellClass = (fixed?: 'left' | 'right', isHeader?: boolean) =>
+  const stickyCellClass = (
+    fixed?: 'left' | 'right',
+    isHeader?: boolean,
+    opts?: { filterRow?: boolean },
+  ) =>
     cn(
+      isHeader &&
+        cn(
+          'sticky z-20 bg-[var(--table-header)] text-foreground',
+          opts?.filterRow ? 'top-9' : 'top-0',
+        ),
       fixed === 'left' &&
         cn(
-          'sticky overflow-hidden shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.45)]',
+          'sticky left-0 overflow-hidden shadow-[2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[2px_0_6px_-2px_rgba(0,0,0,0.45)]',
           !isFlat && 'border-r border-border',
+          isHeader
+            ? 'z-30 bg-[var(--table-header)]'
+            : 'z-[15] bg-[var(--table-surface)]',
         ),
       fixed === 'right' &&
         cn(
-          'sticky overflow-hidden shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)]',
+          'sticky right-0 overflow-hidden shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.12)] dark:shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.45)]',
           !isFlat && 'border-l border-border',
+          isHeader
+            ? 'z-30 bg-[var(--table-header)]'
+            : 'z-[15] bg-[var(--table-surface)]',
         ),
-      fixed === 'left' && 'bg-[var(--table-surface)]',
-      fixed === 'right' && 'bg-[var(--table-surface)]',
-      isHeader && fixed && 'z-40',
     );
 
   const stickyStyle = (
@@ -532,7 +544,10 @@ export function DataTable<T extends Record<string, unknown>>({
       <div
         ref={scrollContainerRef}
         className={cn(
-          'w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto overscroll-x-contain',
+          'w-full min-w-0 max-w-full overscroll-x-contain',
+          scroll?.y != null
+            ? 'overflow-x-auto overflow-y-auto'
+            : 'overflow-x-auto',
           '[&_button]:cursor-pointer [&_a]:cursor-pointer [&_input]:cursor-text [&_textarea]:cursor-text [&_select]:cursor-pointer [&_[role=switch]]:cursor-pointer',
           hasHorizontalScroll && (isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'),
         )}
@@ -555,7 +570,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 : { width: '100%' }
           }
         >
-          <TableHeader className="sticky top-0 z-[45] bg-[var(--table-surface)]">
+          <TableHeader className="bg-[var(--table-header)] [&_th]:bg-[var(--table-header)]">
             {groupedHeaders ? (
               <>
                 <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'hover:bg-transparent')}>
@@ -569,7 +584,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           colSpan={col.children.length}
                           className={cn(
                             cellPadding,
-                            'text-center text-muted-foreground',
+                            'sticky top-0 z-20 bg-[var(--table-header)] text-center text-foreground',
                           )}
                         >
                           <span className="text-[11px] font-semibold uppercase tracking-[0.04em]">
@@ -615,7 +630,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         key={header.id}
                         className={cn(
                           cellPadding,
-                          'text-muted-foreground',
+                          'text-foreground',
                           meta?.align === 'center' && 'text-center',
                           meta?.align === 'right' && 'text-right',
                           stickyCellClass(fixed, true),
@@ -626,7 +641,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           <button
                             type="button"
                             className={cn(
-                              'inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.04em]',
+                              'inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-foreground',
                               header.column.getCanSort() && 'cursor-pointer select-none',
                             )}
                             onClick={header.column.getToggleSortingHandler()}
@@ -638,7 +653,7 @@ export function DataTable<T extends Record<string, unknown>>({
                               ) : header.column.getIsSorted() === 'desc' ? (
                                 <ArrowDown className="h-3 w-3" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-35" />
+                                <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
                               )
                             ) : null}
                           </button>
@@ -650,7 +665,7 @@ export function DataTable<T extends Record<string, unknown>>({
               ))
             )}
             {hasColumnFilters && !groupedHeaders ? (
-              <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'bg-[var(--table-header)]/70 hover:bg-[var(--table-header)]/70')}>
+              <TableRow className={cn(isFlat ? 'border-border/40' : 'border-border', 'bg-[var(--table-header)] hover:bg-[var(--table-header)]')}>
                 {table.getHeaderGroups()[0]?.headers.map((header) => {
                   const col = findLeafColumn(columns, header.column.id);
                   const meta = header.column.columnDef.meta as {
@@ -670,7 +685,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         'py-2 px-2',
                         meta?.align === 'center' && 'text-center',
                         meta?.align === 'right' && 'text-right',
-                        stickyCellClass(fixed, true),
+                        stickyCellClass(fixed, true, { filterRow: true }),
                       )}
                       style={stickyStyle(colId, fixed, meta?.width, true)}
                     >

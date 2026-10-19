@@ -82,8 +82,8 @@
   --primary-hover: #1f6159;
   --shell-rail: #22786e;
   --shell-sidebar: #fafafa;
-  --table-header: #f4f4f5;
-  --table-row-hover: #fafafa;
+  --table-header: #ffffff;
+  --table-row-hover: #f4f4f5;
   --table-surface: #ffffff;
   /* Cinematic login stage (teal · zinc) */
   --cinema-fg: #effaf8;
@@ -95,7 +95,7 @@
 .dark {
   --background: #09090b;
   --foreground: #f4f4f5;
-  --card: rgba(24, 24, 27, 0.72);
+  --card: #18181b;
   --card-foreground: #f4f4f5;
   --popover: #18181b;
   --popover-foreground: #f4f4f5;
@@ -121,8 +121,8 @@
   --shell-rail: #4db1a3;
   --shell-sidebar: #09090b;
   --table-header: #18181b;
-  --table-row-hover: rgba(39, 39, 42, 0.45);
-  --table-surface: rgba(24, 24, 27, 0.72);
+  --table-row-hover: #27272a;
+  --table-surface: #18181b;
   --cinema-fg: #effaf8;
   --cinema-muted: rgba(239, 250, 248, 0.7);
   --cinema-accent: #4db1a3;
@@ -400,22 +400,27 @@ body {
   min-width: 280px;
 }
 
-/* Enterprise jadval — quiet rules, no zebra bands */
+/* Enterprise jadval — solid header (no opacity bleed on sticky scroll) */
 .enterprise-table {
   background: var(--table-surface);
 }
 
 .enterprise-table thead {
-  background: transparent;
+  background: var(--table-header);
 }
 
 .enterprise-table thead th {
   font-size: 0.6875rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted-foreground);
-  border-bottom: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  color: var(--foreground);
+  background: var(--table-header);
+  border-bottom: 1px solid var(--border);
+  /* sticky scroll: cells must be opaque so body never shows through */
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .enterprise-table tbody tr {
