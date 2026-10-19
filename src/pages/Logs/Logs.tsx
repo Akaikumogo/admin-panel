@@ -160,7 +160,7 @@ export default function LogsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="page-stack">
       <Card
         className="!border-slate-200 dark:!border-slate-700/60"
         title={

@@ -39,7 +39,7 @@ const tagColorMap: Record<string, BadgeProps['variant']> = {
   error: 'destructive',
   warning: 'warning',
   default: 'secondary',
-  blue: 'info',
+  blue: 'default',
   green: 'success',
   gold: 'warning',
   purple: 'default',

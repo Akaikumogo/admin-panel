@@ -20,7 +20,6 @@ import {
   Plus,
   Mail,
   Shield,
-  Filter,
   Settings,
   Star,
   Table2,
@@ -33,6 +32,7 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
+import { FilterBar, ListSurface } from '@/components/FilterBar';
 import { AvatarPreview } from '@/components/AvatarPreview';
 import apiService, {
   resolveAssetUrl,
@@ -581,7 +581,7 @@ const Moderators = () => {
                 name={fullName}
                 initials={(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
                 size={36}
-                avatarClassName="bg-gradient-to-br from-slate-600 to-slate-800"
+                avatarClassName="bg-primary text-primary-foreground"
               />
               <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold tracking-tight text-foreground">
                 <HighlightText text={fullName} />
@@ -661,7 +661,7 @@ const Moderators = () => {
         width: 130,
         filterable: false,
         render: () => (
-          <Tag color={staffRoleTab === 'ACCOUNTING' ? 'blue' : 'default'}>
+          <Tag color="default">
             <span className="inline-flex items-center gap-1">
               <Shield size={13} />
               {staffRoleTab === 'ACCOUNTING' ? 'ACCOUNTING' : 'MODERATOR'}
@@ -728,7 +728,7 @@ const Moderators = () => {
   );
 
   return (
-    <div className="space-y-4 moderators-page">
+    <div className="page-stack moderators-page">
       <PageHeader
         icon={Shield}
         title={t(T.title)}
@@ -739,11 +739,13 @@ const Moderators = () => {
         })}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Tag className="text-xs tabular-nums">
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {t(T.total)}: {total}
-            </Tag>
+            </span>
             {staffRoleTab === 'MODERATOR' ? (
               <Button
+                type="default"
+                size="small"
                 icon={<Table2 size={16} />}
                 onClick={() => navigate('/dashboard/permissions')}
               >
@@ -761,33 +763,37 @@ const Moderators = () => {
         }
       />
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type={staffRoleTab === 'MODERATOR' ? 'primary' : 'default'}
+      <div className="inline-flex rounded-xl border border-border bg-card p-1">
+        <button
+          type="button"
           onClick={() => setParams({ staffRole: undefined, page: undefined })}
+          className={
+            staffRoleTab === 'MODERATOR'
+              ? 'rounded-lg bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground'
+              : 'rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground'
+          }
         >
           {t(T.tabModerators)}
-        </Button>
-        <Button
-          type={staffRoleTab === 'ACCOUNTING' ? 'primary' : 'default'}
+        </button>
+        <button
+          type="button"
           onClick={() =>
             setParams({ staffRole: 'ACCOUNTING', page: undefined })
           }
+          className={
+            staffRoleTab === 'ACCOUNTING'
+              ? 'rounded-lg bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground'
+              : 'rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground'
+          }
         >
           {t(T.tabAccounting)}
-        </Button>
+        </button>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-          <Filter size={14} />
-          {t({ uz: 'Filtrlar', en: 'Filters', ru: 'Фильтры' })}
-        </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(320px,1fr)_260px]">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t(T.filialFilter)}
-            </span>
+      <ListSurface
+        loading={loading && !initialLoading}
+        toolbar={
+          <FilterBar showIcon>
             <Select
               allowClear
               showSearch
@@ -796,7 +802,7 @@ const Moderators = () => {
               onChange={handleOrgChange}
               optionFilterProp="label"
               filterOption={filterSelectOption}
-              className="moderator-filial-filter"
+              className="moderator-filial-filter min-w-[200px] max-w-[360px] flex-1"
               popupClassName="moderator-filial-popup"
               listHeight={300}
               virtual
@@ -805,25 +811,19 @@ const Moderators = () => {
                 <span className="moderator-filial-option">{option.label}</span>
               )}
             />
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t(T.filterMode)}
-            </span>
             <Select
               value={qp.orgMode === 'exclude' ? 'exclude' : 'include'}
               onChange={handleOrgModeChange}
               disabled={!qp.orgId}
+              className="w-[180px]"
               options={[
                 { value: 'include', label: t(T.orgModeInclude) },
                 { value: 'exclude', label: t(T.orgModeExclude) }
               ]}
             />
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-border bg-card p-2">
+          </FilterBar>
+        }
+      >
         {initialLoading ? (
           <div className="flex h-32 items-center justify-center">
             <Spin />
@@ -835,7 +835,10 @@ const Moderators = () => {
             rowKey="id"
             columns={columns}
             dataSource={moderators}
-            loading={loading}
+            loading={false}
+            size="small"
+            variant="flat"
+            className="moderators-table !rounded-none !border-0"
             pagination={{
               current: currentPage,
               pageSize,
@@ -849,11 +852,10 @@ const Moderators = () => {
                 });
               }
             }}
-            scroll={{ x: 1280 }}
-            className="moderators-table"
+            scroll={{ x: 1100 }}
           />
         )}
-      </div>
+      </ListSurface>
 
       <Modal
         title={t(T.addModerator)}
@@ -1017,7 +1019,7 @@ const Moderators = () => {
                     {(['view', 'create', 'update', 'delete'] as const).map(
                       (field) => (
                         <div key={field} className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500 capitalize">
+                          <span className="text-xs capitalize text-muted-foreground">
                             {field}
                           </span>
                           <Switch

@@ -211,7 +211,7 @@ export default function ImportExportPage() {
   if (!isSuperAdmin()) return null;
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="page-stack">
       <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
         Faqat SuperAdmin. Export qilgan JSON faylni o‘sha formatda import qiling.
         Modullarda barcha bog‘lanishlar (level → nazariya → savol → variant) saqlanadi.

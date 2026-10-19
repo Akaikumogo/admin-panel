@@ -22,7 +22,7 @@ export function PercentBar({
   rightLabel,
 }: Props) {
   const clamped = Math.min(100, Math.max(0, percent));
-  const barColor = status ? statusColor(status) : 'bg-blue-600';
+  const barColor = status ? statusColor(status) : 'bg-primary';
 
   const h =
     height === 'sm'
@@ -43,7 +43,7 @@ export function PercentBar({
           </span>
         </div>
       )}
-      <div className={cn('w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800', h)}>
+      <div className={cn('w-full overflow-hidden rounded-full bg-muted', h)}>
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500 ease-out',

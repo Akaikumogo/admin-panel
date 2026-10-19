@@ -305,7 +305,7 @@ export default function NesSync() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="page-stack">
       <PageHeader
         icon={IdCard}
         title="ENERGO ID"

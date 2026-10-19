@@ -8,7 +8,6 @@ import {
   Spin,
   Switch,
   Table,
-  Tag,
   Tooltip,
   message,
 } from '@/components/ui';
@@ -562,7 +561,7 @@ const Students = () => {
     {
       title: 'Tabel',
       key: 'personnelNumber',
-      width: 220,
+      width: 148,
       fixed: 'left' as const,
       filterable: true,
       filterPlaceholder: 'Tabel / ism...',
@@ -578,17 +577,25 @@ const Students = () => {
             size={28}
             onUploaded={() => void columnsApiRef.current.refetch()}
           />
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-            <Tag className="max-w-[110px] truncate">{record.personnelNumber || '—'}</Tag>
-            {record.role === 'MODERATOR' ? (
-              <Tag color="blue" className="shrink-0">Moderator</Tag>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate font-mono text-[13px] font-medium tabular-nums text-foreground">
+                {record.personnelNumber || '—'}
+              </span>
+              {record.role === 'MODERATOR' ? (
+                <span className="shrink-0 rounded bg-primary/12 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-primary">
+                  Mod
+                </span>
+              ) : null}
+            </div>
+            {record.badge?.label ? (
+              <span
+                className="mt-0.5 block truncate text-[10px] text-amber-700 dark:text-amber-400"
+                title={`${'⚡'.repeat(record.badge?.bolts ?? 1)} ${record.badge.label}`}
+              >
+                {record.badge.label}
+              </span>
             ) : null}
-            <span
-              className="min-w-0 truncate text-[10px] text-amber-600 dark:text-amber-400"
-              title={record.badge?.label ?? 'Yangi ishchi'}
-            >
-              {'⚡'.repeat(record.badge?.bolts ?? 1)} {record.badge?.label ?? 'Yangi ishchi'}
-            </span>
           </div>
         </div>
       ),
@@ -596,7 +603,7 @@ const Students = () => {
     {
       title: 'Ism',
       key: 'firstName',
-      width: 180,
+      width: 130,
       filterable: true,
       filterPlaceholder: 'Ism...',
       getFilterValue: (record: StudentSummary) => record.firstName ?? '',
@@ -616,7 +623,7 @@ const Students = () => {
     {
       title: 'Familiya',
       key: 'lastName',
-      width: 180,
+      width: 130,
       filterable: true,
       filterPlaceholder: 'Familiya...',
       getFilterValue: (record: StudentSummary) => record.lastName ?? '',
@@ -636,7 +643,7 @@ const Students = () => {
     {
       title: 'Otasining ismi',
       key: 'middleName',
-      width: 200,
+      width: 140,
       filterable: true,
       filterPlaceholder: 'Ota ismi...',
       getFilterValue: (record: StudentSummary) => record.middleName ?? '',
@@ -656,7 +663,7 @@ const Students = () => {
     {
       title: "Bo‘lim",
       key: 'division',
-      width: 240,
+      width: 160,
       filterable: true,
       filterPlaceholder: "Bo‘lim...",
       getFilterValue: (record: StudentSummary) => record.division ?? '',
@@ -676,7 +683,7 @@ const Students = () => {
     {
       title: 'Lavozim',
       key: 'post',
-      width: 240,
+      width: 150,
       filterable: true,
       filterPlaceholder: 'Lavozim...',
       getFilterValue: (record: StudentSummary) => record.post ?? '',
@@ -696,7 +703,7 @@ const Students = () => {
     {
       title: columnsApiRef.current.t(T.email),
       key: 'email',
-      width: 240,
+      width: 180,
       ellipsis: true,
       filterable: true,
       filterPlaceholder: 'Email...',
@@ -713,7 +720,7 @@ const Students = () => {
     {
       title: columnsApiRef.current.t(T.lastOnline),
       key: 'lastOnline',
-      width: 160,
+      width: 120,
       filterable: false,
       sorter: (a: StudentSummary, b: StudentSummary) => {
         const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
@@ -750,7 +757,7 @@ const Students = () => {
     {
       title: columnsApiRef.current.t(T.xp),
       key: 'xp',
-      width: 100,
+      width: 80,
       filterable: true,
       filterPlaceholder: 'XP...',
       getFilterValue: (record: StudentSummary) => String(record.totalXp ?? ''),
@@ -763,7 +770,7 @@ const Students = () => {
     {
       title: columnsApiRef.current.t(T.completed),
       key: 'completed',
-      width: 120,
+      width: 88,
       filterable: false,
       render: (_: unknown, record: StudentSummary) => (
         <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
@@ -774,22 +781,25 @@ const Students = () => {
     {
       title: columnsApiRef.current.t(T.level),
       key: 'level',
-      width: 160,
+      width: 120,
       ellipsis: true,
       filterable: true,
       filterPlaceholder: 'Daraja...',
       getFilterValue: (record: StudentSummary) =>
         record.currentLevelTitle ?? '',
       render: (_: unknown, record: StudentSummary) => (
-        <Tag color="default" className="max-w-full truncate" title={record.currentLevelTitle ?? '—'}>
+        <span
+          className="block truncate text-[12px] text-muted-foreground"
+          title={record.currentLevelTitle ?? '—'}
+        >
           {record.currentLevelTitle ?? '—'}
-        </Tag>
+        </span>
       ),
     },
     {
       title: columnsApiRef.current.t(T.org),
       key: 'org',
-      width: 280,
+      width: 160,
       ellipsis: true,
       filterable: true,
       filterPlaceholder: 'Tashkilot...',
@@ -843,7 +853,7 @@ const Students = () => {
     {
       title: 'Saqlash',
       key: 'saveFields',
-      width: 110,
+      width: 96,
       fixed: 'right' as const,
       filterable: false,
       render: (_: unknown, record: StudentSummary) => {
@@ -870,7 +880,7 @@ const Students = () => {
         ru: 'Отчёт',
       }),
       key: 'reportActive',
-      width: 100,
+      width: 88,
       fixed: 'right' as const,
       filterable: false,
       render: (_: unknown, record: StudentSummary) => {
@@ -1033,7 +1043,7 @@ const Students = () => {
                 });
               },
             }}
-            scroll={{ x: 2500 }}
+            scroll={{ x: 1680 }}
             size="small"
           />
         )}

@@ -20,7 +20,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Button, Card, Skeleton, Table, message } from '@/components/ui';
+import { Button, Skeleton, Table, message } from '@/components/ui';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
@@ -396,7 +396,7 @@ export default function ExecutiveDashboard() {
       render: (name: string, row: BranchRankingRow) => (
         <button
           type="button"
-          className="text-left text-[15px] font-semibold transition-colors hover:text-blue-600"
+          className="text-left text-[15px] font-semibold transition-colors hover:text-primary"
           onClick={() => navigate(`/dashboard/analytics/branches/${row.orgId}?date=${date}`)}
         >
           {name}
@@ -587,7 +587,8 @@ export default function ExecutiveDashboard() {
             </div>
             <div className="p-3 md:p-4">
               <Table
-                size="middle"
+                size="small"
+                variant="flat"
                 rowKey="orgId"
                 columns={branchColumns}
                 dataSource={rankingAllBranches}
@@ -598,7 +599,7 @@ export default function ExecutiveDashboard() {
 
           {planType === 'daily' && (
             <section className="grid gap-4 lg:grid-cols-2">
-              <Card className="!border-border !shadow-none">
+              <div className="overflow-hidden rounded-xl border border-border bg-card">
                 <div className="border-b border-border px-4 py-3 text-sm font-semibold">
                   {t({
                     uz: 'Kun davomida (soatlik)',
@@ -622,9 +623,9 @@ export default function ExecutiveDashboard() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </Card>
+              </div>
 
-              <Card className="!border-border !shadow-none">
+              <div className="overflow-hidden rounded-xl border border-border bg-card">
                 <div className="border-b border-border px-4 py-3 text-sm font-semibold">
                   {t({ uz: 'Oxirgi 7 kun', en: 'Last 7 days', ru: 'Последние 7 дней' })}
                 </div>
@@ -649,7 +650,7 @@ export default function ExecutiveDashboard() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </Card>
+              </div>
             </section>
           )}
         </>

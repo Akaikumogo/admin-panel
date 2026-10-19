@@ -190,7 +190,7 @@ const Users = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="page-stack">
       <div className="flex items-center gap-3 flex-wrap bg-card border border-border rounded-lg px-4 py-3">
         <Filter size={16} className="text-slate-400" />
         <Input

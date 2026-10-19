@@ -90,7 +90,7 @@ const Lessons = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-100px)]">
+    <div className="page-stack">
       <div>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">
           {t(T.title)}

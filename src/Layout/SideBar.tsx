@@ -31,12 +31,24 @@ export const Sidebar: React.FC<{
 
   return (
     <nav
-      className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3"
+      className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3"
       aria-label="Main"
     >
-      {navGroups.map((group) => (
-        <div key={group.label.uz} className="space-y-0.5">
-          <div className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+      {navGroups.map((group) => {
+        const isAnalytics =
+          group.label.uz === 'Analitika' ||
+          group.items.some((i) => i.path.includes('/analytics'));
+        return (
+        <div
+          key={group.label.uz}
+          className={cn('space-y-0.5', isAnalytics && 'space-y-0')}
+        >
+          <div
+            className={cn(
+              'px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground',
+              isAnalytics ? 'pb-1' : 'pb-2',
+            )}
+          >
             {t(group.label)}
           </div>
           {group.items.map((item) => {
@@ -49,7 +61,8 @@ export const Sidebar: React.FC<{
                 to={item.path}
                 onClick={onNavigate}
                 className={cn(
-                  'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                  'group relative flex items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors',
+                  isAnalytics ? 'py-1.5' : 'py-2',
                   active
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -89,7 +102,8 @@ export const Sidebar: React.FC<{
             );
           })}
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 };

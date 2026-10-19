@@ -264,7 +264,7 @@ const StudentDetailPage = () => {
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
               {formatPersonName(student)}
               {student.role === 'MODERATOR' ? (
-                <Tag className="ml-2 align-middle" color="blue">
+                <Tag className="ml-2 align-middle" color="default">
                   Moderator
                 </Tag>
               ) : null}
