@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Home,
   LogOut,
@@ -34,6 +35,9 @@ import {
   CalendarDays,
   UserCog,
   Megaphone,
+  Zap,
+  Menu,
+  X,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -271,8 +275,22 @@ const allNavItems: NavItem[] = [
   importExportNavItem,
 ];
 
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        'relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]',
+        className,
+      )}
+    >
+      <Zap className="h-5 w-5" fill="currentColor" strokeWidth={0} />
+      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-breathe rounded-full border-2 border-background bg-emerald-400" />
+    </span>
+  );
+}
+
 const Layout = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(
     () => typeof document !== 'undefined' && !!document.fullscreenElement
   );
@@ -285,7 +303,9 @@ const Layout = () => {
   /** Moderator ruxsatlari yuklanganda menyuni qayta chizish uchun */
   const [modPerms, setModPerms] = useState<ModeratorPermissions | null>(null);
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const toggleFullscreen = async () => {
     try {
@@ -632,164 +652,189 @@ const Layout = () => {
     navigate('/login');
   };
 
-  return (
-    <div
-      data-app-shell="true"
-      className="flex h-dvh max-w-[100vw] overflow-hidden bg-background"
-    >
-      <aside
-        className={cn(
-          'z-30 flex h-full shrink-0 flex-col border-r border-border bg-[var(--shell-sidebar)] transition-[width] duration-300 ease-out',
-          isCollapsed ? 'w-[72px]' : 'w-[272px]',
-        )}
-      >
-        <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
+  const sidebarBody = (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 px-5 pb-6 pt-6">
+        <BrandMark />
+        <div className="leading-tight">
+          <div className="text-[15px] font-semibold tracking-tight text-foreground">
+            ElektroLearn
+          </div>
+          <div className="text-[11px] text-muted-foreground">Admin panel</div>
+        </div>
+      </div>
+
+      <Sidebar
+        navGroups={visibleNavGroups}
+        onNavigate={() => setMobileOpen(false)}
+      />
+
+      {me ? (
+        <div className="m-3 flex items-center gap-3 rounded-2xl border border-border/70 bg-card/70 p-3">
           <button
             type="button"
-            onClick={toggleSidebar}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors',
-              'hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              isCollapsed && 'justify-center px-0',
-            )}
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => {
+              setMobileOpen(false);
+              navigate('/dashboard/profile');
+            }}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-[13px] font-bold tracking-tight">
-              EL
-            </span>
-            {!isCollapsed && (
-              <span className="min-w-0">
-                <span className="block truncate text-[15px] font-semibold tracking-tight text-foreground">
-                  ElektroLearn
-                </span>
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Admin
-                </span>
-              </span>
-            )}
+            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-primary ring-1 ring-black/5">
+              {me.avatarUrl ? (
+                <img
+                  src={resolveAssetUrl(me.avatarUrl)}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <span className="select-none text-[11px] font-semibold tracking-wide text-primary-foreground">
+                    {initials}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="truncate text-[13px] font-semibold text-foreground">
+                {`${me.firstName} ${me.lastName}`.trim() || '—'}
+              </div>
+              <div className="truncate text-[11px] text-muted-foreground">
+                {me.role}
+              </div>
+            </div>
           </button>
-        </div>
-
-        <Sidebar navGroups={visibleNavGroups} isCollapsed={isCollapsed} />
-
-        <div className="shrink-0 border-t border-border p-3">
           <button
             type="button"
             onClick={clearSessionAndLogout}
-            className={cn(
-              'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors',
-              'hover:bg-muted hover:text-foreground active:scale-[0.98]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              isCollapsed && 'justify-center px-2',
-            )}
+            title={t({ uz: 'Chiqish', en: 'Logout', ru: 'Выход' })}
+            aria-label={t({ uz: 'Chiqish', en: 'Logout', ru: 'Выход' })}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-rose-600"
           >
-            <LogOut size={18} strokeWidth={1.75} />
-            {!isCollapsed && (
-              <span>
-                {t({ uz: 'Chiqish', en: 'Logout', ru: 'Выход' })}
-              </span>
-            )}
+            <LogOut className="h-[18px] w-[18px]" strokeWidth={1.75} />
           </button>
         </div>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div data-app-shell="true" className="grain min-h-[100dvh] bg-background">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-border/70 bg-background/80 backdrop-blur-xl lg:block">
+        {sidebarBody}
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-card/90 px-5 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
-              {t(getCurrentPageTitle())}
-            </h1>
-            <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
-              {getCurrentDate()}
-            </p>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="default"
-              size="middle"
-              onClick={toggleFullscreen}
-              title={t({
-                uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
-                en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
-                ru: isFullscreen
-                  ? 'Выйти из полноэкранного режима'
-                  : 'Полный экран',
-              })}
-              aria-label={t({
-                uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
-                en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
-                ru: isFullscreen
-                  ? 'Выйти из полноэкранного режима'
-                  : 'Полный экран',
-              })}
-              icon={
-                isFullscreen ? (
-                  <Minimize2 size={15} strokeWidth={1.75} />
-                ) : (
-                  <Maximize2 size={15} strokeWidth={1.75} />
-                )
-              }
+      <AnimatePresence>
+        {mobileOpen ? (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <motion.div
+              className="absolute inset-0 bg-foreground/40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
             />
-            <ThemeToggle />
-            <Select
-              value={lang}
-              className="w-[132px]"
-              size="middle"
-              prefix={<Languages size={14} />}
-              onChange={(value) => setLang(value as typeof lang)}
-              options={[
-                { value: 'en', label: 'English' },
-                { value: 'ru', label: 'Русский' },
-                { value: 'uz', label: "O'zbekcha" },
-                { value: 'uz-cyrl', label: 'Ўзбекча' },
-              ]}
-            />
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/profile')}
-              className={cn(
-                'flex items-center gap-2.5 rounded-md border border-border bg-background px-2 py-1 transition-colors',
-                'hover:bg-muted/80 active:scale-[0.98]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              )}
+            <motion.aside
+              className="absolute inset-y-0 left-0 w-[284px] max-w-[86vw] border-r border-border bg-background"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
             >
-              <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium leading-tight text-foreground">
-                  {me ? `${me.firstName} ${me.lastName}` : '—'}
-                </p>
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  {me?.role || ''}
-                </p>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                aria-label={t({ uz: 'Yopish', en: 'Close', ru: 'Закрыть' })}
+                className="absolute right-3 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              {sidebarBody}
+            </motion.aside>
+          </div>
+        ) : null}
+      </AnimatePresence>
+
+      <div className="lg:pl-[264px]">
+        <header className="sticky top-0 z-20 border-b border-border/60 bg-background/75 backdrop-blur-xl">
+          <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-3 px-4 md:px-8">
+            <div className="flex min-w-0 items-center gap-2 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="-ml-2 flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+                aria-label={t({ uz: 'Menyu', en: 'Menu', ru: 'Меню' })}
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <BrandMark className="h-8 w-8" />
+              <span className="hidden truncate font-semibold tracking-tight min-[380px]:inline">
+                ElektroLearn
+              </span>
+            </div>
+
+            <div className="hidden min-w-0 lg:block">
+              <div className="truncate text-[13px] font-medium text-foreground">
+                {t(getCurrentPageTitle())}
               </div>
-              <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-primary">
-                {me?.avatarUrl ? (
-                  <img
-                    src={resolveAssetUrl(me.avatarUrl)}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <span className="select-none text-[11px] font-semibold tracking-wide text-primary-foreground">
-                      {initials}
-                    </span>
-                  </div>
-                )}
+              <div className="text-[12px] text-muted-foreground">
+                {getCurrentDate()}
               </div>
-            </button>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                type="default"
+                size="middle"
+                variant="ghost"
+                className="h-9 w-9 rounded-xl px-0"
+                onClick={toggleFullscreen}
+                title={t({
+                  uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                  en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
+                  ru: isFullscreen
+                    ? 'Выйти из полноэкранного режима'
+                    : 'Полный экран',
+                })}
+                aria-label={t({
+                  uz: isFullscreen ? 'To‘liq ekrandan chiqish' : 'To‘liq ekran',
+                  en: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
+                  ru: isFullscreen
+                    ? 'Выйти из полноэкранного режима'
+                    : 'Полный экран',
+                })}
+                icon={
+                  isFullscreen ? (
+                    <Minimize2 size={15} strokeWidth={1.75} />
+                  ) : (
+                    <Maximize2 size={15} strokeWidth={1.75} />
+                  )
+                }
+              />
+              <ThemeToggle />
+              <Select
+                value={lang}
+                className="w-[120px]"
+                size="middle"
+                prefix={<Languages size={14} />}
+                onChange={(value) => setLang(value as typeof lang)}
+                options={[
+                  { value: 'en', label: 'English' },
+                  { value: 'ru', label: 'Русский' },
+                  { value: 'uz', label: "O'zbekcha" },
+                  { value: 'uz-cyrl', label: 'Ўзбекча' },
+                ]}
+              />
+            </div>
           </div>
         </header>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background">
-          <div className="w-full min-w-0 max-w-full p-2 md:p-2">
-            {me?.role !== 'USER' &&
-            !isModeratorForbiddenRoute &&
-            !isDirectorForbiddenRoute &&
-            !isAccountingForbiddenRoute ? (
-              <Outlet />
-            ) : null}
-          </div>
+        <main className="mx-auto min-h-[calc(100dvh-3.5rem)] max-w-[1400px] px-4 py-6 md:px-8 md:py-8">
+          {me?.role !== 'USER' &&
+          !isModeratorForbiddenRoute &&
+          !isDirectorForbiddenRoute &&
+          !isAccountingForbiddenRoute ? (
+            <Outlet />
+          ) : null}
         </main>
       </div>
     </div>

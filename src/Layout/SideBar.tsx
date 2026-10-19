@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
@@ -22,150 +21,75 @@ function isNavActive(path: string, pathname: string) {
   return pathname === path || pathname.startsWith(path + '/');
 }
 
-const STORAGE_KEY = 'el-sidebar-collapsed-groups';
-
+/** SCHETCHIK uslubidagi sidebar nav — pill active + section labels */
 export const Sidebar: React.FC<{
   navGroups: NavGroup[];
-  isCollapsed?: boolean;
-}> = ({ navGroups, isCollapsed = false }) => {
+  onNavigate?: () => void;
+}> = ({ navGroups, onNavigate }) => {
   const location = useLocation();
   const { t } = useTranslation();
 
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
-    () => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
-      } catch {
-        return {};
-      }
-    },
-  );
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsedGroups));
-    } catch {
-      /* ignore */
-    }
-  }, [collapsedGroups]);
-
-  const activeGroupKeys = useMemo(() => {
-    const keys = new Set<string>();
-    for (const group of navGroups) {
-      if (group.items.some((item) => isNavActive(item.path, location.pathname))) {
-        keys.add(group.label.uz);
-      }
-    }
-    return keys;
-  }, [navGroups, location.pathname]);
-
-  const toggleGroup = (key: string) => {
-    setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   return (
     <nav
-      className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-3"
+      className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3"
       aria-label="Main"
     >
-      <div className="space-y-3">
-        {navGroups.map((group) => {
-          const key = group.label.uz;
-          const hasActive = activeGroupKeys.has(key);
-          const closed = !isCollapsed && !!collapsedGroups[key] && !hasActive;
+      {navGroups.map((group) => (
+        <div key={group.label.uz} className="space-y-0.5">
+          <div className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            {t(group.label)}
+          </div>
+          {group.items.map((item) => {
+            const Icon = item.icon;
+            const active = isNavActive(item.path, location.pathname);
 
-          return (
-            <div key={key} className="space-y-0.5">
-              {!isCollapsed && (
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(key)}
-                  className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left transition-colors hover:bg-muted/60"
-                >
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t(group.label)}
-                  </span>
-                  <ChevronDown
-                    size={14}
-                    className={cn(
-                      'text-muted-foreground transition-transform duration-200',
-                      closed && '-rotate-90',
-                    )}
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onNavigate}
+                className={cn(
+                  'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                  active
+                    ? 'text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                )}
+              >
+                {active ? (
+                  <motion.span
+                    layoutId="nav-active"
+                    className="absolute inset-0 rounded-xl border border-border/80 bg-card shadow-sm dark:bg-muted/80"
+                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                   />
-                </button>
-              )}
-              {!closed &&
-                group.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = isNavActive(item.path, location.pathname);
-
-                  return (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      title={isCollapsed ? t(item.label) : undefined}
+                ) : null}
+                <Icon
+                  size={18}
+                  strokeWidth={1.75}
+                  className={cn(
+                    'relative shrink-0',
+                    active ? 'text-primary' : 'text-current',
+                  )}
+                />
+                <span className="relative flex min-w-0 flex-1 items-center gap-2">
+                  <span className="truncate">{t(item.label)}</span>
+                  {typeof item.badgeCount === 'number' && item.badgeCount > 0 ? (
+                    <span
                       className={cn(
-                        'group relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium tracking-tight transition-colors duration-150',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                        active
-                          ? 'bg-muted text-foreground'
-                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                        isCollapsed && 'justify-center px-2',
+                        'ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums text-white',
+                        item.badgeTone === 'danger' || !item.badgeTone
+                          ? 'bg-red-600'
+                          : 'bg-muted-foreground',
                       )}
                     >
-                      <span
-                        aria-hidden
-                        className={cn(
-                          'absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--shell-rail)] transition-opacity duration-150',
-                          active ? 'opacity-100' : 'opacity-0 group-hover:opacity-35',
-                        )}
-                      />
-                      <Icon
-                        size={17}
-                        strokeWidth={1.7}
-                        className={cn(
-                          'shrink-0 transition-colors',
-                          active ? 'text-foreground' : 'text-current',
-                        )}
-                      />
-                      {!isCollapsed && (
-                        <span className="flex min-w-0 flex-1 items-center gap-2">
-                          <span className="truncate">{t(item.label)}</span>
-                          {typeof item.badgeCount === 'number' &&
-                            item.badgeCount > 0 && (
-                              <span
-                                className={cn(
-                                  'ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums text-white',
-                                  item.badgeTone === 'danger' || !item.badgeTone
-                                    ? 'bg-red-600'
-                                    : 'bg-muted-foreground',
-                                )}
-                              >
-                                {item.badgeCount > 99 ? '99+' : item.badgeCount}
-                              </span>
-                            )}
-                        </span>
-                      )}
-                      {isCollapsed &&
-                        typeof item.badgeCount === 'number' &&
-                        item.badgeCount > 0 && (
-                          <span
-                            className={cn(
-                              'absolute right-1 top-1 h-2 w-2 rounded-full',
-                              item.badgeTone === 'danger' || !item.badgeTone
-                                ? 'bg-red-600'
-                                : 'bg-muted-foreground',
-                            )}
-                          />
-                        )}
-                    </NavLink>
-                  );
-                })}
-            </div>
-          );
-        })}
-      </div>
+                      {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                    </span>
+                  ) : null}
+                </span>
+              </NavLink>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 };

@@ -104,7 +104,7 @@ export default function ArchiveEmployeesPage() {
   }
 
   return (
-    <div className="space-y-6 overflow-y-auto p-6 h-[calc(100vh-100px)]">
+    <div className="space-y-6">
       <div>
         <Link
           to="/dashboard/archive"

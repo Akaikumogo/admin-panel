@@ -910,7 +910,7 @@ const Students = () => {
   const treeEmpty = treeStudents.length === 0 && !treeFetching;
 
   return (
-    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden p-4 md:p-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
       <PageHeader
         title={t(T.title)}
         description={t(T.subtitle)}
