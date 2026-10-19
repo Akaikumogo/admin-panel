@@ -5,13 +5,8 @@ import {
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
-  Building2,
-  CheckCircle2,
   ClipboardCopy,
   Minus,
-  Target,
-  TrendingUp,
-  Users,
 } from 'lucide-react';
 import { domToBlob } from 'modern-screenshot';
 import {
@@ -25,15 +20,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Button, Card, Skeleton, Table, Tag, message } from '@/components/ui';
+import { Button, Card, Skeleton, Table, message } from '@/components/ui';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
 import apiService from '@/services/api';
-import type { AnalyticsStatus, BranchRankingRow } from '@/services/api';
+import type { BranchRankingRow } from '@/services/api';
 import { PageHeader } from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 import { AnalyticsFilters, useAnalyticsFilters } from './components/AnalyticsFilters';
-import { BranchWeekdayHeatmap } from './components/BranchWeekdayHeatmap';
 import { PercentBar } from './components/PercentBar';
 import { StatusBadge } from './components/StatusBadge';
 import {
@@ -41,8 +35,6 @@ import {
   formatDelta,
   formatNumber,
   statusFromPercent,
-  statusSoftBg,
-  statusTextColor,
   todayStr,
 } from './analytics-utils';
 
@@ -101,38 +93,19 @@ function KpiCard({
   hint,
   trend,
   trendSuffix,
-  tone = 'neutral',
 }: {
   label: string;
   value: string;
   hint?: string;
   trend?: number | null;
   trendSuffix?: string;
-  tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info';
 }) {
-  const toneClass =
-    tone === 'success'
-      ? 'from-emerald-500/10 to-transparent'
-      : tone === 'warning'
-        ? 'from-amber-500/10 to-transparent'
-        : tone === 'danger'
-          ? 'from-red-500/10 to-transparent'
-          : tone === 'info'
-            ? 'from-blue-500/10 to-transparent'
-            : 'from-slate-500/5 to-transparent';
-
   return (
-    <div
-      className={cn(
-        'relative overflow-hidden rounded-2xl border border-border/50 bg-white p-4 shadow-sm dark:bg-slate-950',
-        'bg-gradient-to-br',
-        toneClass,
-      )}
-    >
-      <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1.5 text-2xl font-bold tracking-tight tabular-nums text-foreground sm:text-[28px]">
+      <div className="mt-1.5 text-2xl font-bold tracking-tight tabular-nums text-foreground">
         {value}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -140,46 +113,6 @@ function KpiCard({
         {hint ? <span className="text-[11px] text-muted-foreground">{hint}</span> : null}
       </div>
     </div>
-  );
-}
-
-function RankBarRow({
-  rank,
-  name,
-  percent,
-  status,
-  onClick,
-  medal,
-}: {
-  rank: number;
-  name: string;
-  percent: number;
-  status: AnalyticsStatus;
-  onClick: () => void;
-  medal?: boolean;
-}) {
-  const badge =
-    medal && rank === 1 ? '🥇' : medal && rank === 2 ? '🥈' : medal && rank === 3 ? '🥉' : `${rank}`;
-
-  return (
-    <button type="button" onClick={onClick} className="group w-full text-left">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="w-6 shrink-0 text-center text-sm font-semibold tabular-nums text-muted-foreground">
-            {badge}
-          </span>
-          <span className="truncate text-sm font-medium text-foreground group-hover:text-blue-600">
-            {name}
-          </span>
-        </div>
-        <span className={cn('shrink-0 text-sm font-bold tabular-nums', statusTextColor(status))}>
-          {percent}%
-        </span>
-      </div>
-      <div className="ml-8">
-        <PercentBar percent={percent} status={status} height="md" />
-      </div>
-    </button>
   );
 }
 
@@ -350,12 +283,6 @@ export default function ExecutiveDashboard() {
     { enabled: planType === 'daily' },
   );
 
-  const { data: heatmap } = useFetch(
-    ['weekday-heatmap', date, orgId],
-    () => apiService.getWeekdayHeatmap({ to: date, orgId: orgId || undefined }),
-    { weekdays: [], branches: [], rangeFrom: '', rangeTo: '' },
-  );
-
   const { data: under } = useFetch(
     ['underperformers', date, planType],
     () => apiService.getUnderperformers({ date, threshold: 70 }),
@@ -378,12 +305,6 @@ export default function ExecutiveDashboard() {
 
   const rankingAllBranches = useMemo(
     () => [...filteredBranches].sort((a, b) => b.percent - a.percent || a.orgName.localeCompare(b.orgName)),
-    [filteredBranches],
-  );
-
-  const top10 = useMemo(() => filteredBranches.slice(0, 10), [filteredBranches]);
-  const bottom5 = useMemo(
-    () => [...filteredBranches].sort((a, b) => a.percent - b.percent).slice(0, 5),
     [filteredBranches],
   );
 
@@ -415,8 +336,8 @@ export default function ExecutiveDashboard() {
     [dashboard.completionPercent, currentHour],
   );
 
-  const worstBranch = under.branches[0] ?? bottom5[0] ?? null;
-  const bestBranch = top10[0] ?? null;
+  const worstBranch = under.branches[0] ?? null;
+  const bestBranch = rankingAllBranches[0] ?? null;
 
   const insightLine = useMemo(() => {
     if (planType !== 'daily') return null;
@@ -513,128 +434,68 @@ export default function ExecutiveDashboard() {
       }
     : null;
 
-  const overallStatus = statusFromPercent(dashboard.completionPercent);
-
   return (
-    <div className="min-h-full space-y-5 rounded-2xl bg-slate-50/80 p-1 dark:bg-slate-950/40 sm:p-2">
+    <div className="min-h-full space-y-5">
       <PageHeader
         icon={Activity}
         title={t({ uz: 'Analitika', en: 'Analytics', ru: 'Аналитика' })}
         description={t({
-          uz: 'Bugungi holat → muammo → filial → bo‘lim → xodim',
-          en: 'Today → problem → branch → department → employee',
-          ru: 'Сегодня → проблема → филиал → отдел → сотрудник',
+          uz: 'Kunlik reja va filiallar reytingi',
+          en: 'Daily plan and branch ranking',
+          ru: 'Дневной план и рейтинг филиалов',
         })}
       />
 
-      <div className="rounded-xl border border-border/40 bg-white/80 p-3 shadow-sm dark:bg-slate-950/60">
+      <div className="rounded-xl border border-border bg-card p-3">
         <AnalyticsFilters />
       </div>
 
       {loading ? (
-        <Skeleton active paragraph={{ rows: 10 }} />
+        <Skeleton active paragraph={{ rows: 8 }} />
       ) : (
         <>
-          {/* 1. Bugungi holat */}
           <section className="space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-2 px-1">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-                  {t({ uz: 'Bugungi holat', en: "Today's pulse", ru: 'Сегодня' })}
-                </div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  {planType === 'daily'
-                    ? t({ uz: 'Kunlik reja', en: 'Daily plan', ru: 'Дневной план' })
-                    : t({ uz: 'Oylik ko‘rinish', en: 'Monthly view', ru: 'Месяц' })}
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    {planType === 'daily' ? dashboard.planDate : date.slice(0, 7)}
-                  </span>
-                </h2>
-              </div>
+            <div className="flex flex-wrap items-end justify-between gap-2 px-0.5">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">
+                {planType === 'daily'
+                  ? t({ uz: 'Kunlik reja', en: 'Daily plan', ru: 'Дневной план' })
+                  : t({ uz: 'Oylik ko‘rinish', en: 'Monthly view', ru: 'Месяц' })}
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  {planType === 'daily' ? dashboard.planDate : date.slice(0, 7)}
+                </span>
+              </h2>
               {insightLine ? (
-                <p className="max-w-xl text-right text-xs leading-relaxed text-muted-foreground">
+                <p className="max-w-xl text-right text-xs text-muted-foreground">
                   {insightLine}
                 </p>
               ) : null}
             </div>
 
             {planType === 'daily' ? (
-              <>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <KpiCard
-                    label={t({ uz: 'Bajarilish', en: 'Completion', ru: 'Выполнение' })}
-                    value={`${dashboard.completionPercent}%`}
-                    trend={percentDelta}
-                    trendSuffix="%"
-                    hint={t({ uz: 'kechagiga nisbatan', en: 'vs yesterday', ru: 'к вчера' })}
-                    tone={
-                      overallStatus === 'green'
-                        ? 'success'
-                        : overallStatus === 'yellow'
-                          ? 'warning'
-                          : 'danger'
-                    }
-                  />
-                  <KpiCard
-                    label={t({ uz: 'Bajarildi', en: 'Completed', ru: 'Выполнено' })}
-                    value={formatNumber(dashboard.completedTotal)}
-                    hint={`${formatNumber(dashboard.completedEmployees)} ${t({ uz: 'xodim', en: 'employees', ru: 'сотр.' })}`}
-                    tone="success"
-                  />
-                  <KpiCard
-                    label={t({ uz: 'Qoldi', en: 'Remaining', ru: 'Осталось' })}
-                    value={formatNumber(dashboard.remaining)}
-                    hint={`${Math.max(0, 100 - dashboard.completionPercent).toFixed(1)}% ${t({ uz: 'reja', en: 'of plan', ru: 'плана' })}`}
-                    tone="warning"
-                  />
-                  <KpiCard
-                    label={t({ uz: 'Umumiy reja', en: 'Total plan', ru: 'Общий план' })}
-                    value={formatNumber(dashboard.totalPlan)}
-                    hint={`${formatNumber(dashboard.activeEmployees)} ${t({ uz: 'faol ·', en: 'active ·', ru: 'актив ·' })} ${formatNumber(dashboard.branchCount)} ${t({ uz: 'filial', en: 'branches', ru: 'филиалов' })}`}
-                    tone="info"
-                  />
-                </div>
-
-                <Card className="!border-border/40 !bg-white !shadow-sm dark:!bg-slate-950">
-                  <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0 flex-1 space-y-3">
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <div className="text-sm font-semibold text-foreground">
-                          {t({ uz: 'Umumiy progress', en: 'Overall progress', ru: 'Общий прогресс' })}
-                        </div>
-                        <div className="text-sm tabular-nums text-muted-foreground">
-                          <span className="font-semibold text-foreground">
-                            {formatNumber(dashboard.completedTotal)}
-                          </span>
-                          {' / '}
-                          {formatNumber(dashboard.totalPlan)}
-                        </div>
-                      </div>
-                      <PercentBar
-                        percent={dashboard.completionPercent}
-                        status={overallStatus}
-                        height="xl"
-                        showLabel
-                        leftLabel={`${dashboard.completionPercent}%`}
-                        rightLabel={`${formatNumber(dashboard.remaining)} ${t({ uz: 'qoldi', en: 'left', ru: 'осталось' })}`}
-                      />
-                    </div>
-                    <div
-                      className={cn(
-                        'shrink-0 rounded-xl border px-4 py-3 text-center sm:min-w-[140px]',
-                        statusSoftBg(statusFromPercent(eodForecast)),
-                      )}
-                    >
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        {t({ uz: 'Kun oxiri prognoz', en: 'EOD forecast', ru: 'Прогноз' })}
-                      </div>
-                      <div className={cn('mt-1 text-2xl font-bold tabular-nums', statusTextColor(statusFromPercent(eodForecast)))}>
-                        ~{eodForecast}%
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <KpiCard
+                  label={t({ uz: 'Bajarilish', en: 'Completion', ru: 'Выполнение' })}
+                  value={`${dashboard.completionPercent}%`}
+                  trend={percentDelta}
+                  trendSuffix="%"
+                  hint={t({ uz: 'kechagiga nisbatan', en: 'vs yesterday', ru: 'к вчера' })}
+                />
+                <KpiCard
+                  label={t({ uz: 'Bajarildi', en: 'Completed', ru: 'Выполнено' })}
+                  value={formatNumber(dashboard.completedTotal)}
+                  hint={`${formatNumber(dashboard.completedEmployees)} ${t({ uz: 'xodim', en: 'employees', ru: 'сотр.' })}`}
+                />
+                <KpiCard
+                  label={t({ uz: 'Qoldi', en: 'Remaining', ru: 'Осталось' })}
+                  value={formatNumber(dashboard.remaining)}
+                  hint={`~${eodForecast}% ${t({ uz: 'kun oxiri', en: 'EOD', ru: 'к концу дня' })}`}
+                />
+                <KpiCard
+                  label={t({ uz: 'Umumiy reja', en: 'Total plan', ru: 'Общий план' })}
+                  value={formatNumber(dashboard.totalPlan)}
+                  hint={`${formatNumber(dashboard.branchCount)} ${t({ uz: 'filial', en: 'branches', ru: 'филиалов' })}`}
+                />
+              </div>
             ) : monthlyKpi ? (
               <div className="grid gap-3 sm:grid-cols-3">
                 <KpiCard
@@ -644,238 +505,151 @@ export default function ExecutiveDashboard() {
                 <KpiCard
                   label={t({ uz: "O'rtacha oylik", en: 'Avg monthly', ru: 'Средний за месяц' })}
                   value={`${monthlyKpi.completionPercent}%`}
-                  tone={statusFromPercent(monthlyKpi.completionPercent) === 'green' ? 'success' : 'warning'}
                 />
                 <KpiCard
                   label={t({ uz: 'Filiallar', en: 'Branches', ru: 'Филиалы' })}
                   value={formatNumber(monthlyKpi.branchCount)}
-                  tone="info"
                 />
               </div>
             ) : null}
           </section>
 
-          {/* 2. Muammo qayerda */}
           {planType === 'daily' && (
-            <section className="space-y-3">
-              <div className="px-1 text-[11px] font-semibold uppercase tracking-wider text-amber-600">
-                {t({ uz: 'Muammo qayerda', en: 'Where it hurts', ru: 'Где проблема' })}
+            <button
+              type="button"
+              onClick={() => navigate(`/dashboard/analytics/underperformers?date=${date}`)}
+              className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition hover:bg-muted/40"
+            >
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <span className="text-sm font-semibold text-foreground">
+                  {t({
+                    uz: 'Rejani bajarmayotganlar',
+                    en: 'Underperformers',
+                    ru: 'Не выполняют план',
+                  })}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {under.branchCount} {t({ uz: 'filial', en: 'branches', ru: 'фил.' })} ·{' '}
+                  {formatNumber(under.employeeCount)}{' '}
+                  {t({ uz: 'xodim', en: 'employees', ru: 'сотр.' })}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => navigate(`/dashboard/analytics/underperformers?date=${date}`)}
-                className="w-full rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-white p-5 text-left shadow-sm transition hover:border-amber-500/40 dark:to-slate-950"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
-                      <AlertTriangle className="h-5 w-5" />
-                      {t({
-                        uz: 'Rejani bajarmayotganlar',
-                        en: 'Underperformers',
-                        ru: 'Не выполняют план',
-                      })}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-4 text-sm">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Building2 className="h-4 w-4 text-amber-600" />
-                        <strong className="tabular-nums">{under.branchCount}</strong>{' '}
-                        {t({ uz: 'filial', en: 'branches', ru: 'филиалов' })}
-                      </span>
-                      <span>
-                        <strong className="tabular-nums">{under.divisionCount}</strong>{' '}
-                        {t({ uz: 'bo‘lim', en: 'departments', ru: 'отделов' })}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <Users className="h-4 w-4 text-amber-600" />
-                        <strong className="tabular-nums">{formatNumber(under.employeeCount)}</strong>{' '}
-                        {t({ uz: 'xodim', en: 'employees', ru: 'сотрудников' })}
-                      </span>
-                    </div>
-                  </div>
-                  {worstBranch ? (
-                    <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
-                        {t({ uz: 'Eng yomon', en: 'Worst', ru: 'Худший' })}
-                      </div>
-                      <div className="mt-1 max-w-[220px] truncate text-sm font-semibold text-foreground">
-                        {'orgName' in worstBranch ? worstBranch.orgName : '—'}
-                      </div>
-                      <div className="text-lg font-bold tabular-nums text-red-600">
-                        {'percent' in worstBranch ? worstBranch.percent : 0}%
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </button>
-            </section>
+              {worstBranch ? (
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t({ uz: 'Eng sust', en: 'Weakest', ru: 'Слабый' })}:{' '}
+                  <span className="text-foreground">
+                    {'orgName' in worstBranch ? worstBranch.orgName : '—'}
+                  </span>{' '}
+                  <span className="tabular-nums text-red-600">
+                    {'percent' in worstBranch ? worstBranch.percent : 0}%
+                  </span>
+                </span>
+              ) : null}
+            </button>
           )}
 
-          {/* 3. Filiallar */}
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-                {t({ uz: 'Filiallar', en: 'Branches', ru: 'Филиалы' })}
-              </div>
-              {bestBranch ? (
-                <Tag className="!border-emerald-500/30 !bg-emerald-500/10 !text-emerald-700 dark:!text-emerald-300">
-                  <TrendingUp className="mr-1 inline h-3.5 w-3.5" />
-                  {t({ uz: 'Lider', en: 'Leader', ru: 'Лидер' })}: {bestBranch.orgName} · {bestBranch.percent}%
-                </Tag>
-              ) : null}
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-12">
-              <Card className="!border-border/40 !bg-white !shadow-sm xl:col-span-7 dark:!bg-slate-950">
-                <div className="border-b border-border/40 px-4 py-3 text-sm font-semibold">
-                  {t({ uz: 'Top 10 filial', en: 'Top 10 branches', ru: 'Топ 10 филиалов' })}
-                </div>
-                <div className="space-y-4 p-4">
-                  {top10.map((b, i) => (
-                    <RankBarRow
-                      key={b.orgId}
-                      rank={i + 1}
-                      name={b.orgName}
-                      percent={b.percent}
-                      status={b.status}
-                      medal
-                      onClick={() => navigate(`/dashboard/analytics/branches/${b.orgId}?date=${date}`)}
-                    />
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="!border-border/40 !bg-white !shadow-sm xl:col-span-5 dark:!bg-slate-950">
-                <div className="border-b border-border/40 px-4 py-3 text-sm font-semibold text-red-600">
-                  {t({ uz: 'Eng orqada', en: 'Bottom performers', ru: 'Отстающие' })}
-                </div>
-                <div className="space-y-4 p-4">
-                  {bottom5.map((b, i) => (
-                    <RankBarRow
-                      key={b.orgId}
-                      rank={i + 1}
-                      name={b.orgName}
-                      percent={b.percent}
-                      status="red"
-                      onClick={() => navigate(`/dashboard/analytics/branches/${b.orgId}?date=${date}`)}
-                    />
-                  ))}
-                </div>
-              </Card>
-            </div>
-
-            <div
-              ref={rankingSnapRef}
-              className="rounded-2xl border border-border/40 bg-white shadow-sm dark:bg-slate-950"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-4 py-3">
-                <div>
-                  <div className="text-base font-semibold">
-                    {t({
-                      uz: 'Filiallar reytingi',
-                      en: 'Branch ranking',
-                      ru: 'Рейтинг филиалов',
-                    })}
-                  </div>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {date} ·{' '}
-                    {t({
-                      uz: 'Asosiy filialsiz · barcha filiallar',
-                      en: 'Excluding main branch · all branches',
-                      ru: 'Без головного · все филиалы',
-                    })}
-                  </p>
-                </div>
-                <Button
-                  type="primary"
-                  size="small"
-                  data-snapshot-ignore="1"
-                  loading={copyingRank}
-                  icon={<ClipboardCopy size={14} />}
-                  onClick={() => void copyRankingSnapshot()}
-                  disabled={copyingRank || rankingAllBranches.length === 0}
-                >
+          <section
+            ref={rankingSnapRef}
+            className="overflow-hidden rounded-xl border border-border bg-card"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+              <div>
+                <div className="text-[15px] font-semibold tracking-tight">
                   {t({
-                    uz: 'Rasmni nusxalash',
-                    en: 'Copy image',
-                    ru: 'Копировать фото',
+                    uz: 'Filiallar reytingi',
+                    en: 'Branch ranking',
+                    ru: 'Рейтинг филиалов',
                   })}
-                </Button>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {date}
+                  {bestBranch
+                    ? ` · ${t({ uz: 'Lider', en: 'Leader', ru: 'Лидер' })}: ${bestBranch.orgName} (${bestBranch.percent}%)`
+                    : ''}
+                </p>
               </div>
-              <div className="p-3 md:p-4">
-                <Table
-                  size="middle"
-                  rowKey="orgId"
-                  columns={branchColumns}
-                  dataSource={rankingAllBranches}
-                  pagination={false}
-                />
-              </div>
+              <Button
+                type="primary"
+                size="small"
+                data-snapshot-ignore="1"
+                loading={copyingRank}
+                icon={<ClipboardCopy size={14} />}
+                onClick={() => void copyRankingSnapshot()}
+                disabled={copyingRank || rankingAllBranches.length === 0}
+              >
+                {t({
+                  uz: 'Rasmni nusxalash',
+                  en: 'Copy image',
+                  ru: 'Копировать фото',
+                })}
+              </Button>
+            </div>
+            <div className="p-3 md:p-4">
+              <Table
+                size="middle"
+                rowKey="orgId"
+                columns={branchColumns}
+                dataSource={rankingAllBranches}
+                pagination={false}
+              />
             </div>
           </section>
 
-          {/* 4. Trendlar */}
           {planType === 'daily' && (
-            <section className="space-y-3">
-              <div className="px-1 text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-                {t({ uz: 'Tempo va trend', en: 'Pace & trend', ru: 'Темп и тренд' })}
-              </div>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <Card className="!border-border/40 !bg-white !shadow-sm dark:!bg-slate-950">
-                  <div className="border-b border-border/40 px-4 py-3 text-sm font-semibold">
-                    {t({
-                      uz: 'Kun davomida (soatlik)',
-                      en: 'Hourly progress',
-                      ru: 'Почасовой прогресс',
-                    })}
-                  </div>
-                  <div className="p-3 pt-4">
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={hourly.points}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <ChartTooltip />
-                        <Bar
-                          dataKey="completedEmployees"
-                          name={t({ uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' })}
-                          fill="#2563EB"
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
+            <section className="grid gap-4 lg:grid-cols-2">
+              <Card className="!border-border !shadow-none">
+                <div className="border-b border-border px-4 py-3 text-sm font-semibold">
+                  {t({
+                    uz: 'Kun davomida (soatlik)',
+                    en: 'Hourly progress',
+                    ru: 'Почасовой прогресс',
+                  })}
+                </div>
+                <div className="p-3 pt-4">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={hourly.points}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <ChartTooltip />
+                      <Bar
+                        dataKey="completedEmployees"
+                        name={t({ uz: 'Xodimlar', en: 'Employees', ru: 'Сотрудники' })}
+                        fill="var(--primary)"
+                        radius={[3, 3, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
 
-                <Card className="!border-border/40 !bg-white !shadow-sm dark:!bg-slate-950">
-                  <div className="border-b border-border/40 px-4 py-3 text-sm font-semibold">
-                    {t({ uz: 'Oxirgi 7 kun', en: 'Last 7 days', ru: 'Последние 7 дней' })}
-                  </div>
-                  <div className="p-3 pt-4">
-                    <ResponsiveContainer width="100%" height={220}>
-                      <AreaChart data={trend7}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis
-                          dataKey="date"
-                          tick={{ fontSize: 10 }}
-                          tickFormatter={(v) => String(v).slice(5)}
-                        />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                        <ChartTooltip formatter={(v: number) => [`${v}%`, '']} />
-                        <Area
-                          type="monotone"
-                          dataKey="percent"
-                          stroke="#2563EB"
-                          fill="#2563EB"
-                          fillOpacity={0.12}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
-              </div>
-
-              <BranchWeekdayHeatmap data={heatmap} />
+              <Card className="!border-border !shadow-none">
+                <div className="border-b border-border px-4 py-3 text-sm font-semibold">
+                  {t({ uz: 'Oxirgi 7 kun', en: 'Last 7 days', ru: 'Последние 7 дней' })}
+                </div>
+                <div className="p-3 pt-4">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={trend7}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 10 }}
+                        tickFormatter={(v) => String(v).slice(5)}
+                      />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                      <ChartTooltip formatter={(v: number) => [`${v}%`, '']} />
+                      <Area
+                        type="monotone"
+                        dataKey="percent"
+                        stroke="var(--primary)"
+                        fill="var(--primary)"
+                        fillOpacity={0.12}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
             </section>
           )}
         </>

@@ -7,7 +7,6 @@ import {
   Tag,
   Popconfirm,
   message,
-  Avatar,
   Table
 } from '@/components/ui';
 import type { DefaultOptionType } from '@/components/ui';
@@ -18,6 +17,7 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
+import { AvatarPreview } from '@/components/AvatarPreview';
 import apiService, {
   resolveAssetUrl,
   type Organization,
@@ -254,20 +254,23 @@ export default function ApproversPage() {
       {
         title: t(T.name),
         key: 'name',
-        render: (_: unknown, row: UserProfile) => (
-          <div className="flex items-center gap-3 min-w-[180px]">
-            <Avatar
-              size={36}
-              src={row.avatarUrl ? resolveAssetUrl(row.avatarUrl) : undefined}
-              className="flex-shrink-0 bg-gradient-to-br from-emerald-600 to-slate-800"
-            >
-              {(row.firstName?.[0] || '') + (row.lastName?.[0] || '')}
-            </Avatar>
-            <span className="font-medium text-foreground">
-              <HighlightText text={`${row.lastName} ${row.firstName}`} />
-            </span>
-          </div>
-        )
+        render: (_: unknown, row: UserProfile) => {
+          const fullName = `${row.lastName ?? ''} ${row.firstName ?? ''}`.trim();
+          return (
+            <div className="flex min-w-[200px] items-center gap-3">
+              <AvatarPreview
+                src={row.avatarUrl ? resolveAssetUrl(row.avatarUrl) : null}
+                name={fullName}
+                initials={(row.firstName?.[0] || '') + (row.lastName?.[0] || '')}
+                size={36}
+                avatarClassName="bg-gradient-to-br from-emerald-600 to-slate-800"
+              />
+              <span className="text-[13px] font-semibold tracking-tight text-foreground">
+                <HighlightText text={fullName} />
+              </span>
+            </div>
+          );
+        }
       },
       {
         title: t(T.login),
@@ -334,10 +337,11 @@ export default function ApproversPage() {
           >
             <Button
               size="small"
-              danger
+              variant="ghost"
               icon={<UserMinus size={14} />}
               loading={demotingId === row.id}
               disabled={!!demotingId && demotingId !== row.id}
+              className="text-muted-foreground hover:text-destructive"
             />
           </Popconfirm>
         )

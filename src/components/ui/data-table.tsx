@@ -410,7 +410,7 @@ export function DataTable<T extends Record<string, unknown>>({
     else if (pagination !== false) pagination.onChange?.(1, pageSize);
   };
 
-  const cellPadding = size === 'small' ? 'py-1.5 px-2' : size === 'large' ? 'py-3 px-3' : 'py-1.5 px-2.5';
+  const cellPadding = size === 'small' ? 'py-2 px-2.5' : size === 'large' ? 'py-3.5 px-3.5' : 'py-2.5 px-3';
   const hasColumnFilters = leafColumns.some(isColumnFilterable);
 
   const renderHeaderCell = (

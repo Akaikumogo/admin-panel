@@ -11,7 +11,6 @@ import {
   Popconfirm,
   message,
   Tooltip,
-  Avatar,
   Divider,
   Switch,
   Table
@@ -34,6 +33,7 @@ import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
+import { AvatarPreview } from '@/components/AvatarPreview';
 import apiService, {
   resolveAssetUrl,
   type Organization,
@@ -572,28 +572,31 @@ const Moderators = () => {
         filterPlaceholder: 'Ism...',
         getFilterValue: (mod: UserProfile) =>
           `${mod.lastName ?? ''} ${mod.firstName ?? ''}`.trim(),
-        render: (_: unknown, mod: UserProfile) => (
-          <div className="flex items-center gap-3 min-w-[180px]">
-            <Avatar
-              size={36}
-              src={mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : undefined}
-              className="flex-shrink-0 bg-gradient-to-br from-slate-600 to-slate-800"
-            >
-              {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
-            </Avatar>
-            <span className="font-medium text-foreground inline-flex items-center gap-1.5">
-              <HighlightText text={`${mod.lastName} ${mod.firstName}`} />
-              {isMainBranchModerator(mod) ? (
-                <Tooltip title={t(T.mainBranchModerator)}>
-                  <Star
-                    size={15}
-                    className="flex-shrink-0 fill-amber-400 text-amber-500"
-                  />
-                </Tooltip>
-              ) : null}
-            </span>
-          </div>
-        )
+        render: (_: unknown, mod: UserProfile) => {
+          const fullName = `${mod.lastName ?? ''} ${mod.firstName ?? ''}`.trim();
+          return (
+            <div className="flex min-w-[200px] items-center gap-3">
+              <AvatarPreview
+                src={mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : null}
+                name={fullName}
+                initials={(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
+                size={36}
+                avatarClassName="bg-gradient-to-br from-slate-600 to-slate-800"
+              />
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold tracking-tight text-foreground">
+                <HighlightText text={fullName} />
+                {isMainBranchModerator(mod) ? (
+                  <Tooltip title={t(T.mainBranchModerator)}>
+                    <Star
+                      size={14}
+                      className="flex-shrink-0 fill-amber-400 text-amber-500"
+                    />
+                  </Tooltip>
+                ) : null}
+              </span>
+            </div>
+          );
+        }
       },
       {
         title: t(T.login),
@@ -677,8 +680,10 @@ const Moderators = () => {
             {staffRoleTab === 'MODERATOR' ? (
               <Button
                 size="small"
+                variant="ghost"
                 icon={<Settings size={14} />}
                 title={t(T.permissions)}
+                className="text-muted-foreground hover:text-foreground"
                 onClick={() =>
                   void openPermissions(
                     mod.id,
@@ -697,10 +702,11 @@ const Moderators = () => {
             >
               <Button
                 size="small"
-                danger
+                variant="ghost"
                 icon={<UserMinus size={14} />}
                 loading={demotingId === mod.id}
                 disabled={!!demotingId && demotingId !== mod.id}
+                className="text-muted-foreground hover:text-destructive"
               />
             </Popconfirm>
           </div>

@@ -1,6 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Avatar,
   Button,
   Input,
   message,
@@ -17,6 +16,7 @@ import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
+import { AvatarPreview } from '@/components/AvatarPreview';
 import apiService, { resolveAssetUrl } from '@/services/api';
 import type {
   CrudPermissions,
@@ -268,18 +268,16 @@ const PermissionsPage = () => {
       fixed: 'left',
       width: USER_COL_WIDTH,
       render: (_, mod) => (
-        <div className="flex items-center gap-3 min-w-0">
-          <Avatar
+        <div className="flex min-w-0 items-center gap-3">
+          <AvatarPreview
+            src={mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : null}
+            name={`${mod.firstName ?? ''} ${mod.lastName ?? ''}`.trim()}
+            initials={(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
             size={40}
-            src={
-              mod.avatarUrl ? resolveAssetUrl(mod.avatarUrl) : undefined
-            }
-            className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700"
-          >
-            {(mod.firstName?.[0] || '') + (mod.lastName?.[0] || '')}
-          </Avatar>
+            avatarClassName="bg-gradient-to-br from-slate-600 to-slate-800"
+          />
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 truncate text-[13px] font-semibold tracking-tight text-foreground">
               <HighlightText
                 text={`${mod.firstName} ${mod.lastName}`}
                 highlight={qp.search}
