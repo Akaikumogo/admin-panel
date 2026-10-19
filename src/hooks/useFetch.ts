@@ -11,12 +11,17 @@ export function useFetch<T>(
   key: QueryKey,
   fetcher: () => Promise<T>,
   initial: T,
-  options?: { enabled?: boolean; keepPrevious?: boolean },
+  options?: {
+    enabled?: boolean;
+    keepPrevious?: boolean;
+    refetchInterval?: number | false;
+  },
 ): UseFetchReturn<T> {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: key,
     queryFn: fetcher,
     enabled: options?.enabled ?? true,
+    refetchInterval: options?.refetchInterval,
     placeholderData: options?.keepPrevious
       ? (prev: T | undefined) => prev
       : undefined,
