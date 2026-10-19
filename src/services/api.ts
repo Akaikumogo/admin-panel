@@ -1219,6 +1219,10 @@ export type StudentSummary = {
   currentLevelTitle: string | null;
   badge?: StudentBadge | null;
   organizations: { id: string; name: string; reportActive?: boolean }[];
+  /** Hozir online (heartbeat 2 daqiqa ichida) */
+  isOnline?: boolean;
+  /** Oxirgi session last_seen_at */
+  lastSeenAt?: string | null;
 };
 
 export type LevelProgress = {
@@ -1259,6 +1263,29 @@ export type StudentDetail = {
   badge?: StudentBadge | null;
   levelProgress: LevelProgress[];
   createdAt: string;
+  isOnline?: boolean;
+  lastSeenAt?: string | null;
+};
+
+export type OnlineCalendarSession = {
+  loginAt: string;
+  logoutAt: string | null;
+  lastSeenAt: string;
+  durationSeconds: number;
+  isOnline: boolean;
+};
+
+export type OnlineCalendarDay = {
+  date: string;
+  seconds: number;
+  hours: number;
+  sessions: OnlineCalendarSession[];
+};
+
+export type OnlineCalendarResponse = {
+  from: string;
+  to: string;
+  days: OnlineCalendarDay[];
 };
 
 export type StudentXpHistoryItem = {
@@ -4922,6 +4949,16 @@ export const userActivityApi = {
     const { data } = await apiService.api.get<ActivitySession[]>(
       `/user-activity/sessions/${userId}`,
       { params: { range } }
+    );
+    return data;
+  },
+  async onlineCalendar(
+    userId: string,
+    params?: { from?: string; to?: string; days?: number }
+  ) {
+    const { data } = await apiService.api.get<OnlineCalendarResponse>(
+      `/user-activity/online-calendar/${userId}`,
+      { params }
     );
     return data;
   },

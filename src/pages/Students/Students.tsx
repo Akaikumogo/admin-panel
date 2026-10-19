@@ -9,8 +9,15 @@ import {
   Switch,
   Table,
   Tag,
+  Tooltip,
   message,
 } from '@/components/ui';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/uz-latn';
+
+dayjs.extend(relativeTime);
+dayjs.locale('uz-latn');
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +64,9 @@ const T = {
   level: { uz: 'Joriy daraja', en: 'Current level', ru: 'Текущий уровень' },
   completed: { uz: 'Tugallangan', en: 'Completed', ru: 'Завершено' },
   org: { uz: 'Tashkilot', en: 'Organization', ru: 'Организация' },
+  lastOnline: { uz: 'Oxirgi online', en: 'Last online', ru: 'Последний онлайн' },
+  onlineNow: { uz: 'Hozir online', en: 'Online now', ru: 'Сейчас онлайн' },
+  neverOnline: { uz: 'Hali online bo‘lmagan', en: 'Never online', ru: 'Ещё не был онлайн' },
   allOrgs: { uz: 'Barcha tashkilotlar', en: 'All organizations', ru: 'Все организации' },
   allLevels: { uz: 'Barcha darajalar', en: 'All levels', ru: 'Все уровни' },
   search: { uz: 'Qidirish...', en: 'Search...', ru: 'Поиск...' },
@@ -700,6 +710,43 @@ const Students = () => {
           </span>
         </span>
       ),
+    },
+    {
+      title: columnsApiRef.current.t(T.lastOnline),
+      key: 'lastOnline',
+      width: 160,
+      filterable: false,
+      sorter: (a: StudentSummary, b: StudentSummary) => {
+        const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
+        const bt = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
+        return at - bt;
+      },
+      render: (_: unknown, record: StudentSummary) => {
+        const api = columnsApiRef.current;
+        if (record.isOnline) {
+          return (
+            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              {api.t(T.onlineNow)}
+            </span>
+          );
+        }
+        if (!record.lastSeenAt) {
+          return (
+            <span className="text-muted-foreground text-sm">{api.t(T.neverOnline)}</span>
+          );
+        }
+        return (
+          <Tooltip title={dayjs(record.lastSeenAt).format('DD.MM.YYYY HH:mm:ss')}>
+            <span className="text-sm text-foreground/80">
+              {dayjs(record.lastSeenAt).fromNow()}
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: columnsApiRef.current.t(T.xp),

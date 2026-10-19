@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Progress, Spin, Table, Tag, Tooltip } from '@/components/ui';
 import { ArrowLeft, CheckCircle2, Zap, Trophy, XCircle, Mail, Calendar, CalendarDays } from 'lucide-react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/uz-latn';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import NoData from '@/components/NoData';
@@ -11,23 +14,28 @@ import type {
   StudentDetail as StudentDetailType,
   StudentXpHistoryResponse,
   LostQuestion,
-  ActivityDay,
 } from '@/services/api';
 import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
 import { EmployeeCertificateSection } from './EmployeeCertificateSection';
 import { EmployeeSafetySection } from './EmployeeSafetySection';
 import { EmployeePlanSection } from './EmployeePlanSection';
 import { StudentFieldsEditor } from './StudentFieldsEditor';
+import { OnlinePresenceHeatmap } from './OnlinePresenceHeatmap';
 import type { UserProfile } from '@/services/api';
 import { formatPersonName } from '@/lib/person-name';
+
+dayjs.extend(relativeTime);
+dayjs.locale('uz-latn');
 
 const T = {
   back: { uz: 'Orqaga', en: 'Back', ru: 'Назад' },
   profile: { uz: 'Profil', en: 'Profile', ru: 'Профиль' },
   progress: { uz: 'Progress', en: 'Progress', ru: 'Прогресс' },
   lostQuestions: { uz: 'Ko`p xato qilingan savollar', en: 'Most failed questions', ru: 'Часто ошибаемые вопросы' },
-  activity: { uz: 'Faollik (28 kun)', en: 'Activity (28 days)', ru: 'Активность (28 дней)' },
   totalXp: { uz: 'Jami XP', en: 'Total XP', ru: 'Всего XP' },
+  onlineNow: { uz: 'Hozir online', en: 'Online now', ru: 'Сейчас онлайн' },
+  lastOnline: { uz: 'Oxirgi online', en: 'Last online', ru: 'Последний онлайн' },
+  neverOnline: { uz: 'Hali online bo‘lmagan', en: 'Never online', ru: 'Ещё не был онлайн' },
   correctAnswers: { uz: 'To‘g‘ri javoblar', en: 'Correct answers', ru: 'Верные ответы' },
   uniqueQuestions: { uz: 'Noyob savollar', en: 'Unique questions', ru: 'Уникальные вопросы' },
   completedLevels: { uz: 'Tugallangan darajalar', en: 'Completed levels', ru: 'Завершённые уровни' },
@@ -60,22 +68,6 @@ function xpSourceLabel(source: string | null | undefined) {
     return { uz: 'Dars', en: 'Lesson', ru: 'Урок' };
   }
   return { uz: 'Noma’lum', en: 'Unknown', ru: 'Неизвестно' };
-}
-
-const ACTIVITY_COLORS = [
-  'bg-slate-100 dark:bg-slate-800',
-  'bg-green-200 dark:bg-green-900',
-  'bg-green-400 dark:bg-green-700',
-  'bg-green-600 dark:bg-green-500',
-  'bg-green-800 dark:bg-green-400',
-];
-
-function getActivityColor(count: number) {
-  if (count === 0) return ACTIVITY_COLORS[0];
-  if (count <= 3) return ACTIVITY_COLORS[1];
-  if (count <= 7) return ACTIVITY_COLORS[2];
-  if (count <= 15) return ACTIVITY_COLORS[3];
-  return ACTIVITY_COLORS[4];
 }
 
 const StudentDetailPage = () => {
@@ -116,12 +108,6 @@ const StudentDetailPage = () => {
   const { data: lostQuestions, initialLoading: lqLoading } = useFetch<LostQuestion[]>(
     ['student-lost-questions', id],
     () => apiService.getStudentLostQuestions(id!),
-    [],
-  );
-
-  const { data: activity, initialLoading: actLoading } = useFetch<ActivityDay[]>(
-    ['student-activity', id],
-    () => apiService.getStudentActivity(id!),
     [],
   );
 
@@ -289,11 +275,32 @@ const StudentDetailPage = () => {
                 {student.badge?.label ?? 'Yangi ishchi'}
               </span>
             </div>
-            <div className="flex items-center gap-4 mt-3 text-sm text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1"><Mail size={14} /> {student.email}</span>
               <span className="flex items-center gap-1">
                 <Calendar size={14} /> {t(T.joined)}: {new Date(student.createdAt).toLocaleDateString()}
               </span>
+              {student.isOnline ? (
+                <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  {t(T.onlineNow)}
+                </span>
+              ) : student.lastSeenAt ? (
+                <Tooltip title={dayjs(student.lastSeenAt).format('DD.MM.YYYY HH:mm:ss')}>
+                  <span className="flex items-center gap-1">
+                    <CalendarDays size={14} />
+                    {t(T.lastOnline)}: {dayjs(student.lastSeenAt).fromNow()}
+                  </span>
+                </Tooltip>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <CalendarDays size={14} />
+                  {t(T.neverOnline)}
+                </span>
+              )}
             </div>
             {student.organizations.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
@@ -434,25 +441,7 @@ const StudentDetailPage = () => {
         </div>
       </div>
 
-      {/* Activity heatmap */}
-      <div className="bg-card border border-border rounded-lg p-6">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t(T.activity)}</h3>
-        {actLoading ? (
-          <div className="flex items-center justify-center h-16"><Spin /></div>
-        ) : (
-          <div className="flex gap-1.5 flex-wrap">
-            {activity.map((day) => (
-              <Tooltip key={day.date} title={`${day.date}: ${day.count} ta javob`}>
-                <div
-                  className={`w-8 h-8 rounded-md ${getActivityColor(day.count)} transition-colors flex items-center justify-center text-[10px] font-medium ${day.count > 0 ? 'text-white dark:text-slate-100' : 'text-slate-400 dark:text-slate-600'}`}
-                >
-                  {new Date(day.date).getDate()}
-                </div>
-              </Tooltip>
-            ))}
-          </div>
-        )}
-      </div>
+      {id ? <OnlinePresenceHeatmap userId={id} /> : null}
 
       {/* Lost questions */}
       <div className="bg-card border border-border rounded-lg p-6">
