@@ -1,13 +1,11 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Users,
   Activity,
   Building2,
-  Shield,
   Layers,
-  HelpCircle,
   AlertTriangle,
   Home as HomeIcon,
   TrendingUp,
@@ -19,13 +17,13 @@ import {
   BookOpen,
   Flame,
   Star,
-  Sparkles,
   Upload,
+  ChevronDown,
+  ExternalLink,
 } from 'lucide-react';
 import {
   Card,
   Button,
-  Badge,
   Typography,
   Avatar,
   Skeleton,
@@ -33,11 +31,15 @@ import {
   Progress,
   Tooltip,
 } from '@/components/ui';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type {
-  AnalyticsSummary,
   DailyTrend,
   HomeOverview,
   LevelFunnelItem,
@@ -56,92 +58,6 @@ type KpiTone = {
   accent: string;
   spark: string;
   chip: string;
-};
-
-const KPI_META: Array<{
-  key: keyof Pick<
-    AnalyticsSummary,
-    | 'totalUsers'
-    | 'activeUsers7d'
-    | 'totalOrganizations'
-    | 'totalModerators'
-    | 'totalLevels'
-    | 'totalQuestions'
-  >;
-  icon: typeof Users;
-  tone: KpiTone;
-}> = [
-  {
-    key: 'totalUsers',
-    icon: Users,
-    tone: {
-      accent: 'text-primary',
-      spark: '#22786e',
-      chip: 'bg-accent',
-    },
-  },
-  {
-    key: 'activeUsers7d',
-    icon: Activity,
-    tone: {
-      accent: 'text-accent-600 dark:text-accent-400',
-      spark: '#2f9688',
-      chip: 'bg-accent-100 dark:bg-accent-500/15',
-    },
-  },
-  {
-    key: 'totalOrganizations',
-    icon: Building2,
-    tone: {
-      accent: 'text-amber-700 dark:text-amber-400',
-      spark: 'rgb(217 119 6)',
-      chip: 'bg-amber-500/10',
-    },
-  },
-  {
-    key: 'totalModerators',
-    icon: Shield,
-    tone: {
-      accent: 'text-zinc-700 dark:text-zinc-300',
-      spark: '#71717a',
-      chip: 'bg-zinc-100 dark:bg-zinc-800',
-    },
-  },
-  {
-    key: 'totalLevels',
-    icon: Layers,
-    tone: {
-      accent: 'text-accent-700 dark:text-accent-300',
-      spark: '#1f6159',
-      chip: 'bg-accent-50 dark:bg-accent-500/10',
-    },
-  },
-  {
-    key: 'totalQuestions',
-    icon: HelpCircle,
-    tone: {
-      accent: 'text-accent-800 dark:text-accent-200',
-      spark: '#1d4e49',
-      chip: 'bg-accent-100/80 dark:bg-accent-500/12',
-    },
-  },
-];
-
-const KPI_LABELS: Record<string, { uz: string; en: string; ru: string }> = {
-  totalUsers: {
-    uz: 'Foydalanuvchilar',
-    en: 'Total users',
-    ru: 'Пользователей',
-  },
-  activeUsers7d: { uz: 'Faol (7 kun)', en: 'Active (7d)', ru: 'Активные (7д)' },
-  totalOrganizations: {
-    uz: 'Tashkilotlar',
-    en: 'Organizations',
-    ru: 'Организации',
-  },
-  totalModerators: { uz: 'Moderatorlar', en: 'Moderators', ru: 'Модераторы' },
-  totalLevels: { uz: 'Modullar', en: 'Modules', ru: 'Модули' },
-  totalQuestions: { uz: 'Savollar', en: 'Questions', ru: 'Вопросы' },
 };
 
 const FUNNEL_ICONS = [Star, Flame, BookOpen, Layers, Trophy];
@@ -186,6 +102,8 @@ function KpiCell({
   tone,
   sparkValues,
   deltaPercent,
+  invertDelta,
+  hint,
 }: {
   label: string;
   value: number | string;
@@ -194,6 +112,8 @@ function KpiCell({
   tone: KpiTone;
   sparkValues?: number[];
   deltaPercent?: number | null;
+  invertDelta?: boolean;
+  hint?: string;
 }) {
   return (
     <div className="relative px-3 py-3 sm:px-4">
@@ -224,7 +144,11 @@ function KpiCell({
             {typeof value === 'number' ? value.toLocaleString() : value}
           </p>
           <div className="mt-2 flex items-end justify-between gap-2">
-            <DeltaBadge percent={deltaPercent} />
+            {hint ? (
+              <span className="text-[11px] text-muted-foreground">{hint}</span>
+            ) : (
+              <DeltaBadge percent={deltaPercent} invert={invertDelta} />
+            )}
             {sparkValues && sparkValues.length > 1 ? (
               <MiniSparkline values={sparkValues} stroke={tone.spark} />
             ) : null}
@@ -316,47 +240,158 @@ export default function HomePage() {
     [dailyTrend?.points],
   );
 
-  const storyInsight = useMemo(() => {
-    const top = homeOverview?.mostActiveBranch;
-    const err = homeOverview?.topErrorBranches?.[0];
-    const loginD = formatDelta(insight?.loginDeltaPercent);
-    const errD = formatDelta(insight?.errorDeltaPercent);
-    const parts: string[] = [];
-    if (top) {
-      parts.push(
-        t({
-          uz: `Eng faol: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} login)`,
-          en: `Top activity: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} logins)`,
-          ru: `Активнее всего: ${shortBranchName(top.orgName)} (${top.value.toLocaleString()} входов)`,
-        }),
-      );
-    }
-    if (err && insight) {
-      parts.push(
-        t({
-          uz: `Eng ko‘p xato: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30 kun). Umumiy xato ${errD.text}.`,
-          en: `Most errors: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30d). Errors overall ${errD.text}.`,
-          ru: `Больше ошибок: ${shortBranchName(err.orgName)} — ${err.value.toLocaleString()} (30д). Ошибки ${errD.text}.`,
-        }),
-      );
-    } else if (insight) {
-      parts.push(
-        t({
-          uz: `Loginlar haftalik ${loginD.text}, xatolar 30 kun ${errD.text}.`,
-          en: `Weekly logins ${loginD.text}, 30d errors ${errD.text}.`,
-          ru: `Логины за неделю ${loginD.text}, ошибки 30д ${errD.text}.`,
-        }),
-      );
-    }
-    return parts.join(' ');
-  }, [homeOverview, insight, t]);
-
   const weakModules = useMemo(() => {
     return (funnel ?? []).filter((item) => {
       if (item.totalStarted <= 0) return true;
       return item.totalCompleted / item.totalStarted < 0.25;
     }).length;
   }, [funnel]);
+
+  const topErrorBranch = homeOverview?.topErrorBranches?.[0] ?? null;
+  const needsTriage = (insight?.errors30d ?? 0) > 0 || weakModules > 0;
+
+  const homeKpis = useMemo(() => {
+    const tone = {
+      primary: {
+        accent: 'text-primary',
+        spark: '#22786e',
+        chip: 'bg-accent',
+      } satisfies KpiTone,
+      accent: {
+        accent: 'text-accent-600 dark:text-accent-400',
+        spark: '#2f9688',
+        chip: 'bg-accent-100 dark:bg-accent-500/15',
+      } satisfies KpiTone,
+      rose: {
+        accent: 'text-rose-700 dark:text-rose-400',
+        spark: 'rgb(225 29 72)',
+        chip: 'bg-rose-500/10',
+      } satisfies KpiTone,
+      amber: {
+        accent: 'text-amber-700 dark:text-amber-400',
+        spark: 'rgb(217 119 6)',
+        chip: 'bg-amber-500/10',
+      } satisfies KpiTone,
+      zinc: {
+        accent: 'text-zinc-700 dark:text-zinc-300',
+        spark: '#71717a',
+        chip: 'bg-zinc-100 dark:bg-zinc-800',
+      } satisfies KpiTone,
+    };
+
+    return [
+      {
+        key: 'users',
+        label: t({
+          uz: 'Foydalanuvchilar',
+          en: 'Users',
+          ru: 'Пользователи',
+        }),
+        icon: Users,
+        tone: tone.primary,
+        loading: summaryLoading,
+        value: summary?.totalUsers ?? 0,
+        sparkValues: planSpark,
+        deltaPercent: insight?.loginDeltaPercent ?? null,
+      },
+      {
+        key: 'active',
+        label: t({ uz: 'Faol (7 kun)', en: 'Active (7d)', ru: 'Активные (7д)' }),
+        icon: Activity,
+        tone: tone.accent,
+        loading: summaryLoading || homeOverviewLoading,
+        value: summary?.activeUsers7d ?? 0,
+        sparkValues: weekSpark,
+        deltaPercent: insight?.loginDeltaPercent ?? null,
+      },
+      {
+        key: 'online',
+        label: t({ uz: 'Online', en: 'Online', ru: 'Онлайн' }),
+        icon: Wifi,
+        tone: tone.accent,
+        loading: homeOverviewLoading,
+        value: insight?.onlineHint ?? 0,
+        sparkValues: weekSpark.slice(-6),
+        deltaPercent: null as number | null,
+      },
+      {
+        key: 'errors',
+        label: t({
+          uz: 'Xato (30 kun)',
+          en: 'Errors (30d)',
+          ru: 'Ошибки (30д)',
+        }),
+        icon: AlertTriangle,
+        tone: tone.rose,
+        loading: homeOverviewLoading,
+        value: insight?.errors30d ?? 0,
+        sparkValues: weekSpark.slice(-6).map((v) => Math.max(0, v * 0.4)),
+        deltaPercent: insight?.errorDeltaPercent ?? null,
+        invertDelta: true,
+      },
+      {
+        key: 'orgs',
+        label: t({
+          uz: 'Tashkilotlar',
+          en: 'Organizations',
+          ru: 'Организации',
+        }),
+        icon: Building2,
+        tone: tone.zinc,
+        loading: summaryLoading,
+        value: summary?.totalOrganizations ?? 0,
+        sparkValues: undefined as number[] | undefined,
+        deltaPercent: null as number | null,
+      },
+      {
+        key: 'attention',
+        label: t({ uz: 'Diqqat', en: 'Attention', ru: 'Внимание' }),
+        icon: Trophy,
+        tone: tone.amber,
+        loading: funnelLoading,
+        value: weakModules,
+        sparkValues: undefined as number[] | undefined,
+        deltaPercent: null as number | null,
+        hint: t({
+          uz: 'past completion',
+          en: 'low completion',
+          ru: 'низкий completion',
+        }),
+      },
+    ];
+  }, [
+    t,
+    summary,
+    summaryLoading,
+    homeOverviewLoading,
+    funnelLoading,
+    insight,
+    weekSpark,
+    planSpark,
+    weakModules,
+  ]);
+
+  const secondaryActions = [
+    {
+      to: '/dashboard/levels',
+      label: t({ uz: 'Modul qo‘shish', en: 'Add module', ru: 'Добавить модуль' }),
+      icon: Layers,
+    },
+    {
+      to: '/dashboard/organizations',
+      label: t({
+        uz: 'Tashkilot',
+        en: 'Organization',
+        ru: 'Организация',
+      }),
+      icon: Building2,
+    },
+    {
+      to: '/dashboard/import-export',
+      label: t({ uz: 'Import / Export', en: 'Import / Export', ru: 'Импорт / Экспорт' }),
+      icon: Upload,
+    },
+  ];
 
   const errorColumns = useMemo(
     () => [
@@ -426,32 +461,9 @@ export default function HomePage() {
     [t],
   );
 
-  const quickActions = [
-    {
-      to: '/dashboard/users',
-      label: t({ uz: '+ User', en: '+ User', ru: '+ User' }),
-      icon: Plus,
-    },
-    {
-      to: '/dashboard/levels',
-      label: t({ uz: '+ Modul', en: '+ Module', ru: '+ Модуль' }),
-      icon: Layers,
-    },
-    {
-      to: '/dashboard/organizations',
-      label: t({ uz: '+ Tashkilot', en: '+ Org', ru: '+ Орг.' }),
-      icon: Building2,
-    },
-    {
-      to: '/dashboard/import-export',
-      label: t({ uz: 'Import', en: 'Import', ru: 'Импорт' }),
-      icon: Upload,
-    },
-  ];
-
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <div className="page-stack">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <PageHeader
           icon={HomeIcon}
           title={t({
@@ -460,302 +472,314 @@ export default function HomePage() {
             ru: `Добро пожаловать${me?.firstName ? `, ${me.firstName}` : ''}`,
           })}
           description={t({
-            uz: 'Bugungi holat — 5 soniyada tushunarli',
-            en: 'Today’s status — clear in 5 seconds',
-            ru: 'Статус на сегодня — понятно за 5 секунд',
+            uz: 'Bugungi holat — bitta KPI, bitta asosiy ish',
+            en: 'Today’s status — one KPI row, one primary action',
+            ru: 'Статус на сегодня — один KPI, одно главное действие',
           })}
+          className="flex-1"
         />
-        <div className="flex flex-wrap gap-2 lg:pt-1">
-          {quickActions.map((a) => (
-            <Button key={a.to} type="default" size="small" asChild>
-              <Link to={a.to} className="inline-flex items-center gap-1.5">
-                <a.icon size={13} strokeWidth={2} />
-                {a.label}
-              </Link>
-            </Button>
-          ))}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button type="primary" size="middle" asChild>
+            <Link to="/dashboard/users" className="inline-flex items-center gap-1.5">
+              <Plus size={15} strokeWidth={2} />
+              {t({
+                uz: 'Foydalanuvchi',
+                en: 'Add user',
+                ru: 'Пользователь',
+              })}
+            </Link>
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="default" size="middle" className="gap-1.5">
+                {t({ uz: 'Yana', en: 'More', ru: 'Ещё' })}
+                <ChevronDown size={14} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56 p-1.5">
+              {secondaryActions.map((a) => (
+                <Link
+                  key={a.to}
+                  to={a.to}
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground transition hover:bg-muted"
+                >
+                  <a.icon size={15} className="text-muted-foreground" />
+                  {a.label}
+                </Link>
+              ))}
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      {/* Story strip — "nima bo'lyapti?" */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
-        <StoryTile
-          loading={homeOverviewLoading || summaryLoading}
-          icon={<Activity size={14} />}
-          label={t({ uz: 'Faol foydalanuvchi', en: 'Active users', ru: 'Активные' })}
-          value={(summary?.activeUsers7d ?? 0).toLocaleString()}
-          hint={<DeltaBadge percent={insight?.loginDeltaPercent} />}
-          tone="teal"
-        />
-        <StoryTile
-          loading={homeOverviewLoading}
-          icon={<AlertTriangle size={14} />}
-          label={t({ uz: 'Yangi xato (30 kun)', en: 'Errors (30d)', ru: 'Ошибки (30д)' })}
-          value={(insight?.errors30d ?? 0).toLocaleString()}
-          hint={<DeltaBadge percent={insight?.errorDeltaPercent} invert />}
-          tone="rose"
-        />
-        <StoryTile
-          loading={homeOverviewLoading}
-          icon={<Trophy size={14} />}
-          label={t({ uz: 'Top filial', en: 'Top branch', ru: 'Топ филиал' })}
-          value={
-            homeOverview?.mostActiveBranch
-              ? shortBranchName(homeOverview.mostActiveBranch.orgName)
-              : '—'
-          }
-          hint={
-            homeOverview?.mostActiveBranch
-              ? `${homeOverview.mostActiveBranch.value.toLocaleString()} login`
-              : undefined
-          }
-          tone="amber"
-          title={homeOverview?.mostActiveBranch?.orgName}
-        />
-        <StoryTile
-          loading={funnelLoading}
-          icon={<AlertTriangle size={14} />}
-          label={t({ uz: 'Diqqat', en: 'Attention', ru: 'Внимание' })}
-          value={`${weakModules}`}
-          hint={t({
-            uz: 'ta modul past completion',
-            en: 'modules with low completion',
-            ru: 'модуля с низким completion',
-          })}
-          tone="amber"
-        />
-        <StoryTile
-          loading={homeOverviewLoading}
-          icon={<Wifi size={14} />}
-          label={t({ uz: 'Online', en: 'Online', ru: 'Онлайн' })}
-          value={(insight?.onlineHint ?? 0).toLocaleString()}
-          hint={t({ uz: 'hozir sessiyada', en: 'in session now', ru: 'сейчас в сессии' })}
-          tone="cyan"
-          className="col-span-2 md:col-span-1 xl:col-span-1"
-        />
-      </div>
-
-      {storyInsight ? (
-        <div className="surface flex items-start gap-3 border-primary/20 bg-accent px-4 py-3">
-          <Sparkles
-            size={16}
-            className="mt-0.5 shrink-0 text-primary"
-          />
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
-              {t({ uz: 'AI Insight', en: 'AI Insight', ru: 'AI Insight' })}
-            </p>
-            <p className="mt-0.5 text-sm leading-relaxed text-foreground/90">
-              {storyInsight}
-            </p>
+      {needsTriage && topErrorBranch ? (
+        <div className="surface flex flex-col gap-3 border-rose-500/25 bg-rose-500/[0.04] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300">
+              <AlertTriangle size={16} strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-rose-700 dark:text-rose-300">
+                {t({
+                  uz: 'Diqqat — triage kerak',
+                  en: 'Attention — triage needed',
+                  ru: 'Внимание — нужен triage',
+                })}
+              </p>
+              <p className="mt-0.5 text-sm leading-relaxed text-foreground">
+                {t({
+                  uz: `${shortBranchName(topErrorBranch.orgName)} — ${topErrorBranch.value.toLocaleString()} xato (30 kun)${weakModules ? ` · ${weakModules} modul past completion` : ''}`,
+                  en: `${shortBranchName(topErrorBranch.orgName)} — ${topErrorBranch.value.toLocaleString()} errors (30d)${weakModules ? ` · ${weakModules} low-completion modules` : ''}`,
+                  ru: `${shortBranchName(topErrorBranch.orgName)} — ${topErrorBranch.value.toLocaleString()} ошибок (30д)${weakModules ? ` · ${weakModules} модуля с низким completion` : ''}`,
+                })}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button size="small" type="primary" asChild>
+              <Link
+                to="/dashboard/analytics"
+                className="inline-flex items-center gap-1.5"
+              >
+                {t({
+                  uz: 'Xatolarga o‘tish',
+                  en: 'Open errors',
+                  ru: 'К ошибкам',
+                })}
+                <ExternalLink size={13} />
+              </Link>
+            </Button>
+            <Button size="small" type="default" asChild>
+              <Link to="/dashboard/logs">
+                {t({ uz: 'Loglar', en: 'Logs', ru: 'Логи' })}
+              </Link>
+            </Button>
           </div>
         </div>
       ) : null}
 
-      {/* KPI — larger visual weight */}
       <div className="surface overflow-hidden p-4 md:p-5">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             {t({
-              uz: 'Asosiy ko‘rsatkichlar',
-              en: 'Core metrics',
-              ru: 'Ключевые метрики',
+              uz: 'Bugungi signal',
+              en: 'Today’s signal',
+              ru: 'Сигнал на сегодня',
             })}
           </p>
-          <p className="text-[11px] tabular-nums text-muted-foreground">
+          <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
             {new Date().toLocaleDateString()}
           </p>
         </div>
         <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-6">
-          {KPI_META.map(({ key, icon, tone }) => {
-            const spark =
-              key === 'activeUsers7d'
-                ? weekSpark
-                : key === 'totalUsers'
-                  ? planSpark
-                  : weekSpark.slice(-6).map((v, i) => v * (0.7 + i * 0.05));
-            const delta =
-              key === 'activeUsers7d'
-                ? insight?.loginDeltaPercent
-                : key === 'totalQuestions'
-                  ? insight?.errorDeltaPercent
-                  : null;
-            return (
-              <KpiCell
-                key={key}
-                label={t(KPI_LABELS[key])}
-                icon={icon}
-                tone={tone}
-                loading={summaryLoading}
-                value={summary?.[key] ?? 0}
-                sparkValues={spark}
-                deltaPercent={
-                  key === 'activeUsers7d' || key === 'totalUsers'
-                    ? insight?.loginDeltaPercent
-                    : delta
-                }
-              />
-            );
-          })}
+          {homeKpis.map((kpi) => (
+            <KpiCell
+              key={kpi.key}
+              label={kpi.label}
+              icon={kpi.icon}
+              tone={kpi.tone}
+              loading={kpi.loading}
+              value={kpi.value}
+              sparkValues={kpi.sparkValues}
+              deltaPercent={kpi.deltaPercent}
+              invertDelta={'invertDelta' in kpi ? kpi.invertDelta : false}
+              hint={'hint' in kpi ? kpi.hint : undefined}
+            />
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <Card
-          className="xl:col-span-8 min-h-[320px]"
-          title={
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <Activity
-                size={15}
-                strokeWidth={1.75}
-                className="text-primary"
-              />
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
               {t({
-                uz: 'Filial bo‘yicha faollik (12 hafta)',
-                en: 'Branch activity (12 weeks)',
-                ru: 'Активность филиалов (12 недель)',
+                uz: 'Filial holati',
+                en: 'Branch health',
+                ru: 'Состояние филиалов',
               })}
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {t({
+                uz: 'Faollik + xato — bir qarashda',
+                en: 'Activity + errors at a glance',
+                ru: 'Активность и ошибки одним взглядом',
+              })}
+            </p>
+          </div>
+          {homeOverview?.scopeLabel ? (
+            <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+              {homeOverview.scopeLabel}
             </span>
-          }
-          extra={
-            <span className="text-xs text-muted-foreground">
-              {homeOverview?.scopeLabel}
-            </span>
-          }
-        >
-          {homeOverviewLoading ? (
-            <Skeleton active paragraph={{ rows: 6 }} />
-          ) : (
-            <BranchActivityHeatmap rows={homeOverview?.branchHeatmap ?? []} />
-          )}
-        </Card>
+          ) : null}
+        </div>
 
-        <div className="xl:col-span-4 space-y-4">
-          <div className="surface p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  {t({ uz: 'Profil', ru: 'Профиль', en: 'Profile' })}
-                </p>
-                {meLoading ? (
-                  <Skeleton active title={false} paragraph={{ rows: 2 }} />
-                ) : (
-                  <>
-                    <Title level={4} className="!mb-0 !mt-1 !text-base">
-                      {me?.firstName} {me?.lastName}
-                    </Title>
-                    <Text className="text-sm text-muted-foreground">
-                      {me?.email} · {me?.role}
-                    </Text>
-                  </>
-                )}
-              </div>
-              <Avatar
-                size={44}
-                className="!rounded-md"
-                style={{ backgroundColor: 'var(--primary)' }}
-                icon={<ShieldCheck size={20} />}
-              />
+        <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-12 xl:gap-4">
+          <div className="surface flex min-h-[340px] flex-col overflow-hidden p-4 md:p-5 xl:col-span-8">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Activity size={15} strokeWidth={1.75} className="text-primary" />
+              {t({
+                uz: 'Faollik (12 hafta)',
+                en: 'Activity (12 weeks)',
+                ru: 'Активность (12 недель)',
+              })}
             </div>
-            <div className="mt-3 border-t border-border pt-3">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                {t({
-                  uz: 'Ruxsat holati',
-                  en: 'Permissions',
-                  ru: 'Права доступа',
-                })}
-              </p>
-              <div className="mt-2 flex items-center justify-between">
-                <Badge
-                  color="green"
-                  text={
-                    me?.role === 'SUPERADMIN'
-                      ? adminPing?.message || 'OK'
-                      : 'Limited'
-                  }
+            <div className="min-h-0 flex-1">
+              {homeOverviewLoading ? (
+                <Skeleton active paragraph={{ rows: 6 }} />
+              ) : (
+                <BranchActivityHeatmap
+                  rows={homeOverview?.branchHeatmap ?? []}
                 />
+              )}
+            </div>
+          </div>
+
+          <div className="flex min-h-[340px] flex-col gap-4 xl:col-span-4">
+            <div className="surface shrink-0 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    {t({ uz: 'Siz', en: 'You', ru: 'Вы' })}
+                  </p>
+                  {meLoading ? (
+                    <Skeleton active title={false} paragraph={{ rows: 2 }} />
+                  ) : (
+                    <>
+                      <Title level={4} className="!mb-0 !mt-1 !text-base">
+                        {me?.firstName} {me?.lastName}
+                      </Title>
+                      <Text className="text-sm text-muted-foreground">
+                        {me?.role}
+                      </Text>
+                    </>
+                  )}
+                </div>
+                <Avatar
+                  size={40}
+                  className="!rounded-xl"
+                  style={{ backgroundColor: 'var(--primary)' }}
+                  icon={<ShieldCheck size={18} />}
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+                <span className="text-[12px] text-muted-foreground">
+                  {me?.role === 'SUPERADMIN'
+                    ? adminPing?.message || 'API OK'
+                    : t({
+                        uz: 'Cheklangan ruxsat',
+                        en: 'Limited access',
+                        ru: 'Ограниченный доступ',
+                      })}
+                </span>
                 {me?.role === 'SUPERADMIN' ? (
-                  <Button type="primary" onClick={() => void refetchMe()}>
-                    {t({ uz: 'Yangilash', ru: 'Обновить', en: 'Refresh' })}
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => void refetchMe()}
+                    className="text-[12px] font-medium text-primary hover:underline"
+                  >
+                    {t({ uz: 'Yangilash', en: 'Refresh', ru: 'Обновить' })}
+                  </button>
                 ) : null}
               </div>
             </div>
-          </div>
 
-          <div className="surface p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <AlertTriangle
-                size={15}
-                strokeWidth={1.75}
-                className="text-destructive"
-              />
-              {t({
-                uz: 'Filial xatolari (30 kun)',
-                en: 'Branch errors (30d)',
-                ru: 'Ошибки филиалов (30д)',
-              })}
-            </div>
-            {homeOverviewLoading ? (
-              <Skeleton active paragraph={{ rows: 4 }} />
-            ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
-              <p className="py-2 text-sm text-muted-foreground">
-                {t({ uz: 'Maʼlumot yoʻq', en: 'No data', ru: 'Нет данных' })}
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {(homeOverview?.topErrorBranches ?? []).map((row, idx) => {
-                  const prev = row.previousValue ?? 0;
-                  const deltaPct =
-                    prev > 0
-                      ? Math.round(((row.value - prev) / prev) * 1000) / 10
-                      : row.value > 0
-                        ? 100
-                        : null;
-                  const short = shortBranchName(row.orgName);
-                  return (
-                    <li
-                      key={row.orgId}
-                      className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <span className="text-[10px] tabular-nums text-muted-foreground">
-                          #{idx + 1}
-                        </span>
-                        <Tooltip title={row.orgName}>
-                          <p className="truncate text-sm font-semibold">
-                            {row.isDefault ? (
-                              <span className="mr-1 text-amber-500">★</span>
-                            ) : null}
-                            {short}
-                          </p>
-                        </Tooltip>
-                        <p className="text-[11px] text-muted-foreground">
-                          {t({
-                            uz: `Oldingi: ${prev.toLocaleString()}`,
-                            en: `Prev: ${prev.toLocaleString()}`,
-                            ru: `Было: ${prev.toLocaleString()}`,
-                          })}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <span className="block rounded bg-destructive/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-destructive">
-                          {row.value.toLocaleString()}
-                        </span>
-                        <div className="mt-1 flex justify-end">
-                          <DeltaBadge percent={deltaPct} invert />
+            <div className="surface flex min-h-0 flex-1 flex-col p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <AlertTriangle
+                    size={15}
+                    strokeWidth={1.75}
+                    className="text-destructive"
+                  />
+                  {t({
+                    uz: 'Xato top (30 kun)',
+                    en: 'Error top (30d)',
+                    ru: 'Топ ошибок (30д)',
+                  })}
+                </div>
+                <Link
+                  to="/dashboard/analytics"
+                  className="text-[11px] font-medium text-primary hover:underline"
+                >
+                  {t({ uz: 'Barchasi', en: 'All', ru: 'Все' })}
+                </Link>
+              </div>
+              {homeOverviewLoading ? (
+                <Skeleton active paragraph={{ rows: 4 }} />
+              ) : (homeOverview?.topErrorBranches?.length ?? 0) === 0 ? (
+                <p className="py-2 text-sm text-muted-foreground">
+                  {t({
+                    uz: 'Maʼlumot yoʻq',
+                    en: 'No data',
+                    ru: 'Нет данных',
+                  })}
+                </p>
+              ) : (
+                <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
+                  {(homeOverview?.topErrorBranches ?? []).map((row, idx) => {
+                    const prev = row.previousValue ?? 0;
+                    const deltaPct =
+                      prev > 0
+                        ? Math.round(((row.value - prev) / prev) * 1000) / 10
+                        : row.value > 0
+                          ? 100
+                          : null;
+                    const short = shortBranchName(row.orgName);
+                    return (
+                      <li
+                        key={row.orgId}
+                        className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                            #{idx + 1}
+                          </span>
+                          <Tooltip title={row.orgName}>
+                            <p className="truncate text-sm font-semibold">
+                              {row.isDefault ? (
+                                <span className="mr-1 text-amber-500">★</span>
+                              ) : null}
+                              {short}
+                            </p>
+                          </Tooltip>
                         </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+                        <div className="shrink-0 text-right">
+                          <span className="block rounded-md bg-destructive/10 px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-destructive">
+                            {row.value.toLocaleString()}
+                          </span>
+                          <div className="mt-1 flex justify-end">
+                            <DeltaBadge percent={deltaPct} invert />
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {(funnelLoading || (funnel?.length ?? 0) > 0) && (
+        <section className="space-y-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              {t({
+                uz: 'Kontent salomatligi',
+                en: 'Content health',
+                ru: 'Здоровье контента',
+              })}
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {t({
+                uz: 'Modul completion — pastlar diqqat talab qiladi',
+                en: 'Module completion — lows need attention',
+                ru: 'Completion модулей — низкие требуют внимания',
+              })}
+            </p>
+          </div>
         <Card
           title={
             <span className="flex items-center gap-2 text-sm font-semibold">
@@ -815,6 +839,7 @@ export default function HomePage() {
             </div>
           )}
         </Card>
+        </section>
       )}
 
       {(errorsLoading || (errorQuestions?.length ?? 0) > 0) && (
@@ -849,57 +874,3 @@ export default function HomePage() {
   );
 }
 
-function StoryTile({
-  loading,
-  icon,
-  label,
-  value,
-  hint,
-  tone,
-  title,
-  className,
-}: {
-  loading?: boolean;
-  icon: ReactNode;
-  label: string;
-  value: string;
-  hint?: ReactNode;
-  tone: 'teal' | 'rose' | 'amber' | 'cyan';
-  title?: string;
-  className?: string;
-}) {
-  const toneMap = {
-    teal: 'border-primary/20 bg-accent text-accent-foreground',
-    rose: 'border-rose-500/20 bg-rose-500/[0.06] text-rose-700 dark:text-rose-300',
-    amber:
-      'border-amber-500/25 bg-amber-500/[0.07] text-amber-800 dark:text-amber-300',
-    cyan: 'border-accent-400/30 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300',
-  };
-  return (
-    <div
-      title={title}
-      className={cn(
-        'surface-flat px-3 py-3',
-        toneMap[tone],
-        className,
-      )}
-    >
-      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide opacity-80">
-        {icon}
-        {label}
-      </div>
-      {loading ? (
-        <Skeleton.Input active size="small" className="mt-2 !w-20" />
-      ) : (
-        <>
-          <p className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
-            {value}
-          </p>
-          {hint ? (
-            <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
-          ) : null}
-        </>
-      )}
-    </div>
-  );
-}
