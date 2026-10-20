@@ -159,6 +159,33 @@ const LoginPage = () => {
                   })}
             </MagneticButton>
 
+            <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+              {t({
+                uz: 'Parolni unutdingizmi?',
+                en: 'Forgot your password?',
+                ru: 'Забыли пароль?',
+              })}
+              <br />
+              <a
+                href="https://t.me/EnergoItS"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                {t({
+                  uz: 'Qayta tiklash uchun',
+                  en: 'To reset it,',
+                  ru: 'Чтобы восстановить,',
+                })}
+                <br />
+                {t({
+                  uz: 'Telegram orqali aloqaga chiqing',
+                  en: 'contact us on Telegram',
+                  ru: 'напишите в Telegram',
+                })}
+              </a>
+            </p>
+
             <div className="flex items-center gap-3 py-1">
               <span className="h-px flex-1 bg-border" />
               <span className="text-[12px] text-muted-foreground">
