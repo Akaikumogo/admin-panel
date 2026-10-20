@@ -12,6 +12,7 @@ import type {
 } from '@/services/api';
 import { DateTimeDisplay } from '@/components/DateTimeDisplay';
 import { fmtDateTime } from '@/lib/format';
+import { can } from '@/utils/can';
 
 const { Text } = Typography;
 
@@ -149,7 +150,7 @@ export default function LogsPage() {
     [t]
   );
 
-  if (me && me.role !== 'SUPERADMIN') return null;
+  if (me && !can('logs', 'view')) return null;
 
   if (initialLoading) {
     return (

@@ -18,6 +18,7 @@ import HighlightText from '@/components/HighlightText';
 import NoData from '@/components/NoData';
 import { PageHeader } from '@/components/PageHeader';
 import { AvatarPreview } from '@/components/AvatarPreview';
+import { can } from '@/utils/can';
 import apiService, {
   resolveAssetUrl,
   type Organization,
@@ -326,7 +327,7 @@ export default function ApproversPage() {
         key: 'actions',
         width: 72,
         align: 'right' as const,
-        render: (_: unknown, row: UserProfile) => (
+        render: (_: unknown, row: UserProfile) => can('approvers', 'delete') ? (
           <Popconfirm
             title={t(T.demoteConfirm)}
             description={`${row.lastName} ${row.firstName}`}
@@ -344,7 +345,7 @@ export default function ApproversPage() {
               className="text-muted-foreground hover:text-destructive"
             />
           </Popconfirm>
-        )
+        ) : null
       }
     ],
     [currentPage, pageSize, demotingId, t]
@@ -365,13 +366,15 @@ export default function ApproversPage() {
             <Tag className="text-xs tabular-nums">
               {t(T.total)}: {total}
             </Tag>
-            <Button
-              type="primary"
-              icon={<Plus size={16} />}
-              onClick={openCreateModal}
-            >
-              {t(T.add)}
-            </Button>
+            {can('approvers', 'create') ? (
+              <Button
+                type="primary"
+                icon={<Plus size={16} />}
+                onClick={openCreateModal}
+              >
+                {t(T.add)}
+              </Button>
+            ) : null}
           </div>
         }
       />

@@ -10,6 +10,7 @@ import apiService, {
   type SafetyRecordType,
 } from '@/services/api';
 import { cn } from '@/lib/utils';
+import { actorCan } from '@/utils/can';
 
 const T = {
   title: {
@@ -266,6 +267,7 @@ function TypeTable({
                     </td>
                   )}
                   <td className="px-3 py-2.5">
+                    {actorCan('approvals', 'update', ['APPROVER']) ? (
                     <div className="flex flex-wrap gap-1.5">
                       <Button
                         size="small"
@@ -288,6 +290,7 @@ function TypeTable({
                         {t(T.reject)}
                       </Button>
                     </div>
+                    ) : null}
                   </td>
                 </tr>
               );
@@ -466,7 +469,7 @@ export default function ApprovalsPage() {
         title={t(T.title)}
         description={t(T.subtitle)}
         actions={
-          items.length > 0 ? (
+          items.length > 0 && actorCan('approvals', 'update', ['APPROVER']) ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="primary"
@@ -609,6 +612,7 @@ export default function ApprovalsPage() {
                           </div>
                         </td>
                         <td className="px-3 py-3">
+                          {actorCan('approvals', 'update', ['APPROVER']) ? (
                           <div
                             className="flex flex-wrap gap-1.5"
                             onClick={(e) => e.stopPropagation()}
@@ -630,6 +634,7 @@ export default function ApprovalsPage() {
                               {t(T.rejectAll)}
                             </Button>
                           </div>
+                          ) : null}
                         </td>
                       </tr>
                       {open ? (

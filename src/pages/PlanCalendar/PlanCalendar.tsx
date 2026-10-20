@@ -15,6 +15,7 @@ import {
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFetch } from '@/hooks/useFetch';
 import apiService, { type PlanCalendarDay } from '@/services/api';
+import { can } from '@/utils/can';
 import {
   PlanLegend,
   PlanMonthGrid,
@@ -46,7 +47,7 @@ const PlanCalendarPage = () => {
     () => apiService.getPlanPermissions(),
     { canEdit: false },
   );
-  const canEdit = perms.canEdit;
+  const canEdit = perms.canEdit && can('planCalendar', 'update');
   const [month, setMonth] = useState(() => dayjs().format('YYYY-MM'));
   const [view, setView] = useState<View>('month');
   const [year, setYear] = useState(() => dayjs().format('YYYY'));

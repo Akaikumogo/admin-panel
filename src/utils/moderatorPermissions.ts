@@ -33,6 +33,15 @@ const KEYS: (keyof ModeratorPermissions)[] = [
   'aiAssistant',
   'safetyRecords',
   'telegramBot',
+  'notifications',
+  'approvers',
+  'approvals',
+  'archive',
+  'reports',
+  'planCalendar',
+  'customPlans',
+  'anomaloz',
+  'importExport',
 ];
 
 /** Eski API javoblarida yangi modullar bo‘lmasa — default bilan to‘ldiradi. */

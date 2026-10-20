@@ -8,6 +8,7 @@ import type { ModeratorViolationRow, UserProfile } from '@/services/api';
 import { DateTimeDisplay } from '@/components/DateTimeDisplay';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar, ListSurface } from '@/components/FilterBar';
+import { can } from '@/utils/can';
 
 const T = {
   title: { uz: 'Qoidabuzarliklar', en: 'Violations', ru: 'Нарушения' },
@@ -128,7 +129,7 @@ export default function ViolationsPage() {
     [t],
   );
 
-  if (me && me.role !== 'SUPERADMIN') return null;
+  if (me && !can('violations', 'view')) return null;
 
   if (initialLoading) {
     return (

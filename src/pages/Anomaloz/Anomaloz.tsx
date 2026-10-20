@@ -12,6 +12,7 @@ import {
 } from '@/components/ui';
 import { AlertTriangle, RefreshCw, Trash2, Wrench } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { can } from '@/utils/can';
 import { useFetch } from '@/hooks/useFetch';
 import apiService from '@/services/api';
 import type {
@@ -364,7 +365,7 @@ export default function AnomalozPage() {
         key: 'actions',
         width: 90,
         fixed: 'right' as const,
-        render: (_: unknown, r: BlockedEmailLoginRow) => (
+        render: (_: unknown, r: BlockedEmailLoginRow) => can('anomaloz', 'delete') ? (
           <Popconfirm
             title={t({
               uz: 'Akkauntni o‘chirasizmi?',
@@ -383,7 +384,7 @@ export default function AnomalozPage() {
               loading={deletingBlocked}
             />
           </Popconfirm>
-        ),
+        ) : null,
       },
     ],
     [t, deletingBlocked],
@@ -397,7 +398,7 @@ export default function AnomalozPage() {
     );
   }
 
-  if (me.role !== 'SUPERADMIN') {
+  if (!can('anomaloz', 'view')) {
     return (
       <div className="p-6">
         <Text type="secondary">{t(T.onlySuper)}</Text>
@@ -427,6 +428,7 @@ export default function AnomalozPage() {
             >
               {t(T.scan)}
             </Button>
+            {can('anomaloz', 'update') ? (
             <Button
               type="primary"
               icon={<Wrench size={16} />}
@@ -436,6 +438,7 @@ export default function AnomalozPage() {
             >
               {t(T.fix)}
             </Button>
+            ) : null}
           </div>
         </div>
       </Card>

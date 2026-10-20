@@ -24,6 +24,7 @@ import type {
   UserProfile,
 } from '@/services/api';
 import { mergeModeratorPermissions } from '@/utils/moderatorPermissions';
+import { can } from '@/utils/can';
 import { cn } from '@/lib/utils';
 
 const T = {
@@ -97,6 +98,15 @@ const MODULES: {
       ru: 'Telegram бот',
     },
   },
+  { key: 'notifications', label: { uz: 'Bildirishnomalar', en: 'Notifications', ru: 'Уведомления' } },
+  { key: 'approvers', label: { uz: 'Tasdiqlovchilar', en: 'Approvers', ru: 'Утверждающие' } },
+  { key: 'approvals', label: { uz: 'Tasdiq', en: 'Approvals', ru: 'Утверждение' } },
+  { key: 'archive', label: { uz: 'Arxiv', en: 'Archive', ru: 'Архив' } },
+  { key: 'reports', label: { uz: 'Hisobotlar', en: 'Reports', ru: 'Отчёты' } },
+  { key: 'planCalendar', label: { uz: 'Plan kalendari', en: 'Plan calendar', ru: 'Календарь' } },
+  { key: 'customPlans', label: { uz: 'Custom plans', en: 'Custom plans', ru: 'Custom plans' } },
+  { key: 'anomaloz', label: { uz: 'Anomaloz', en: 'Anomalies', ru: 'Аномалии' } },
+  { key: 'importExport', label: { uz: 'Import / Export', en: 'Import / Export', ru: 'Импорт / экспорт' } },
 ];
 
 const CRUD_ORDER: (keyof CrudPermissions)[] = [
@@ -160,8 +170,8 @@ const PermissionsPage = () => {
 
   useEffect(() => {
     if (!moderators.length) {
-      setPermMap({});
-      setSelectedId(null);
+      setPermMap((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+      setSelectedId((prev) => (prev == null ? prev : null));
       return;
     }
     setSelectedId((prev) =>
@@ -469,6 +479,8 @@ const PermissionsPage = () => {
                     {t(T.dirty)}
                   </Tag>
                 ) : null}
+                {can('permissions', 'update') ? (
+                  <>
                 <Button
                   size="small"
                   variant="ghost"
@@ -492,6 +504,8 @@ const PermissionsPage = () => {
                 >
                   {t(T.save)}
                 </Button>
+                  </>
+                ) : null}
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5">
@@ -515,7 +529,8 @@ const PermissionsPage = () => {
                             </p>
                             <button
                               type="button"
-                              className="text-[11px] font-medium text-muted-foreground hover:text-primary"
+                              disabled={!can('permissions', 'update')}
+                              className="text-[11px] font-medium text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                               onClick={() =>
                                 setModuleAll(selected.id, mod.key, !allOn)
                               }
@@ -535,6 +550,7 @@ const PermissionsPage = () => {
                                 <Switch
                                   size="small"
                                   checked={!!row?.[crud]}
+                                  disabled={!can('permissions', 'update')}
                                   onChange={(v) =>
                                     setCrud(selected.id, mod.key, crud, v)
                                   }

@@ -20,3 +20,15 @@ export function can(moduleKey: keyof ModeratorPermissions, action: keyof CrudPer
   return !!perms?.[moduleKey]?.[action];
 }
 
+/** Moderator — CRUD. Berilgan rollar (masalan APPROVER) o‘z ishini qiladi. */
+export function actorCan(
+  moduleKey: keyof ModeratorPermissions,
+  action: keyof CrudPermissions,
+  alwaysRoles: Role[] = [],
+): boolean {
+  const role = readCachedUserRole();
+  if (role === 'SUPERADMIN') return true;
+  if (role && alwaysRoles.includes(role)) return true;
+  return can(moduleKey, action);
+}
+

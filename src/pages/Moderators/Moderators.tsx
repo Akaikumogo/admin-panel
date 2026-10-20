@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { mergeModeratorPermissions } from '@/utils/moderatorPermissions';
+import { can } from '@/utils/can';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useFetch, usePaginatedFetch } from '@/hooks/useFetch';
 import HighlightText from '@/components/HighlightText';
@@ -677,7 +678,7 @@ const Moderators = () => {
         filterable: false,
         render: (_: unknown, mod: UserProfile) => (
           <div className="flex justify-end gap-1">
-            {staffRoleTab === 'MODERATOR' ? (
+            {staffRoleTab === 'MODERATOR' && can('permissions', 'update') ? (
               <Button
                 size="small"
                 variant="ghost"
@@ -692,6 +693,7 @@ const Moderators = () => {
                 }
               />
             ) : null}
+            {can('moderators', 'delete') ? (
             <Popconfirm
               title={t(T.demoteConfirm)}
               description={`${mod.lastName} ${mod.firstName}`}
@@ -709,6 +711,7 @@ const Moderators = () => {
                 className="text-muted-foreground hover:text-destructive"
               />
             </Popconfirm>
+            ) : null}
           </div>
         )
       }
@@ -742,7 +745,7 @@ const Moderators = () => {
             <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {t(T.total)}: {total}
             </span>
-            {staffRoleTab === 'MODERATOR' ? (
+            {staffRoleTab === 'MODERATOR' && can('permissions', 'view') ? (
               <Button
                 type="default"
                 size="small"
@@ -752,6 +755,7 @@ const Moderators = () => {
                 {t(T.permissionsPage)}
               </Button>
             ) : null}
+            {can('moderators', 'create') ? (
             <Button
               type="primary"
               icon={<Plus size={16} />}
@@ -759,6 +763,7 @@ const Moderators = () => {
             >
               {t(T.addModerator)}
             </Button>
+            ) : null}
           </div>
         }
       />
@@ -1008,7 +1013,17 @@ const Moderators = () => {
                 ['logs', 'Tizim loglari (Logs)'],
                 ['nesSync', '1C sinxronizatsiya (NES sync)'],
                 ['aiAssistant', 'AI yordamchi (AI Assistant)'],
-                ['telegramBot', 'Telegram bot']
+                ['safetyRecords', 'Xavfsizlik yozuvlari'],
+                ['telegramBot', 'Telegram bot'],
+                ['notifications', 'Bildirishnomalar'],
+                ['approvers', 'Tasdiqlovchilar'],
+                ['approvals', 'Tasdiq'],
+                ['archive', 'Arxiv'],
+                ['reports', 'Hisobotlar'],
+                ['planCalendar', 'Plan kalendari'],
+                ['customPlans', 'Custom plans'],
+                ['anomaloz', 'Anomaloz'],
+                ['importExport', 'Import / Export'],
               ] as const
             ).map(([key, label], idx) => (
               <div key={key}>

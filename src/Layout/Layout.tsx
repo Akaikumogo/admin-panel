@@ -61,6 +61,7 @@ import {
   writeLastUnreadTotal,
 } from '@/utils/telegramBotNotifications';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
+import { permissionForPath } from '@/utils/routePermissions';
 
 const G = {
   main: { uz: 'Asosiy', en: 'Main', ru: 'Основное' },
@@ -302,6 +303,7 @@ const Layout = () => {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   /** Moderator ruxsatlari yuklanganda menyuni qayta chizish uchun */
   const [modPerms, setModPerms] = useState<ModeratorPermissions | null>(null);
+  const [modPermsReady, setModPermsReady] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -389,8 +391,10 @@ const Layout = () => {
     if (me.role !== 'MODERATOR') {
       cacheModeratorPermissions(null);
       setModPerms(null);
+      setModPermsReady(true);
       return;
     }
+    setModPermsReady(false);
     apiService
       .getMyModeratorPermissions()
       .then((res) => {
@@ -403,7 +407,8 @@ const Layout = () => {
       .catch(() => {
         cacheModeratorPermissions(null);
         setModPerms(null);
-      });
+      })
+      .finally(() => setModPermsReady(true));
   }, [me]);
 
   // Telegram bot → brauzer bildirishnomasi (faqat alohida toggle yoqilganda)
@@ -519,39 +524,25 @@ const Layout = () => {
       }
       if (me.role !== 'MODERATOR') return [];
 
-      const hasAudioPerm =
-        !!modPerms?.audioLibrary?.create ||
-        !!modPerms?.audioLibrary?.update ||
-        !!modPerms?.audioLibrary?.delete ||
-        can('audioLibrary', 'create') ||
-        can('audioLibrary', 'update') ||
-        can('audioLibrary', 'delete');
-      const hasNesSyncPerm =
-        !!modPerms?.nesSync?.view || can('nesSync', 'view');
-      const hasTelegramBotPerm =
-        !!modPerms?.telegramBot?.view || can('telegramBot', 'view');
+      const canView = (key: keyof ModeratorPermissions) =>
+        !!modPerms?.[key]?.view || can(key, 'view');
 
-      return items.filter(
-        (item) =>
-          item.path !== '/dashboard/moderators' &&
-          item.path !== '/dashboard/approvers' &&
-          item.path !== '/dashboard/approvals' &&
-          item.path !== '/dashboard/violations' &&
-          item.path !== '/dashboard/permissions' &&
-          item.path !== '/dashboard/exam-analysis' &&
-          item.path !== '/dashboard/anomaloz' &&
-          item.path !== '/dashboard/custom-plans' &&
-          item.path !== '/dashboard/telegram-news' &&
-          (hasNesSyncPerm || item.path !== '/dashboard/nes-sync') &&
-          (hasTelegramBotPerm || item.path !== '/dashboard/telegram-bot') &&
-          (hasAudioPerm || item.path !== '/dashboard/audio-library'),
-      );
+      return items.filter((item) => {
+        const key = permissionForPath(item.path);
+        if (key === 'always') return true;
+        if (!key) return false;
+        return canView(key);
+      });
     };
 
     return navGroups
       .map((group) => {
         let items = filterItems(group.items);
-        if (me.role === 'SUPERADMIN' && group.label.uz === G.admin.uz) {
+        const showImport =
+          me.role === 'SUPERADMIN' ||
+          (me.role === 'MODERATOR' &&
+            (!!modPerms?.importExport?.view || can('importExport', 'view')));
+        if (showImport && group.label.uz === G.admin.uz) {
           items = [...items, importExportNavItem];
         }
         return { ...group, items };
@@ -559,32 +550,18 @@ const Layout = () => {
       .filter((group) => group.items.length > 0);
   }, [me, pendingApprovalsCount, modPerms]);
 
-  const hasTelegramBotView =
-    !!modPerms?.telegramBot?.view || can('telegramBot', 'view');
-  const hasNesSyncView = !!modPerms?.nesSync?.view || can('nesSync', 'view');
-  const hasAudioLibraryWrite =
-    !!modPerms?.audioLibrary?.create ||
-    !!modPerms?.audioLibrary?.update ||
-    !!modPerms?.audioLibrary?.delete ||
-    can('audioLibrary', 'create') ||
-    can('audioLibrary', 'update') ||
-    can('audioLibrary', 'delete');
-
+  const moderatorRouteKey =
+    me?.role === 'MODERATOR' ? permissionForPath(location.pathname) : null;
   const isModeratorForbiddenRoute =
     me?.role === 'MODERATOR' &&
-    (location.pathname === '/dashboard/moderators' ||
-      location.pathname === '/dashboard/approvers' ||
-      location.pathname === '/dashboard/permissions' ||
-      location.pathname === '/dashboard/import-export' ||
-      (location.pathname === '/dashboard/telegram-bot' &&
-        !hasTelegramBotView) ||
-      location.pathname === '/dashboard/anomaloz' ||
-      location.pathname === '/dashboard/custom-plans' ||
-      location.pathname === '/dashboard/telegram-news' ||
-      (location.pathname === '/dashboard/nes-sync' && !hasNesSyncView) ||
-      location.pathname === '/dashboard/exam-analysis' ||
-      (location.pathname === '/dashboard/audio-library' &&
-        !hasAudioLibraryWrite));
+    modPermsReady &&
+    location.pathname.startsWith('/dashboard') &&
+    moderatorRouteKey !== 'always' &&
+    (moderatorRouteKey == null ||
+      !(
+        !!modPerms?.[moderatorRouteKey]?.view ||
+        can(moderatorRouteKey, 'view')
+      ));
 
   const isDirectorForbiddenRoute =
     me?.role === 'APPROVER' &&

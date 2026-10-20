@@ -1582,6 +1582,15 @@ export type ModeratorPermissions = {
   aiAssistant: CrudPermissions;
   safetyRecords: CrudPermissions;
   telegramBot: CrudPermissions;
+  notifications: CrudPermissions;
+  approvers: CrudPermissions;
+  approvals: CrudPermissions;
+  archive: CrudPermissions;
+  reports: CrudPermissions;
+  planCalendar: CrudPermissions;
+  customPlans: CrudPermissions;
+  anomaloz: CrudPermissions;
+  importExport: CrudPermissions;
 };
 
 export type ModeratorPermissionRecord = {

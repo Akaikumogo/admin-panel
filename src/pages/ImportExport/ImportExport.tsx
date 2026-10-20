@@ -5,6 +5,7 @@ import { Download, UploadCloud, Layers, Shield, FileJson, KeyRound, Copy, Check 
 import { useNavigate } from 'react-router-dom';
 import apiService from '@/services/api';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
+import { can } from '@/utils/can';
 
 type ContentImportResult = {
   success: boolean;
@@ -72,11 +73,12 @@ export default function ImportExportPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSuperAdmin()) {
+    if (!can('importExport', 'view')) {
       navigate('/dashboard/home');
       return;
     }
-    void loadOAuthIntegration();
+    if (isSuperAdmin()) void loadOAuthIntegration();
+    else setOAuthLoading(false);
   }, [navigate]);
 
   const loadOAuthIntegration = async () => {
@@ -208,7 +210,7 @@ export default function ImportExportPage() {
     }
   };
 
-  if (!isSuperAdmin()) return null;
+  if (!can('importExport', 'view')) return null;
 
   return (
     <div className="page-stack">
@@ -375,6 +377,7 @@ export default function ImportExportPage() {
         </Card>
       </div>
 
+      {isSuperAdmin() ? (
       <Card
         title={
           <span className="flex items-center gap-2">
@@ -487,6 +490,7 @@ export default function ImportExportPage() {
           </div>
         ) : null}
       </Card>
+      ) : null}
 
       <Modal
         open={contentConfirmOpen}
