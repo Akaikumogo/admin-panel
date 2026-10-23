@@ -63,6 +63,7 @@ export type EnergoIdCardSource = {
   middleName?: string | null;
   personnelNumber?: string | null;
   post?: string | null;
+  qualificationGroup?: string | null;
   avatarUrl?: string | null;
   organizations?: { id: string; name: string }[];
   createdAt?: string;
@@ -141,6 +142,7 @@ export function buildEnergoIdCertificate(
     firstName,
     middleName,
     positionTitle: source.post?.trim() || '',
+    qualificationGroup: source.qualificationGroup?.trim() || null,
     personnelNumber: source.personnelNumber ?? null,
     examAttemptId: null,
     issuedAt: source.createdAt ?? new Date().toISOString(),

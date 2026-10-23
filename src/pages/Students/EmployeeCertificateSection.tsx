@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Award, Printer } from 'lucide-react';
 import { Button, Tag } from '@/components/ui';
 import NoData from '@/components/NoData';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { StudentDetail } from '@/services/api';
+import apiService, { type StudentDetail } from '@/services/api';
 import {
   CertificateCard,
   formatCertificateDate,
@@ -46,8 +46,45 @@ export function EmployeeCertificateSection({
   const { t } = useTranslation();
   const [printing, setPrinting] = useState(false);
   const [design, setDesign] = useState<CertificateCardDesign>('v1');
+  const [qualificationGroup, setQualificationGroup] = useState<string | null>(
+    null,
+  );
 
-  const certificate = buildEnergoIdCertificate(student);
+  useEffect(() => {
+    let cancelled = false;
+    apiService
+      .getEmployeeSafetyRecords(student.id)
+      .then((bundle) => {
+        if (cancelled) return;
+        const section = bundle.sections.find(
+          (item) => item.type.code === 'OCCUPATIONAL_SAFETY',
+        );
+        const approved =
+          section?.records?.find(
+            (row) =>
+              row.isLatest &&
+              row.approvalStatus === 'APPROVED' &&
+              !row.archivedAt,
+          ) ??
+          (section?.record?.approvalStatus === 'APPROVED' &&
+          section.record.isLatest &&
+          !section.record.archivedAt
+            ? section.record
+            : null);
+        setQualificationGroup(approved?.qualificationGroup?.trim() || null);
+      })
+      .catch(() => {
+        if (!cancelled) setQualificationGroup(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [student.id]);
+
+  const certificate = buildEnergoIdCertificate({
+    ...student,
+    qualificationGroup,
+  });
   const hasIdentity = Boolean(
     student.firstName?.trim() || student.lastName?.trim(),
   );

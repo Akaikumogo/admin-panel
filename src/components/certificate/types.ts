@@ -13,6 +13,8 @@ export interface EmployeeCertificate {
   firstName: string;
   middleName: string;
   positionTitle: string;
+  /** Guvohnoma yuzida — ХТҚ malaka guruhi. Lavozim alohida saqlanadi. */
+  qualificationGroup?: string | null;
   personnelNumber: string | null;
   examAttemptId: string | null;
   issuedAt: string | null;

@@ -290,9 +290,9 @@ function CertificateCardFrontV1({
               mutedClass="text-[#B8C9D4]"
             />
             <CardField
-              labelUz="Lavozimi"
-              labelEn="Position"
-              value={certificate.positionTitle || '—'}
+              labelUz="Malaka guruhi"
+              labelEn="Qualification group"
+              value={certificate.qualificationGroup || '—'}
               compact
               mutedClass="text-[#B8C9D4]"
             />
@@ -428,9 +428,9 @@ function CertificateCardFrontV2({
               value={certificate.middleName || '—'}
             />
             <CardField
-              labelUz="Lavozimi"
-              labelEn="Position"
-              value={certificate.positionTitle || '—'}
+              labelUz="Malaka guruhi"
+              labelEn="Qualification group"
+              value={certificate.qualificationGroup || '—'}
               compact
             />
           </dl>
