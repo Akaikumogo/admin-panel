@@ -173,6 +173,24 @@ const ERROR_TITLES: Record<number, string> = {
   500: 'Server xatosi'
 };
 
+export function apiErrorMessage(error: unknown, fallback = 'So‘rov bajarilmadi'): string {
+  if (!axios.isAxiosError(error)) {
+    if (error instanceof Error && error.message.trim()) return error.message;
+    return fallback;
+  }
+  const data = error.response?.data;
+  if (data && typeof data === 'object' && 'message' in data) {
+    const message = (data as { message?: unknown }).message;
+    if (Array.isArray(message)) return message.map(String).join('. ');
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  if (typeof data === 'string') {
+    const text = data.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (text) return text.slice(0, 240);
+  }
+  return fallback;
+}
+
 function showErrorNotification(error: unknown) {
   if (!axios.isAxiosError(error)) {
     notification.error({
@@ -185,20 +203,12 @@ function showErrorNotification(error: unknown) {
   }
 
   const status = error.response?.status ?? 0;
-  const data = error.response?.data;
-
   if (status === 401) return;
 
   const title = ERROR_TITLES[status] || `Xato (${status || 'Network'})`;
-  const msg =
-    data?.message ??
-    (Array.isArray(data?.message) ? data.message.join(', ') : null) ??
-    error.message ??
-    'Noma`lum xato yuz berdi';
-
   notification.error({
     message: title,
-    description: typeof msg === 'string' ? msg : JSON.stringify(msg),
+    description: apiErrorMessage(error),
     placement: 'topRight',
     duration: 5
   });
@@ -4832,7 +4842,7 @@ class ApiService {
     };
   }
 
-  async getProctorQuestions(params?: { page?: number; search?: string }) {
+  async getProctorQuestions(params?: { page?: number; limit?: number; search?: string }) {
     const response = await this.api.get('/admin/proctor/questions', { params });
     return response.data as {
       total: number;
@@ -4906,6 +4916,7 @@ class ApiService {
         userId: string;
         standardName: string;
         recordTypeCode: string;
+        employeeName: string;
         scheduledAt: string;
         status: string;
         notificationStatus: string;

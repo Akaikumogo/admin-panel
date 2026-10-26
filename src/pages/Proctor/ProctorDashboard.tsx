@@ -1,60 +1,195 @@
-import { useState } from 'react';
-import { Button, Input, Spin, Table } from '@/components/ui';
+import { useMemo, useState } from 'react';
+import { Button, Form, Input, Modal, Select, Spin, Table, Tag, message } from '@/components/ui';
+import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { FilterBar, ListSurface } from '@/components/FilterBar';
+import { ListSurface } from '@/components/FilterBar';
 import { useFetch } from '@/hooks/useFetch';
 import { useTranslation } from '@/hooks/useTranslation';
-import apiService from '@/services/api';
+import apiService, { apiErrorMessage, type EmployeeSafetySection } from '@/services/api';
+import { formatPersonName } from '@/lib/person-name';
+import { can } from '@/utils/can';
 import { isSuperAdmin } from '@/utils/isSuperAdmin';
+
+type RoomRow = {
+  id: string;
+  standardName: string;
+  employeeName: string;
+  scheduledAt: string;
+  status: string;
+  notificationStatus: string;
+};
+
+const STATUS_LABEL: Record<string, { uz: string; en: string; ru: string }> = {
+  SCHEDULED: { uz: 'Rejada', en: 'Scheduled', ru: 'Запланирован' },
+  READY: { uz: 'Tayyor', en: 'Ready', ru: 'Готов' },
+  IN_PROGRESS: { uz: 'Davom etmoqda', en: 'In progress', ru: 'Идёт' },
+  INTERRUPTED: { uz: 'Uzilgan', en: 'Interrupted', ru: 'Прерван' },
+  COMPLETED: { uz: 'Yakunlangan', en: 'Finished', ru: 'Завершён' },
+  CANCELLED: { uz: 'Bekor', en: 'Cancelled', ru: 'Отменён' },
+  EXPIRED: { uz: 'Muddati o‘tgan', en: 'Expired', ru: 'Истёк' },
+};
+
+function localStamp(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function defaultWindow() {
+  const start = new Date();
+  start.setMinutes(0, 0, 0);
+  start.setHours(start.getHours() + 1);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  return { scheduledAt: localStamp(start), expiresAt: localStamp(end) };
+}
 
 export default function ProctorDashboardPage() {
   const { t } = useTranslation();
-  const [status, setStatus] = useState('');
-  const [form, setForm] = useState({
-    userId: '',
-    safetyRecordId: '',
-    standardId: '',
-    scheduledAt: '',
-    expiresAt: '',
-  });
-  const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const dash = useFetch(['proctor-dash'], () => apiService.getProctorDashboard(), null);
+  const [form] = Form.useForm();
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | undefined>();
+  const [sections, setSections] = useState<EmployeeSafetySection[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   const rooms = useFetch(
-    ['proctor-rooms', status],
-    () => apiService.getProctorRooms({ status: status || undefined }),
+    ['proctor-rooms', status ?? ''],
+    () => apiService.getProctorRooms({ status }),
     { total: 0, data: [] },
   );
   const standards = useFetch(['proctor-standards'], () => apiService.getProctorStandards(), []);
   const employees = useFetch(
-    ['proctor-employees', search],
-    () => apiService.getStudents({ search: search || undefined, limit: 8, light: true }),
-    { data: [], total: 0, page: 1, limit: 8 },
+    ['proctor-employees'],
+    () => apiService.getStudents({ limit: 200, light: true }),
+    { data: [], total: 0, page: 1, limit: 200 },
   );
 
-  const loadRecords = async (userId: string) => {
-    setForm((prev) => ({ ...prev, userId, safetyRecordId: '' }));
-    const bundle = await apiService.getEmployeeSafetyRecords(userId);
-    const first = bundle.sections.find((section) => section.record?.id)?.record?.id ?? '';
-    setForm((prev) => ({ ...prev, userId, safetyRecordId: first }));
+  const openModal = () => {
+    if (!can('exams', 'create')) return;
+    setSections([]);
+    setOpen(true);
+    form.resetFields();
+    form.setFieldsValue({ ...defaultWindow(), userId: undefined, safetyRecordId: undefined, standardId: undefined });
   };
 
-  const create = async () => {
-    setError('');
+  const onEmployee = async (userId: string) => {
+    form.setFieldsValue({ userId, safetyRecordId: undefined });
+    setSectionsLoading(true);
     try {
-      await apiService.createProctorRoom({
-        ...form,
-        scheduledAt: new Date(form.scheduledAt).toISOString(),
-        expiresAt: new Date(form.expiresAt).toISOString(),
-      });
-      rooms.refetch();
-      dash.refetch();
+      const bundle = await apiService.getEmployeeSafetyRecords(userId);
+      const next = bundle.sections.filter((section) => section.record?.id);
+      setSections(next);
+      if (next[0]?.record?.id) form.setFieldsValue({ safetyRecordId: next[0].record.id });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xona yaratilmadi');
+      setSections([]);
+      message.error(apiErrorMessage(err, 'Bo‘limlar yuklanmadi'));
+    } finally {
+      setSectionsLoading(false);
     }
   };
 
-  if (dash.initialLoading) {
+  const create = async () => {
+    try {
+      const values = await form.validateFields();
+      const start = new Date(values.scheduledAt);
+      const end = new Date(values.expiresAt);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+        message.error('Tugash vaqti boshlanishdan keyin bo‘lsin');
+        return;
+      }
+      if (!can('exams', 'create')) return;
+      setSaving(true);
+      await apiService.createProctorRoom({
+        userId: values.userId,
+        safetyRecordId: values.safetyRecordId,
+        standardId: values.standardId,
+        scheduledAt: start.toISOString(),
+        expiresAt: end.toISOString(),
+      });
+      message.success('Xona ochildi');
+      setOpen(false);
+      rooms.refetch();
+    } catch (err) {
+      if (err instanceof Error || (err as { response?: unknown })?.response) {
+        message.error(apiErrorMessage(err, 'Xona ochilmadi'));
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        title: t({ uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' }),
+        dataIndex: 'employeeName',
+        key: 'employeeName',
+        render: (value: string) => value || '—',
+      },
+      { title: t({ uz: 'Standart', en: 'Standard', ru: 'Стандарт' }), dataIndex: 'standardName', key: 'standardName' },
+      {
+        title: t({ uz: 'Sana', en: 'Date', ru: 'Дата' }),
+        dataIndex: 'scheduledAt',
+        key: 'scheduledAt',
+        width: 180,
+        render: (value: string) => new Date(value).toLocaleString(),
+      },
+      {
+        title: t({ uz: 'Holat', en: 'Status', ru: 'Статус' }),
+        dataIndex: 'status',
+        key: 'status',
+        width: 150,
+        render: (value: string) => {
+          const label = STATUS_LABEL[value];
+          const color = value === 'IN_PROGRESS' ? 'green' : value === 'COMPLETED' ? 'blue' : value === 'INTERRUPTED' ? 'orange' : 'default';
+          return <Tag color={color}>{label ? t(label) : value}</Tag>;
+        },
+      },
+      {
+        title: t({ uz: 'Amallar', en: 'Actions', ru: 'Действия' }),
+        key: 'actions',
+        width: 180,
+        render: (_: unknown, row: RoomRow) => (
+          <div className="flex items-center gap-2">
+            {row.notificationStatus !== 'SENT' ? (
+              <Button
+                size="small"
+                disabled={!can('exams', 'update')}
+                onClick={() =>
+                  apiService
+                    .retryProctorNotify(row.id)
+                    .then(() => {
+                      message.success('Xabar yuborildi');
+                      rooms.refetch();
+                    })
+                    .catch((err) => message.error(apiErrorMessage(err, 'Xabar yuborilmadi')))
+                }
+              >
+                {t({ uz: 'Xabar', en: 'Notify', ru: 'Уведомить' })}
+              </Button>
+            ) : null}
+            {isSuperAdmin() && row.status !== 'COMPLETED' ? (
+              <Button
+                size="small"
+                onClick={() =>
+                  apiService
+                    .restartProctorRoom(row.id)
+                    .then(() => {
+                      message.success('Qayta boshlandi');
+                      rooms.refetch();
+                    })
+                    .catch((err) => message.error(apiErrorMessage(err, 'Qayta boshlanmadi')))
+                }
+              >
+                {t({ uz: 'Qayta', en: 'Restart', ru: 'Заново' })}
+              </Button>
+            ) : null}
+          </div>
+        ),
+      },
+    ],
+    [rooms, t],
+  );
+
+  if (rooms.initialLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Spin size="large" />
@@ -62,107 +197,84 @@ export default function ProctorDashboardPage() {
     );
   }
 
-  const stats = [
-    ['Jami', dash.data?.total ?? 0],
-    ['Kutilayotgan', dash.data?.upcoming ?? 0],
-    ['Faol', dash.data?.active ?? 0],
-    ['Uzilgan', dash.data?.interrupted ?? 0],
-    ['Yakunlangan', dash.data?.completed ?? 0],
-    ['O‘tgan', dash.data?.passed ?? 0],
-    ['O‘tmagan', dash.data?.failed ?? 0],
-  ];
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t({ uz: 'Attestatsiya imtihoni', en: 'Attestation exams', ru: 'Аттестация' })}
-        description={t({
-          uz: 'Xona, standart va jonli kuzatuv',
-          en: 'Rooms, standards and live monitoring',
-          ru: 'Комнаты и наблюдение',
-        })}
-      />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-        {stats.map(([label, value]) => (
-          <div key={String(label)} className="border border-border px-3 py-2">
-            <div className="text-xs text-muted-foreground">{label}</div>
-            <div className="font-mono text-xl tabular-nums">{value}</div>
-          </div>
-        ))}
-      </div>
-      <FilterBar>
-        <Input placeholder="Xodim qidirish" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <Input type="datetime-local" value={form.scheduledAt} onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })} />
-        <Input type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} />
-      </FilterBar>
-      <div className="grid gap-2 md:grid-cols-2">
-        <div className="max-h-40 overflow-auto border border-border">
-          {employees.data?.data.map((employee) => (
-            <button
-              key={employee.id}
-              htmlType="button"
-              className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
-              onClick={() => loadRecords(employee.id)}
-            >
-              {employee.lastName} {employee.firstName}
-            </button>
-          ))}
-        </div>
-        <div className="space-y-2">
-          <Input placeholder="Safety yozuv ID" value={form.safetyRecordId} onChange={(e) => setForm({ ...form, safetyRecordId: e.target.value })} />
-          <select
-            className="h-10 w-full border border-border bg-background px-2 text-sm"
-            value={form.standardId}
-            onChange={(e) => setForm({ ...form, standardId: e.target.value })}
-          >
-            <option value="">Standart</option>
-            {standards.data?.map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
-              </option>
-            ))}
-          </select>
-          <Button htmlType="button" onClick={create} disabled={!form.userId || !form.safetyRecordId || !form.standardId}>
-            Xona yaratish
+        title={t({ uz: 'Imtihon xonalari', en: 'Exam rooms', ru: 'Комнаты экзамена' })}
+        actions={
+          <Button type="primary" icon={<Plus size={16} />} disabled={!can('exams', 'create')} onClick={openModal}>
+            {t({ uz: 'Xona ochish', en: 'Open room', ru: 'Открыть комнату' })}
           </Button>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        </div>
-      </div>
-      <ListSurface>
-        <div className="mb-3">
-          <Input placeholder="Holat filtri: IN_PROGRESS" value={status} onChange={(e) => setStatus(e.target.value)} />
-        </div>
+        }
+      />
+      <ListSurface
+        loading={rooms.loading}
+        toolbar={
+          <Select
+            allowClear
+            placeholder={t({ uz: 'Holat', en: 'Status', ru: 'Статус' })}
+            style={{ width: 200 }}
+            value={status}
+            onChange={(value) => setStatus(value || undefined)}
+            options={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label: t(label) }))}
+          />
+        }
+      >
         <Table
           rowKey="id"
+          loading={rooms.loading}
           dataSource={rooms.data?.data ?? []}
-          pagination={false}
-          columns={[
-            { title: 'Standart', dataIndex: 'standardName' },
-            { title: 'Bo‘lim', dataIndex: 'recordTypeCode' },
-            { title: 'Holat', dataIndex: 'status' },
-            { title: 'Aloqa', dataIndex: 'connectionStatus' },
-            { title: 'Bildirishnoma', dataIndex: 'notificationStatus' },
-            {
-              title: '',
-              key: 'actions',
-              render: (_: unknown, row: { id: string; status: string; notificationStatus: string }) => (
-                <div className="flex gap-2">
-                  {row.notificationStatus !== 'SENT' ? (
-                    <Button htmlType="button" onClick={() => apiService.retryProctorNotify(row.id).then(() => rooms.refetch())}>
-                      Yuborish
-                    </Button>
-                  ) : null}
-                  {isSuperAdmin() && row.status !== 'COMPLETED' ? (
-                    <Button htmlType="button" onClick={() => apiService.restartProctorRoom(row.id).then(() => rooms.refetch())}>
-                      Qayta boshlash
-                    </Button>
-                  ) : null}
-                </div>
-              ),
-            },
-          ]}
+          columns={columns}
+          variant="flat"
+          className="!rounded-none !border-0"
+          pagination={{ pageSize: 20 }}
+          size="small"
         />
       </ListSurface>
+
+      <Modal
+        open={open}
+        title={t({ uz: 'Yangi xona', en: 'New room', ru: 'Новая комната' })}
+        onCancel={() => setOpen(false)}
+        onOk={create}
+        confirmLoading={saving}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="userId" label={t({ uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' })} rules={[{ required: true, message: 'Xodimni tanlang' }]}>
+            <Select
+              showSearch
+              placeholder={t({ uz: 'Xodim', en: 'Employee', ru: 'Сотрудник' })}
+              options={(employees.data?.data ?? []).map((employee) => ({
+                value: employee.id,
+                label: formatPersonName(employee),
+              }))}
+              onChange={(value) => void onEmployee(value)}
+            />
+          </Form.Item>
+          <Form.Item name="safetyRecordId" label={t({ uz: 'Bo‘lim', en: 'Section', ru: 'Раздел' })} rules={[{ required: true, message: 'Bo‘limni tanlang' }]}>
+            <Select
+              loading={sectionsLoading}
+              placeholder={t({ uz: 'Bo‘lim', en: 'Section', ru: 'Раздел' })}
+              options={sections.map((section) => ({
+                value: section.record?.id ?? '',
+                label: section.type.titleUz,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item name="standardId" label={t({ uz: 'Standart', en: 'Standard', ru: 'Стандарт' })} rules={[{ required: true, message: 'Standartni tanlang' }]}>
+            <Select
+              placeholder={t({ uz: 'Standart', en: 'Standard', ru: 'Стандарт' })}
+              options={(standards.data ?? []).map((row) => ({ value: row.id, label: row.name }))}
+            />
+          </Form.Item>
+          <Form.Item name="scheduledAt" label={t({ uz: 'Boshlanish', en: 'Starts', ru: 'Начало' })} rules={[{ required: true, message: 'Vaqtni tanlang' }]}>
+            <Input type="datetime-local" />
+          </Form.Item>
+          <Form.Item name="expiresAt" label={t({ uz: 'Tugash', en: 'Ends', ru: 'Окончание' })} rules={[{ required: true, message: 'Vaqtni tanlang' }]}>
+            <Input type="datetime-local" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
