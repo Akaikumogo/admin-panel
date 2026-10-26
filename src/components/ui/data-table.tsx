@@ -95,8 +95,18 @@ function getRowKey<T extends Record<string, unknown>>(
   return String(index);
 }
 
+const generatedColumnIds = new WeakMap<object, string>();
+let generatedColumnSeq = 0;
+
 function getColumnId<T>(col: ColumnType<T>): string {
-  return String(col.key ?? col.dataIndex ?? col.title);
+  const explicit = col.key ?? col.dataIndex;
+  if (explicit != null && String(explicit).trim()) return String(explicit);
+  if (typeof col.title === 'string' && col.title.trim()) return col.title.trim();
+  const cached = generatedColumnIds.get(col);
+  if (cached) return cached;
+  const id = `col-${++generatedColumnSeq}`;
+  generatedColumnIds.set(col, id);
+  return id;
 }
 
 function isColumnFilterable<T>(col: ColumnType<T>): boolean {

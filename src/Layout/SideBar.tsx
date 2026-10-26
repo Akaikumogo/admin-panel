@@ -17,8 +17,15 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-function isNavActive(path: string, pathname: string) {
-  return pathname === path || pathname.startsWith(path + '/');
+function isNavActive(path: string, pathname: string, paths: string[]) {
+  if (pathname === path) return true;
+  if (!pathname.startsWith(path + '/')) return false;
+  return !paths.some(
+    (other) =>
+      other !== path &&
+      other.length > path.length &&
+      (pathname === other || pathname.startsWith(other + '/')),
+  );
 }
 
 /** SCHETCHIK uslubidagi sidebar nav — pill active + section labels */
@@ -53,7 +60,11 @@ export const Sidebar: React.FC<{
           </div>
           {group.items.map((item) => {
             const Icon = item.icon;
-            const active = isNavActive(item.path, location.pathname);
+            const active = isNavActive(
+              item.path,
+              location.pathname,
+              group.items.map((entry) => entry.path),
+            );
 
             return (
               <NavLink

@@ -1593,10 +1593,14 @@ export type ModeratorPermissions = {
   importExport: CrudPermissions;
 };
 
+export type ModeratorScope = 'central' | 'branch';
+
 export type ModeratorPermissionRecord = {
   id: string;
   moderatorUserId: string;
   permissions: ModeratorPermissions;
+  /** Markaziy apparat / filial - preset bo'limlar (kontent, xodimlar, analitika) shundan. */
+  scope?: ModeratorScope | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -4812,6 +4816,182 @@ class ApiService {
       });
 
     return this.refreshPromise;
+  }
+
+  async getProctorDashboard(params?: { orgId?: string; from?: string; to?: string }) {
+    const response = await this.api.get('/admin/proctor/dashboard', { params });
+    return response.data as {
+      total: number;
+      upcoming: number;
+      active: number;
+      interrupted: number;
+      completed: number;
+      passed: number;
+      failed: number;
+      byStatus: Record<string, number>;
+    };
+  }
+
+  async getProctorQuestions(params?: { page?: number; search?: string }) {
+    const response = await this.api.get('/admin/proctor/questions', { params });
+    return response.data as {
+      total: number;
+      data: Array<{
+        id: string;
+        prompt: string;
+        type: 'SINGLE' | 'MULTIPLE';
+        subject: string;
+        category: string;
+        difficulty: string;
+        isActive: boolean;
+        explanation: string | null;
+        options: { id: string; text: string; isCorrect: boolean }[];
+      }>;
+    };
+  }
+
+  async saveProctorQuestion(body: Record<string, unknown>, id?: string) {
+    const response = id
+      ? await this.api.put(`/admin/proctor/questions/${id}`, body)
+      : await this.api.post('/admin/proctor/questions', body);
+    return response.data;
+  }
+
+  async deleteProctorQuestion(id: string) {
+    await this.api.delete(`/admin/proctor/questions/${id}`);
+  }
+
+  async getProctorStandards() {
+    const response = await this.api.get('/admin/proctor/standards');
+    return response.data as Array<{
+      id: string;
+      name: string;
+      code: string;
+      durationMs: number;
+      passPercent: number;
+      maxRecordingMb: number;
+      totalQuestions: number;
+      questionIds: string[];
+      isActive: boolean;
+    }>;
+  }
+
+  async saveProctorStandard(body: Record<string, unknown>, id?: string) {
+    const response = id
+      ? await this.api.put(`/admin/proctor/standards/${id}`, body)
+      : await this.api.post('/admin/proctor/standards', body);
+    return response.data;
+  }
+
+  async getProctorPolicies() {
+    const response = await this.api.get('/admin/proctor/policies');
+    return response.data as Array<{
+      recordTypeCode: string;
+      requiresExamRoom: boolean;
+      cutoffDate: string;
+    }>;
+  }
+
+  async updateProctorPolicy(code: string, body: { requiresExamRoom: boolean; cutoffDate: string }) {
+    const response = await this.api.put(`/admin/proctor/policies/${code}`, body);
+    return response.data;
+  }
+
+  async getProctorRooms(params?: { page?: number; status?: string }) {
+    const response = await this.api.get('/admin/proctor/rooms', { params });
+    return response.data as {
+      total: number;
+      data: Array<{
+        id: string;
+        userId: string;
+        standardName: string;
+        recordTypeCode: string;
+        scheduledAt: string;
+        status: string;
+        notificationStatus: string;
+        connectionStatus: string;
+        accessToken: string;
+      }>;
+    };
+  }
+
+  async createProctorRoom(body: {
+    userId: string;
+    safetyRecordId: string;
+    standardId: string;
+    scheduledAt: string;
+    expiresAt: string;
+  }) {
+    const response = await this.api.post('/admin/proctor/rooms', body);
+    return response.data;
+  }
+
+  async restartProctorRoom(id: string) {
+    const response = await this.api.post(`/admin/proctor/rooms/${id}/restart`);
+    return response.data;
+  }
+
+  async cancelProctorRoom(id: string) {
+    const response = await this.api.post(`/admin/proctor/rooms/${id}/cancel`);
+    return response.data;
+  }
+
+  async retryProctorNotify(id: string) {
+    const response = await this.api.post(`/admin/proctor/rooms/${id}/notify`);
+    return response.data;
+  }
+
+  async getProctorLive() {
+    const response = await this.api.get('/admin/proctor/live');
+    return response.data as Array<{
+      id: string;
+      userId: string;
+      standardName: string;
+      status: string;
+      questionIndex: number;
+      remainingMs: number | null;
+      live: boolean;
+      lastSeenAt: string | null;
+      connectionStatus: string;
+      media: Record<string, unknown>;
+    }>;
+  }
+
+  async getProctorMonitor(roomId: string) {
+    const response = await this.api.get(`/admin/proctor/rooms/${roomId}/monitor`);
+    return response.data;
+  }
+
+  async getProctorViolations(page = 1) {
+    const response = await this.api.get('/admin/proctor/violations', { params: { page } });
+    return response.data as {
+      total: number;
+      data: Array<{
+        id: string;
+        roomId: string;
+        userId: string;
+        code: string;
+        processName: string;
+        windowTitle: string | null;
+        occurredAt: string;
+      }>;
+    };
+  }
+
+  async getProctorResults(userId: string) {
+    const response = await this.api.get('/admin/proctor/results', { params: { userId } });
+    return response.data as Array<{
+      examinationName: string;
+      examDate: string | null;
+      questionCount: number;
+      correctCount: number;
+      scorePercent: number;
+      gradeLabel: string;
+      passed: boolean;
+      nextExamDate: string | null;
+      status: string;
+      requiresReview?: boolean;
+    }>;
   }
 }
 

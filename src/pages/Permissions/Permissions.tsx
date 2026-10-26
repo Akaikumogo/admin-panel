@@ -109,6 +109,15 @@ const MODULES: {
   { key: 'importExport', label: { uz: 'Import / Export', en: 'Import / Export', ru: 'Импорт / экспорт' } },
 ];
 
+/** Backend SCOPE_PRESET_KEYS bilan bir xil: bu bo'limlar moderator turiga qarab avtomatik. */
+const SCOPE_PRESET_KEYS: (keyof ModeratorPermissions)[] = [
+  'contentLevels',
+  'contentTheories',
+  'contentQuestions',
+  'students',
+  'analytics',
+];
+
 const CRUD_ORDER: (keyof CrudPermissions)[] = [
   'view',
   'create',
@@ -153,6 +162,9 @@ const PermissionsPage = () => {
   const [permMap, setPermMap] = useState<
     Record<string, ModeratorPermissions | undefined>
   >({});
+  const [scopeMap, setScopeMap] = useState<
+    Record<string, 'central' | 'branch' | null>
+  >({});
   const [permLoading, setPermLoading] = useState(false);
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(() => new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -185,20 +197,23 @@ const PermissionsPage = () => {
           moderators.map(async (m) => {
             try {
               const rec = await apiService.getModeratorPermissions(m.id);
-              return { id: m.id, permissions: rec.permissions };
+              return { id: m.id, permissions: rec.permissions, scope: rec.scope ?? null };
             } catch {
-              return { id: m.id, permissions: undefined };
+              return { id: m.id, permissions: undefined, scope: null };
             }
           }),
         );
         if (cancelled) return;
         const next: Record<string, ModeratorPermissions | undefined> = {};
+        const nextScopes: Record<string, 'central' | 'branch' | null> = {};
         for (const r of results) {
+          nextScopes[r.id] = r.scope;
           next[r.id] = r.permissions
             ? mergeModeratorPermissions(r.permissions)
             : undefined;
         }
         setPermMap(next);
+        setScopeMap(nextScopes);
         setDirtyIds(new Set());
       } finally {
         if (!cancelled) setPermLoading(false);
@@ -312,6 +327,7 @@ const PermissionsPage = () => {
     [moderators, selectedId],
   );
   const selectedPerms = selectedId ? permMap[selectedId] : undefined;
+  const selectedScope = selectedId ? scopeMap[selectedId] ?? null : null;
   const isDirty = selectedId ? dirtyIds.has(selectedId) : false;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -518,6 +534,8 @@ const PermissionsPage = () => {
                     {MODULES.map((mod) => {
                       const row = selectedPerms[mod.key];
                       const allOn = CRUD_ORDER.every((c) => !!row?.[c]);
+                      const presetLocked =
+                        !!selectedScope && SCOPE_PRESET_KEYS.includes(mod.key);
                       return (
                         <div
                           key={String(mod.key)}
@@ -526,10 +544,22 @@ const PermissionsPage = () => {
                           <div className="mb-2.5 flex items-center justify-between gap-2">
                             <p className="truncate text-[13px] font-medium tracking-tight text-foreground">
                               {t(mod.label)}
+                              {presetLocked ? (
+                                <span
+                                  className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground"
+                                  title={
+                                    selectedScope === 'central'
+                                      ? "Markaziy apparat moderatori: to'liq ruxsat (avtomatik)"
+                                      : "Filial moderatori: faqat ko'rish, xodimlarda tahrirlash (avtomatik)"
+                                  }
+                                >
+                                  {selectedScope === 'central' ? 'Avto: markaziy' : 'Avto: filial'}
+                                </span>
+                              ) : null}
                             </p>
                             <button
                               type="button"
-                              disabled={!can('permissions', 'update')}
+                              disabled={!can('permissions', 'update') || presetLocked}
                               className="text-[11px] font-medium text-muted-foreground hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                               onClick={() =>
                                 setModuleAll(selected.id, mod.key, !allOn)
@@ -550,7 +580,7 @@ const PermissionsPage = () => {
                                 <Switch
                                   size="small"
                                   checked={!!row?.[crud]}
-                                  disabled={!can('permissions', 'update')}
+                                  disabled={!can('permissions', 'update') || presetLocked}
                                   onChange={(v) =>
                                     setCrud(selected.id, mod.key, crud, v)
                                   }

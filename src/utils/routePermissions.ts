@@ -27,6 +27,7 @@ const ROUTE_VIEW: Array<[string, keyof ModeratorPermissions | 'always']> = [
   ['/dashboard/approvals', 'approvals'],
   ['/dashboard/departments', 'organizations'],
   ['/dashboard/positions', 'exams'],
+  ['/dashboard/proctor', 'exams'],
   ['/dashboard/nes-sync', 'nesSync'],
   ['/dashboard/archive', 'archive'],
   ['/dashboard/analytics', 'analytics'],

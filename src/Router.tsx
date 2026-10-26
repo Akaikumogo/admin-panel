@@ -56,6 +56,11 @@ const ExecutiveDashboard = lazy(() => import('./pages/Analytics/ExecutiveDashboa
 const BranchDetail = lazy(() => import('./pages/Analytics/BranchDetail'));
 const DepartmentEmployees = lazy(() => import('./pages/Analytics/DepartmentEmployees'));
 const UnderperformersPage = lazy(() => import('./pages/Analytics/UnderperformersPage'));
+const ProctorDashboardPage = lazy(() => import('./pages/Proctor/ProctorDashboard'));
+const ProctorQuestionsPage = lazy(() => import('./pages/Proctor/ProctorQuestions'));
+const ProctorStandardsPage = lazy(() => import('./pages/Proctor/ProctorStandards'));
+const ProctorLivePage = lazy(() => import('./pages/Proctor/ProctorLive'));
+const ProctorViolationsPage = lazy(() => import('./pages/Proctor/ProctorViolations'));
 
 const withSuspense = (
   Component: React.LazyExoticComponent<React.ComponentType>
@@ -204,6 +209,26 @@ export const routes: RouteObject[] = [
           {
             path: 'positions',
             element: withSuspense(PositionsPage)
+          },
+          {
+            path: 'proctor',
+            element: withSuspense(ProctorDashboardPage)
+          },
+          {
+            path: 'proctor/questions',
+            element: withSuspense(ProctorQuestionsPage)
+          },
+          {
+            path: 'proctor/standards',
+            element: withSuspense(ProctorStandardsPage)
+          },
+          {
+            path: 'proctor/live',
+            element: withSuspense(ProctorLivePage)
+          },
+          {
+            path: 'proctor-violations',
+            element: withSuspense(ProctorViolationsPage)
           },
           {
             path: 'archive',

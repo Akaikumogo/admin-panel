@@ -32,6 +32,7 @@ import {
   Bell,
   BadgeCheck,
   ClipboardCheck,
+  MonitorPlay,
   CalendarDays,
   UserCog,
   Megaphone,
@@ -211,6 +212,36 @@ const navGroups: NavGroup[] = [
         path: '/dashboard/archive',
         label: { uz: 'Arxiv', en: 'Archive', ru: 'Архив' },
         icon: Archive,
+      },
+    ],
+  },
+  {
+    label: { uz: 'Attestatsiya', en: 'Attestation', ru: 'Аттестация' },
+    items: [
+      {
+        path: '/dashboard/proctor/questions',
+        label: { uz: 'Imtihon savollari', en: 'Exam questions', ru: 'Вопросы' },
+        icon: HelpCircle,
+      },
+      {
+        path: '/dashboard/proctor/standards',
+        label: { uz: 'Imtihon standartlari', en: 'Exam standards', ru: 'Стандарты' },
+        icon: ClipboardCheck,
+      },
+      {
+        path: '/dashboard/proctor/live',
+        label: { uz: 'Jonli kuzatuv', en: 'Live monitoring', ru: 'Наблюдение' },
+        icon: Activity,
+      },
+      {
+        path: '/dashboard/proctor-violations',
+        label: { uz: 'Xona qoidabuzarliklari', en: 'Room violations', ru: 'Нарушения комнаты' },
+        icon: Shield,
+      },
+      {
+        path: '/dashboard/proctor',
+        label: { uz: 'Imtihon xonalari', en: 'Exam rooms', ru: 'Комнаты' },
+        icon: MonitorPlay,
       },
     ],
   },

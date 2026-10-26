@@ -18,6 +18,7 @@ import type {
 import { PlanResultsTable } from '@/pages/Reports/PlanMatrixTable';
 import { EmployeeCertificateSection } from './EmployeeCertificateSection';
 import { EmployeeSafetySection } from './EmployeeSafetySection';
+import { ProctorEmployeeResults } from '../Proctor/ProctorEmployeeResults';
 import { EmployeePlanSection } from './EmployeePlanSection';
 import { StudentFieldsEditor } from './StudentFieldsEditor';
 import { OnlinePresenceHeatmap } from './OnlinePresenceHeatmap';
@@ -356,6 +357,7 @@ const StudentDetailPage = () => {
 
       {/* Safety / certification (manual) */}
       <EmployeeSafetySection userId={student.id} me={me} />
+      <ProctorEmployeeResults userId={student.id} />
 
       <EmployeePlanSection userId={student.id} me={me} />
 
