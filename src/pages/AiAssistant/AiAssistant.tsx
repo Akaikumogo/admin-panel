@@ -61,6 +61,7 @@ export default function AiAssistantPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [waitText, setWaitText] = useState('');
 
   const refreshSessions = () => {
     apiService
@@ -111,13 +112,18 @@ export default function AiAssistantPage() {
     });
     socket.on('assistant_started', () => {
       setIsStreaming(true);
+      setWaitText('');
       setMessages((prev) => [
         ...prev,
         { id: `assistant-${Date.now()}`, role: 'assistant', content: '' },
       ]);
     });
+    socket.on('assistant_status', ({ text }: { text?: string }) => {
+      setWaitText(text ?? '');
+    });
     socket.on('assistant_chunk', ({ chunk }: { chunk?: string }) => {
       if (!chunk) return;
+      setWaitText('');
       setMessages((prev) => {
         const next = [...prev];
         const last = next[next.length - 1];
@@ -128,18 +134,22 @@ export default function AiAssistantPage() {
     });
     socket.on('assistant_done', () => {
       setIsStreaming(false);
+      setWaitText('');
       refreshSessions();
     });
     socket.on('assistant_error', ({ message }: { message?: string }) => {
       setIsStreaming(false);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: message ?? 'AI bilan bog‘lanishda xato bo‘ldi.',
-        },
-      ]);
+      setWaitText('');
+      const text = message ?? 'AI bilan bog‘lanishda xato bo‘ldi.';
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === 'assistant' && !last.content) {
+          next[next.length - 1] = { ...last, content: text };
+          return next;
+        }
+        return [...next, { id: `error-${Date.now()}`, role: 'assistant', content: text }];
+      });
     });
 
     return () => {
@@ -327,7 +337,10 @@ export default function AiAssistantPage() {
                         : 'bg-muted text-foreground',
                     )}
                   >
-                    {message.content || (isStreaming ? '…' : '')}
+                    {message.content ||
+                      (isStreaming && message.id === messages[messages.length - 1]?.id
+                        ? waitText || '…'
+                        : '')}
                   </p>
                 </div>
               ))
