@@ -3059,6 +3059,35 @@ class ApiService {
     return response.data;
   }
 
+  async getAiChatSessions(): Promise<{
+    data: Array<{
+      id: string;
+      title: string;
+      updatedAt: string;
+      createdAt: string;
+    }>;
+  }> {
+    const response = await this.api.get('/ai-chat/sessions');
+    return response.data;
+  }
+
+  async getAiChatMessages(sessionId: string): Promise<{
+    data: Array<{
+      id: string;
+      role: 'user' | 'assistant';
+      content: string;
+      createdAt: string;
+    }>;
+  }> {
+    const response = await this.api.get(`/ai-chat/sessions/${sessionId}/messages`);
+    return response.data;
+  }
+
+  async deleteAiChatSession(sessionId: string): Promise<{ ok: boolean }> {
+    const response = await this.api.delete(`/ai-chat/sessions/${sessionId}`);
+    return response.data;
+  }
+
   async getMyModeratorPermissions(): Promise<{
     permissions: ModeratorPermissions | null;
   }> {
