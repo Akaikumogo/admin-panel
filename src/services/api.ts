@@ -3033,14 +3033,29 @@ class ApiService {
 
   async getAiChatStatus(): Promise<{
     provider: string;
-    openRouterConfigured: boolean;
-    ollamaConfigured: boolean;
-    openRouterModel: string;
-    ollamaModel: string;
-    ollamaBaseUrl: string;
+    model: string;
     ready: boolean;
+    audience: 'superadmin' | 'central' | 'branch';
+    scopeLabel: string;
+    canReviewOutOfScope: boolean;
   }> {
     const response = await this.api.get('/ai-chat/status');
+    return response.data;
+  }
+
+  async getOutOfScopeQuestions(): Promise<{
+    total: number;
+    data: Array<{
+      id: string;
+      userName: string;
+      userRole: string;
+      audience: string;
+      scopeLabel: string;
+      question: string;
+      createdAt: string;
+    }>;
+  }> {
+    const response = await this.api.get('/ai-chat/out-of-scope');
     return response.data;
   }
 

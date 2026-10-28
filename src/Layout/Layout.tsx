@@ -22,6 +22,7 @@ import {
   Library,
   LibraryBig,
   Bot,
+  FileWarning,
   IdCard,
   ArrowDownUp,
   FileSpreadsheet,
@@ -298,6 +299,15 @@ const navGroups: NavGroup[] = [
         label: { uz: 'AI yordamchi', en: 'AI assistant', ru: 'AI помощник' },
         icon: Bot,
       },
+      {
+        path: '/dashboard/ai-out-of-scope',
+        label: {
+          uz: 'Contextdan tashqari savollar',
+          en: 'Questions outside context',
+          ru: 'Вопросы вне контекста',
+        },
+        icon: FileWarning,
+      },
     ],
   },
 ];
@@ -494,6 +504,9 @@ const Layout = () => {
 
   const visibleNavGroups = useMemo((): NavGroup[] => {
     if (!me) return [];
+    const canReviewOutOfScope =
+      me.role === 'SUPERADMIN' ||
+      Boolean(me.organizations?.some((org) => org.isDefault));
 
     if (me.role === 'APPROVER') {
       const allowed = new Set([
@@ -506,6 +519,7 @@ const Layout = () => {
         '/dashboard/hearts-analytics',
         '/dashboard/profile',
         '/dashboard/ai-assistant',
+        ...(canReviewOutOfScope ? ['/dashboard/ai-out-of-scope'] : []),
       ]);
       return navGroups
         .map((group) => ({
@@ -559,6 +573,7 @@ const Layout = () => {
         !!modPerms?.[key]?.view || can(key, 'view');
 
       return items.filter((item) => {
+        if (item.path === '/dashboard/ai-out-of-scope') return canReviewOutOfScope;
         const key = permissionForPath(item.path);
         if (key === 'always') return true;
         if (!key) return false;
@@ -576,17 +591,28 @@ const Layout = () => {
         if (showImport && group.label.uz === G.admin.uz) {
           items = [...items, importExportNavItem];
         }
+        items = items.filter(
+          (item) =>
+            item.path !== '/dashboard/ai-out-of-scope' || canReviewOutOfScope,
+        );
         return { ...group, items };
       })
       .filter((group) => group.items.length > 0);
   }, [me, pendingApprovalsCount, modPerms]);
 
+  const canReviewOutOfScope =
+    me?.role === 'SUPERADMIN' ||
+    Boolean(me?.organizations?.some((org) => org.isDefault));
+  const isOutOfScopeRoute = location.pathname.startsWith(
+    '/dashboard/ai-out-of-scope',
+  );
   const moderatorRouteKey =
     me?.role === 'MODERATOR' ? permissionForPath(location.pathname) : null;
   const isModeratorForbiddenRoute =
     me?.role === 'MODERATOR' &&
     modPermsReady &&
     location.pathname.startsWith('/dashboard') &&
+    !(isOutOfScopeRoute && canReviewOutOfScope) &&
     moderatorRouteKey !== 'always' &&
     (moderatorRouteKey == null ||
       !(
@@ -596,6 +622,7 @@ const Layout = () => {
 
   const isDirectorForbiddenRoute =
     me?.role === 'APPROVER' &&
+    !(isOutOfScopeRoute && canReviewOutOfScope) &&
     !location.pathname.startsWith('/dashboard/employees') &&
     !location.pathname.startsWith('/dashboard/students') &&
     location.pathname !== '/dashboard/home' &&

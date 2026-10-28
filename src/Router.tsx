@@ -42,6 +42,9 @@ const CustomPlansPage = lazy(() => import('./pages/CustomPlans/CustomPlans'));
 const LeaderboardPage = lazy(() => import('./pages/Leaderboard/Leaderboard'));
 const AnomalozPage = lazy(() => import('./pages/Anomaloz/Anomaloz'));
 const AiAssistantPage = lazy(() => import('./pages/AiAssistant/AiAssistant'));
+const OutOfScopeQuestionsPage = lazy(
+  () => import('./pages/AiAssistant/OutOfScopeQuestions'),
+);
 const NesSyncPage = lazy(() => import('./pages/NesSync/NesSync'));
 const DepartmentsPage = lazy(() => import('./pages/Departments/Departments'));
 const PositionsPage = lazy(() => import('./pages/Positions/Positions'));
@@ -197,6 +200,10 @@ export const routes: RouteObject[] = [
           {
             path: 'ai-assistant',
             element: withSuspense(AiAssistantPage)
+          },
+          {
+            path: 'ai-out-of-scope',
+            element: withSuspense(OutOfScopeQuestionsPage)
           },
           {
             path: 'nes-sync',
