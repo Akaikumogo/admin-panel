@@ -19,7 +19,6 @@ import {
   Star,
   Upload,
   ChevronDown,
-  ExternalLink,
 } from 'lucide-react';
 import {
   Card,
@@ -243,9 +242,6 @@ export default function HomePage() {
       return item.totalCompleted / item.totalStarted < 0.25;
     }).length;
   }, [funnel]);
-
-  const topErrorBranch = homeOverview?.topErrorBranches?.[0] ?? null;
-  const needsTriage = (insight?.errors30d ?? 0) > 0 || weakModules > 0;
 
   const homeKpis = useMemo(() => {
     const tone = {
@@ -508,52 +504,6 @@ export default function HomePage() {
           </Popover>
         </div>
       </div>
-
-      {needsTriage && topErrorBranch ? (
-        <div className="surface flex flex-col gap-3 border-rose-500/25 bg-rose-500/[0.04] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300">
-              <AlertTriangle size={16} strokeWidth={1.75} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-rose-700 dark:text-rose-300">
-                {t({
-                  uz: 'Diqqat — triage kerak',
-                  en: 'Attention — triage needed',
-                  ru: 'Внимание — нужен triage',
-                })}
-              </p>
-              <p className="mt-0.5 text-sm leading-relaxed text-foreground">
-                {t({
-                  uz: `${shortBranchName(topErrorBranch.orgName)} — ${topErrorBranch.value.toLocaleString()} xato (30 kun)${weakModules ? ` · ${weakModules} modul past completion` : ''}`,
-                  en: `${shortBranchName(topErrorBranch.orgName)} — ${topErrorBranch.value.toLocaleString()} errors (30d)${weakModules ? ` · ${weakModules} low-completion modules` : ''}`,
-                  ru: `${shortBranchName(topErrorBranch.orgName)} — ${topErrorBranch.value.toLocaleString()} ошибок (30д)${weakModules ? ` · ${weakModules} модуля с низким completion` : ''}`,
-                })}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            <Button size="small" type="primary" asChild>
-              <Link
-                to="/dashboard/analytics"
-                className="inline-flex items-center gap-1.5"
-              >
-                {t({
-                  uz: 'Xatolarga o‘tish',
-                  en: 'Open errors',
-                  ru: 'К ошибкам',
-                })}
-                <ExternalLink size={13} />
-              </Link>
-            </Button>
-            <Button size="small" type="default" asChild>
-              <Link to="/dashboard/logs">
-                {t({ uz: 'Loglar', en: 'Logs', ru: 'Логи' })}
-              </Link>
-            </Button>
-          </div>
-        </div>
-      ) : null}
 
       <div className="surface overflow-hidden p-4 md:p-5">
         <div className="mb-3 flex items-center justify-between">
